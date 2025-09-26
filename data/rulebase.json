@@ -1,0 +1,140 @@
+{
+  "rules": [
+    {
+      "_id": "rb-001-169374",
+      "name": "Data retention limits are defined and enforced",
+      "description": "Policy must state specific retention periods per data category, legal basis, and disposal procedures. Requires mapping of systems holding personal/PHI data and a documented purge schedule with roles responsible.",
+      "tags": [
+        "GDPR",
+        "CCPA",
+        "ISO27001",
+        "Retention",
+        "RecordsManagement"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T12:17:34.662Z",
+      "active": false
+    },
+    {
+      "_id": "rb-002-169375",
+      "name": "Processor contracts include mandatory clauses (DPA/BAA as applicable)",
+      "description": "Policies must require Data Processing Agreements with processors (GDPR Art. 28) and Business Associate Agreements for PHI (HIPAA 164.308(b)(1)), covering purpose limits, security controls, subprocessor approval, and breach support.",
+      "tags": [
+        "GDPR",
+        "HIPAA",
+        "Vendors",
+        "Contracts"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-003-169376",
+      "name": "Breach notification timelines and playbook",
+      "description": "Incident response policy must define breach severity levels, evidence collection, regulatory and data subject notification timelines (GDPR 72h; HIPAA without unreasonable delay ≤60 days), templates, and accountable roles.",
+      "tags": [
+        "GDPR",
+        "HIPAA",
+        "ISO27001",
+        "IncidentResponse",
+        "Breach"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-004-169377",
+      "name": "DSAR/Consumer request workflow and SLAs",
+      "description": "Privacy policy and procedures must cover request intake, identity verification, decisioning, and response SLAs (GDPR ≤30 days with extension rules; CCPA ≤45 days). Include tracking log, exemptions handling, and escalation path.",
+      "tags": [
+        "GDPR",
+        "CCPA",
+        "Privacy",
+        "RightsRequests",
+        "SLA"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-005-169378",
+      "name": "Access control reviews and least privilege",
+      "description": "Policy requires RBAC, MFA for privileged accounts, joiner/mover/leaver process, and quarterly access reviews for critical systems (including EHR/PHI). Document evidence of review and remediation steps.",
+      "tags": [
+        "HIPAA",
+        "ISO27001",
+        "AccessControl",
+        "RBAC",
+        "MFA"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-006-169379",
+      "name": "Encryption at rest and in transit",
+      "description": "Policies must mandate TLS 1.2+ for data in transit and strong encryption for data at rest (e.g., AES-256). Key management responsibilities, rotation schedules, and exception processes must be documented.",
+      "tags": [
+        "HIPAA",
+        "ISO27001",
+        "Crypto",
+        "TransportSecurity"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-007-169380",
+      "name": "Privacy notice completeness and transparency",
+      "description": "Public notice must cover categories of personal data, purposes, legal bases, sharing/‘sale’ disclosures (CCPA), retention periods, user rights and how to exercise them, and contact/appeals mechanisms.",
+      "tags": [
+        "GDPR",
+        "CCPA",
+        "PrivacyNotice",
+        "Transparency"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-008-169381",
+      "name": "Supplier due diligence and ongoing monitoring",
+      "description": "Vendor management must include risk assessment, security/privacy reviews, signed DPA/BAA as applicable, and annual re-assessments for high-risk vendors. Maintain a current vendor inventory.",
+      "tags": [
+        "GDPR",
+        "HIPAA",
+        "ISO27001",
+        "ThirdPartyRisk",
+        "VendorManagement"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-009-169382",
+      "name": "QMS corrective and preventive action (CAPA)",
+      "description": "ISO 9001 requires CAPA: documented root cause analysis, corrective actions, effectiveness checks, and closure criteria. Policies must reference CAPA logging and periodic management review inputs.",
+      "tags": [
+        "ISO9001",
+        "QMS",
+        "CAPA",
+        "ContinuousImprovement"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    },
+    {
+      "_id": "rb-010-169383",
+      "name": "Change management and validation",
+      "description": "Policies must require risk-based change control for systems impacting quality or security: approvals, testing/validation, rollback, and documented production sign-off. Tie to ISO 9001 (8.5.6) and ISO 27001 (A.12/A.14).",
+      "tags": [
+        "ISO9001",
+        "ISO27001",
+        "ChangeManagement",
+        "SDLC"
+      ],
+      "sourceType": "custom",
+      "updatedAt": "2025-09-03T16:03:50+05:30"
+    }
+  ]
+}
