@@ -6,6 +6,114 @@ import { Shield, FileText, CheckCircle, AlertTriangle, Download, Copy, BookOpen,
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+// Lightweight UI primitives (searchable multi-select and searchable select)
+function MultiSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select...",
+}: { options: string[]; value: string[]; onChange: (next: string[]) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+
+  const toggle = (opt: string) => {
+    if (value.includes(opt)) onChange(value.filter(v => v !== opt));
+    else onChange([...value, opt]);
+  };
+
+  const clearAll = () => onChange([]);
+  const selectAll = () => onChange([...options]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full border rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200"
+      >
+        <span className="truncate">
+          {value.length === 0 ? (
+            <span className="text-gray-400">{placeholder}</span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <span className="flex flex-wrap gap-1">
+                {value.slice(0, 3).map(v => (
+                  <span key={v} className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs border border-purple-200">{v}</span>
+                ))}
+              </span>
+              {value.length > 3 && (
+                <span className="text-xs text-gray-500">+{value.length - 3} more</span>
+              )}
+            </span>
+          )}
+        </span>
+        <span className="text-xs text-gray-500 mr-2">{value.length} selected</span>
+        <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 w-full bg-white border rounded-md shadow-lg">
+          <div className="p-2 border-b flex gap-2 items-center">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search frameworks..." className="flex-1 border rounded px-2 py-1 text-sm"/>
+            <button type="button" onClick={selectAll} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">All</button>
+            <button type="button" onClick={clearAll} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">Clear</button>
+          </div>
+          <div className="px-2 pt-2 text-[11px] text-gray-500">Quick select:</div>
+          <div className="px-2 pb-1 flex gap-1 flex-wrap">
+            {['GDPR','ISO 27001','SOC 2','NIST CSF','PCI DSS'].map(q => (
+              <button key={q} type="button" onClick={()=>toggle(q)} className="px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 border text-[11px]">{q}</button>
+            ))}
+          </div>
+          <div className="max-h-56 overflow-y-auto p-2 space-y-1">
+            {filtered.map(opt => (
+              <label key={opt} className="flex items-center gap-2 text-sm px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" className="accent-purple-600" checked={value.includes(opt)} onChange={()=>toggle(opt)} />
+                <span>{opt}</span>
+              </label>
+            ))}
+            {filtered.length === 0 && <div className="text-xs text-gray-500 px-2 py-1">No results</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select...",
+}: { options: string[]; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+  const current = value || "";
+  return (
+    <div className="relative">
+      <button type="button" onClick={()=>setOpen(!open)} className="w-full border rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-gray-50">
+        <span className={`truncate ${current ? '' : 'text-gray-400'}`}>{current || placeholder}</span>
+        <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 w-full bg-white border rounded-md shadow-lg">
+          <div className="p-2 border-b">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="w-full border rounded px-2 py-1 text-sm"/>
+          </div>
+          <div className="max-h-56 overflow-y-auto p-2">
+            {filtered.map(opt => (
+              <button key={opt} type="button" className="w-full text-left px-2 py-1 text-sm rounded hover:bg-gray-50" onClick={()=>{ onChange(opt); setOpen(false); }}>
+                {opt}
+              </button>
+            ))}
+            {filtered.length === 0 && <div className="text-xs text-gray-500 px-2 py-1">No results</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type GenInputs = {
   policyType: string;
   industry: string;
@@ -43,6 +151,53 @@ export default function PolicyGeneratorPage() {
   const canProceed1 = inputs.policyType.length > 0;
   const canProceed2 = true;
   const canGenerate = canProceed1 && canProceed2 && !isGenerating;
+
+  // Predefined lists
+  const AVAILABLE_FRAMEWORKS: string[] = [
+    'GDPR',
+    'ISO 27001',
+    'SOC 2',
+    'CCPA',
+    'DPDP Act',
+    'HIPAA',
+    'PCI DSS',
+    'NIST CSF',
+    'NIST 800-53',
+    'NIS2',
+    'DORA',
+    'ISO 22301',
+    'ISO 27701',
+    'ISO 9001',
+    'COBIT 2019',
+    'SOX',
+    'GLBA',
+    'FERPA',
+    'ITAR',
+    'FedRAMP',
+    'CSA CCM',
+    'CIS Controls',
+    'MAS TRMG',
+    'PDPA (Singapore)',
+    'UAE DPL',
+    'DIFC DPL',
+  ];
+
+  const AVAILABLE_REGIONS: string[] = [
+    'Global',
+    'India',
+    'United States',
+    'European Union',
+    'United Kingdom',
+    'Canada',
+    'Australia',
+    'Singapore',
+    'United Arab Emirates',
+    'Saudi Arabia',
+    'Qatar',
+    'Japan',
+    'South Korea',
+    'Brazil',
+  ];
 
   const toggleFramework = (fw: string) => {
     setInputs((prev) => ({
@@ -127,7 +282,12 @@ export default function PolicyGeneratorPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Region / Country</label>
-                <input className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.region} onChange={(e)=>setInputs({...inputs, region:e.target.value})} placeholder="e.g., EU, US, India" />
+                <SearchSelect
+                  options={AVAILABLE_REGIONS}
+                  value={inputs.region}
+                  onChange={(v)=>setInputs({...inputs, region: v})}
+                  placeholder="Search region/country..."
+                />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Organization Type</label>
@@ -142,11 +302,19 @@ export default function PolicyGeneratorPage() {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs text-gray-500 mb-1">Frameworks</label>
-                <div className="flex flex-wrap gap-2 text-sm">
-                  {['GDPR','ISO 27001','SOC 2','CCPA','DPDP Act','HIPAA'].map(fw => (
-                    <button type="button" key={fw} onClick={()=>toggleFramework(fw)} className={`px-3 py-1 rounded border ${inputs.frameworks.includes(fw)?'bg-purple-100 text-purple-800 border-purple-300':'hover:bg-gray-50'}`}>{fw}</button>
-                  ))}
-                </div>
+                <MultiSelect
+                  options={AVAILABLE_FRAMEWORKS}
+                  value={inputs.frameworks}
+                  onChange={(v)=>setInputs({...inputs, frameworks: v})}
+                  placeholder="Search and select frameworks..."
+                />
+                {inputs.frameworks.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {inputs.frameworks.map(fw => (
+                      <span key={fw} className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs border border-purple-200">{fw}</span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="md:col-span-2">
                 <label className="inline-flex items-center gap-2 text-sm">

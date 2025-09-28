@@ -106,7 +106,7 @@ export const AgentUploadFileRow = ({
       >
         <MoreHoriz
           className="Icon-color"
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent<HTMLElement>) => {
             setOpenIconButton(e.currentTarget);
           }}
         />

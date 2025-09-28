@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
+import { ContractCanvas } from "@/components/contract-review/ContractCanvas";
+import { useContractReviewStore } from "@/store/contractReview";
 
 interface ContractTemplate {
   id: string;
@@ -85,7 +87,7 @@ interface ContractReview {
 // Dynamic reviews will be loaded from API or user uploads
 const initialReviews: ContractReview[] = [];
 
-// Mock knowledge base templates
+// Knowledge base templates
 const knowledgeBaseTemplates: ContractTemplate[] = [
   {
     id: "service-agreement",
@@ -345,6 +347,9 @@ export default function ContractReview() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [applyRuleBase, setApplyRuleBase] = useState(false);
+  // Removed manual input - using only AI-powered document parsing
+  // Bridge to canvas store
+  const crStore = useContractReviewStore();
   
   // Audit logs state for selected template
   const [templateLogs, setTemplateLogs] = useState<any[]>([]);
@@ -360,6 +365,42 @@ export default function ContractReview() {
     if (!el) return;
     const amount = el.clientWidth * 0.8;
     el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+
+  // Server-side text extraction for uploaded files
+  const extractFileText = async (file: File): Promise<string> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/extract-document', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.error || 'Text extraction failed');
+      }
+      
+      const data = await response.json();
+      return data.text || '';
+    } catch (error) {
+      console.error('Text extraction failed:', error);
+      // Fallback to basic client-side extraction for text files
+      if (file.type.includes('text') || file.name.endsWith('.txt')) {
+        try {
+          return await file.text();
+        } catch {
+          return '';
+        }
+      }
+      // For PDFs, provide a helpful error message
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        throw new Error('Gemini AI could not parse this PDF. Please try a different PDF file or use the manual text input option.');
+      }
+      throw error;
+    }
   };
 
   // Compute inline diff HTML between original extracted text and editedText
@@ -590,6 +631,13 @@ export default function ContractReview() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Clear any existing extracted data when new file is uploaded
+      setExtractedDocument(null);
+      setEditedText('');
+      crStore.setExtractedDocument(null);
+      crStore.setSuggestions([]);
+      setCurrentStep(3); // Reset to upload step
+      
       setUploadedFile(file);
     }
   };
@@ -690,14 +738,14 @@ export default function ContractReview() {
 
   const handleAssetSelect = (asset: any) => {
     // Convert asset to File-like object for consistency with file upload
-    const mockFile = {
+    const assetFile = {
       name: asset.name,
       size: asset.size || 0,
       type: asset.type || 'application/pdf',
       lastModified: asset.lastModified || Date.now()
     } as File;
     
-    setUploadedFile(mockFile);
+    setUploadedFile(assetFile);
     setIsAssetPickerOpen(false);
   };
 
@@ -705,7 +753,7 @@ export default function ContractReview() {
     { id: 1, title: "Select Template", description: "Choose a baseline template from knowledge base" },
     { id: 2, title: "Template Boilerplate", description: "Review format or provide your own template" },
     { id: 3, title: "Upload Contract", description: "Upload your contract document" },
-    { id: 4, title: "Review & Analyze", description: "Review extracted text with highlighted gaps" },
+    { id: 4, title: "Canvas Review", description: "Interactive canvas with inline suggestions and diffs" },
     { id: 5, title: "Make Corrections", description: "Edit and finalize the document" }
   ];
 
@@ -718,110 +766,124 @@ export default function ContractReview() {
       ? !!selectedTemplate
       : (!!customTemplateName || !!customTemplateText);
     if (!uploadedFile || !hasTemplateContext) return;
+    
+    // Clear any existing data and reset error state
+    setExtractedDocument(null);
+    setEditedText('');
+    crStore.setExtractedDocument(null);
+    crStore.setSuggestions([]);
+    crStore.setError(null);
+    
     // Ensure no stale analysis timers are running
     if (analyzeTimerRef.current) {
       clearTimeout(analyzeTimerRef.current);
       analyzeTimerRef.current = null;
     }
+    
     setIsAnalyzing(true);
     try {
-      // Mock document extraction and analysis
-      const mockExtractedText = `SERVICE AGREEMENT
+      // Extract text from uploaded file or use manual input
+      let extractedText = '';
+      
+      extractedText = await extractFileText(uploadedFile);
+      if (!extractedText.trim()) {
+        throw new Error('Could not extract text from the uploaded file. Please try a different PDF or contact support.');
+      }
 
-This Agreement is made between ABC Corp and XYZ Services.
+      // Build template clauses for analysis
+      const clauses = selectedTemplate?.sections?.map(s => ({
+        title: s.title,
+        content: s.content || '',
+        isRequired: s.isRequired,
+        priority: s.priority,
+        guidelines: s.guidelines || []
+      })) || [];
 
-SCOPE OF WORK:
-Provider will deliver consulting services as needed.
+      // Call Gemini API for analysis
+      const response = await fetch('/api/contract-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: extractedText, 
+          templateClauses: clauses, 
+          contractType: selectedTemplate?.name || 'Contract' 
+        })
+      });
 
-PAYMENT:
-Payment due within 30 days.
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.error || 'Analysis failed');
+      }
 
-TERMINATION:
-Either party may terminate with notice.
-
-The parties agree to the terms herein.`;
-
-      const mockGaps: DocumentGap[] = [
-        {
-          id: "gap-1",
-          sectionTitle: "Parties",
-          gapType: "incomplete",
-          severity: "high",
-          description: "Missing legal entity details and addresses",
-          recommendation: "Include full legal names, addresses, and entity types",
-          startIndex: 45,
-          endIndex: 85,
-          originalText: "ABC Corp and XYZ Services",
-          suggestedText: "ABC Corp, a Delaware corporation located at [Address], and XYZ Services LLC, a limited liability company located at [Address]"
-        },
-        {
-          id: "gap-2",
-          sectionTitle: "Scope of Services",
-          gapType: "weak",
-          severity: "critical",
-          description: "Vague scope definition lacks specificity",
-          recommendation: "Define specific deliverables, timelines, and success criteria",
-          startIndex: 120,
-          endIndex: 170,
-          originalText: "Provider will deliver consulting services as needed",
-          suggestedText: "Provider will deliver the following consulting services: [List specific services], with deliverables due on [specific dates], meeting the following criteria: [success metrics]"
-        },
-        {
-          id: "gap-3",
-          sectionTitle: "Limitation of Liability",
-          gapType: "missing",
-          severity: "critical",
-          description: "Missing liability limitation clause",
-          recommendation: "Add comprehensive liability limitation and indemnification clauses",
-          startIndex: -1,
-          endIndex: -1,
-          suggestedText: "LIMITATION OF LIABILITY: Neither party shall be liable for indirect, incidental, or consequential damages. Total liability shall not exceed the amount paid under this agreement."
-        }
-      ];
-
-      const mockDocument: ExtractedDocument = {
-        id: "doc-1",
+      const analysisData = await response.json();
+      
+      // Create document with real analysis results
+      const document: ExtractedDocument = {
+        id: `doc-${Date.now()}`,
         fileName: uploadedFile.name,
-        fullText: mockExtractedText,
-        sections: [
-          {
-            id: "sec-1",
-            title: "Parties",
-            content: "This Agreement is made between ABC Corp and XYZ Services.",
-            startIndex: 40,
-            endIndex: 100,
-            hasGaps: true,
-            gapIds: ["gap-1"]
-          },
-          {
-            id: "sec-2",
-            title: "Scope of Work",
-            content: "Provider will deliver consulting services as needed.",
-            startIndex: 120,
-            endIndex: 170,
-            hasGaps: true,
-            gapIds: ["gap-2"]
-          },
-          {
-            id: "sec-3",
-            title: "Limitation of Liability",
-            content: "",
-            startIndex: -1,
-            endIndex: -1,
-            hasGaps: true,
-            gapIds: ["gap-3"]
-          }
-        ],
-        gaps: mockGaps,
-        overallScore: 45,
+        fullText: extractedText,
+        sections: [], // Could be enhanced to detect sections
+        gaps: (analysisData.suggestions || []).map((s: any, idx: number) => ({
+          id: s.id || `gap_${idx}`,
+          sectionTitle: s.section || 'General',
+          gapType: s.type === 'addition' ? 'missing' : (s.type === 'deletion' ? 'non-compliant' : 'weak'),
+          severity: s.severity || 'medium',
+          description: s.reasoning || 'Suggested improvement',
+          recommendation: s.legalImplications || s.reasoning || '',
+          startIndex: s.startIndex || 0,
+          endIndex: s.endIndex || 0,
+          originalText: s.originalText || '',
+          suggestedText: s.suggestedText || '',
+        })),
+        overallScore: Math.round((analysisData.overallScore || 0.7) * 100),
         templateId: selectedTemplate?.id || 'custom'
       };
 
-      setExtractedDocument(mockDocument);
-      setEditedText(mockExtractedText);
+      setExtractedDocument(document);
+      setEditedText(extractedText);
       setCurrentStep(4);
+
+      // Sync with canvas store for interactive editing
+      crStore.setExtractedDocument({
+        id: document.id,
+        fileName: document.fileName,
+        fullText: extractedText,
+        sections: document.sections as any,
+        gaps: document.gaps as any,
+        overallScore: document.overallScore,
+        templateId: document.templateId,
+        metadata: { pageCount: 1, extractedAt: new Date(), fileSize: uploadedFile.size }
+      } as any);
+
+      // Map suggestions for canvas interactions
+      const suggestions = (analysisData.suggestions || []).map((s: any, idx: number) => ({
+        id: s.id || `sug_${idx}`,
+        type: s.type || 'modification',
+        severity: s.severity || 'medium',
+        category: s.category || 'clarity',
+        confidence: s.confidence || 0.7,
+        originalText: s.originalText || '',
+        suggestedText: s.suggestedText || '',
+        startIndex: Math.max(0, s.startIndex || 0),
+        endIndex: Math.max(s.startIndex || 0, s.endIndex || 0),
+        reasoning: s.reasoning || '',
+        legalImplications: s.legalImplications || '',
+        riskLevel: s.riskLevel || 'medium',
+        section: s.section || 'General',
+        timestamp: new Date(),
+        status: 'pending' as const,
+        clauseType: s.clauseType || ''
+      }));
+      
+      crStore.setSuggestions(suggestions as any);
     } catch (error) {
-      console.error('Document extraction failed:', error);
+      console.error('Document extraction and analysis failed:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Set error in store instead of alert to prevent async issues
+      crStore.setError(`Document processing failed: ${errorMessage}`);
+      console.error('Document processing failed:', errorMessage);
     } finally {
       setIsAnalyzing(false);
     }
@@ -1424,7 +1486,7 @@ The parties agree to the terms herein.`;
             </div>
           )}
 
-          {/* Step 4: Review & Analyze */}
+          {/* Step 4: Canvas Review */}
           {currentStep === 4 && (
             <div className="space-y-8">
               <Card>
@@ -1441,305 +1503,19 @@ The parties agree to the terms herein.`;
                   </div>
                 </CardContent>
               </Card>
-              <div className="grid md:grid-cols-2 gap-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">Selected Template / Contract Type</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedTemplate ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <BookOpen className="h-5 w-5 text-primary" />
-                          <span className="text-sm font-bold">{selectedTemplate.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Badge variant="outline">{selectedTemplate.type}</Badge>
-                          {selectedTemplate.isBaseline && (
-                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">Baseline</Badge>
-                          )}
-                          <span>Updated: {selectedTemplate.lastUpdated}</span>
-                        </div>
-                      </div>
-                    ) : selectedContractTypes.length > 0 ? (
-                      <div className="space-y-2">
-                        {selectedContractTypes.map(typeId => {
-                          const selectedType = contractTypes.find(t => t.id === typeId);
-                          if (!selectedType) return null;
-                          const Icon = selectedType.icon;
-                          return (
-                            <div key={typeId} className="flex items-center gap-3">
-                              <Icon className="h-5 w-5 text-primary" />
-                              <span className="text-sm font-bold">{selectedType.name}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No template or contract type selected</p>
-                    )}
-                  </CardContent>
-                </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">Document</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {uploadedFile ? (
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-bold">{uploadedFile.name}</p>
-                          <p className="text-xs text-muted-foreground font-medium">
-                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No file selected</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Analysis Progress */}
-              {isAnalyzing && (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-full">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
-                      <span className="text-primary font-bold">Analyzing Contract...</span>
-                    </div>
-                  </div>
-                  <div className="max-w-md mx-auto">
-                    <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                      <span>Analysis Progress</span>
-                      <span>Processing...</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      AI is reviewing your contract against reference templates
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Guidance panel to utilize space when idle */}
-              {!isAnalyzing && !extractedDocument && (
+              {!extractedDocument && (
                 <Alert className="mt-2">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Before you proceed</AlertTitle>
+                  <AlertTitle>Ready to analyze your contract</AlertTitle>
                   <AlertDescription>
-                    Ensure the selected template matches your document. Click "Extract & Analyze" to detect gaps and risks. Sensitive data should be reviewed before sharing.
+                    Click "Extract & Analyze" to use Gemini Flash 2.0 AI to parse your document and open the interactive canvas.
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Extracted text with highlighted gaps */}
-              {extractedDocument && (
-                <div className="grid md:grid-cols-2 gap-8">
-                  <Card className="overflow-hidden">
-                    <CardHeader>
-                      <div className="flex items-center justify-between gap-3">
-                        <CardTitle className="text-lg font-bold">Extracted Text</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <div className="inline-flex rounded-md border border-[var(--card-border-color)] p-0.5">
-                            <button
-                              onClick={() => setEditorMode('highlight')}
-                              className={`cursor-pointer px-2 py-1 text-xs rounded ${editorMode === 'highlight' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60'}`}
-                            >
-                              Highlight
-                            </button>
-                            <button
-                              onClick={() => setEditorMode('edit')}
-                              className={`cursor-pointer px-2 py-1 text-xs rounded ${editorMode === 'edit' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60'}`}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setEditorMode('diff')}
-                              className={`cursor-pointer px-2 py-1 text-xs rounded ${editorMode === 'diff' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60'}`}
-                            >
-                              Diff
-                            </button>
-                          </div>
-                          <div className="hidden md:flex items-center gap-2">
-                            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-                              <SelectTrigger className="h-8 w-[180px]">
-                                <SelectValue placeholder="Model" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="extracted">Extracted Text</SelectItem>
-                                <SelectItem value="chatgpt">ChatGPT</SelectItem>
-                                <SelectItem value="claude">Claude</SelectItem>
-                                <SelectItem value="grok">Grok</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button size="sm" variant="outline" className="cursor-pointer" onClick={generateModelDrafts}>
-                              Generate Drafts
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {/* When drafts are present, show model tabs and inline diff for the selected model */}
-                      {Object.keys(modelDrafts).length > 0 && (
-                        <div className="mb-3">
-                          <div className="flex items-center gap-1">
-                            {(["extracted","chatgpt","claude","grok"] as const).map((id) => (
-                              <button
-                                key={id}
-                                onClick={() => setSelectedModelId(id)}
-                                className={`cursor-pointer px-2 py-1 text-xs rounded border ${selectedModelId===id? 'bg-muted text-foreground border-[var(--card-border-color)]' : 'text-muted-foreground hover:bg-muted/60 border-transparent'}`}
-                              >
-                                {id === 'extracted' ? 'Extracted Text' : id.charAt(0).toUpperCase()+id.slice(1)}
-                              </button>
-                            ))}
-                            <div className="ml-auto">
-                              <Button size="sm" variant="secondary" className="cursor-pointer" onClick={() => setEditedText(modelDrafts[selectedModelId] || extractedDocument?.fullText || '')}>
-                                Apply to Editor
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="mt-2 text-xs text-muted-foreground">Inline diff • <span className="bg-emerald-200/70 px-1 rounded">Added</span> <span className="bg-red-200/70 line-through px-1 rounded">Removed</span></div>
-                          <div
-                            className="min-h-[220px] whitespace-pre-wrap font-mono text-sm border rounded-md p-4"
-                            dangerouslySetInnerHTML={{ __html: inlineDiffHtml(extractedDocument?.fullText ?? '', modelDrafts[selectedModelId] ?? '') }}
-                          />
-                        </div>
-                      )}
 
-                      {editorMode === 'highlight' && (
-                        <div
-                          className="prose dark:prose-invert max-w-none border rounded-md p-4"
-                          dangerouslySetInnerHTML={{ __html: highlightGaps(extractedDocument?.fullText ?? '', extractedDocument?.gaps ?? []) }}
-                        />
-                      )}
-
-                      {editorMode === 'edit' && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-muted-foreground">Canvas editor • Click and type to edit</div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="cursor-pointer"
-                                onClick={() => setEditedText(extractedDocument?.fullText ?? '')}
-                              >
-                                Reset to Original
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="cursor-pointer"
-                                onClick={() => navigator.clipboard.writeText(editedText)}
-                              >
-                                Copy
-                              </Button>
-                            </div>
-                          </div>
-                          <textarea
-                            value={editedText}
-                            onChange={(e) => setEditedText(e.target.value)}
-                            className="min-h-[300px] w-full whitespace-pre-wrap font-mono text-sm border rounded-md p-4 outline-none focus:ring-2 focus:ring-ring bg-background resize-none"
-                            placeholder="Click here to edit the extracted text..."
-                          />
-                        </div>
-                      )}
-
-                      {editorMode === 'diff' && (
-                        <div className="space-y-2">
-                          <div className="text-xs text-muted-foreground">Inline diff • <span className="bg-emerald-200/70 px-1 rounded">Added</span> <span className="bg-red-200/70 line-through px-1 rounded">Removed</span></div>
-                          <div
-                            className="min-h-[300px] whitespace-pre-wrap font-mono text-sm border rounded-md p-4"
-                            dangerouslySetInnerHTML={{ __html: inlineDiffHtml(extractedDocument?.fullText ?? '', editedText) }}
-                          />
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-bold">Identified Gaps</CardTitle>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={acceptAllSuggestions}
-                          disabled={!((extractedDocument?.gaps?.length ?? 0) > 0)}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Accept All
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {(extractedDocument?.gaps?.length ?? 0) === 0 ? (
-                        <p className="text-sm text-muted-foreground">No gaps detected.</p>
-                      ) : (
-                        <div className="space-y-4">
-                          {(extractedDocument?.gaps ?? []).map((gap: DocumentGap) => {
-                            return (
-                              <div key={gap.id} className="rounded-md border p-4 bg-background">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs capitalize">{gap.severity}</Badge>
-                                    <div className="text-sm text-muted-foreground">{gap.gapType.replace('-', ' ')}</div>
-                                  </div>
-                                  {gap.suggestedText && (
-                                    <Button size="sm" variant="outline" onClick={() => applyGapSuggestion(gap)}>
-                                      Apply Suggestion
-                                    </Button>
-                                  )}
-                                </div>
-                                <div className="mt-2 text-sm">
-                                  <div className="font-semibold">{gap.sectionTitle}</div>
-                                  <div className="mt-1 text-muted-foreground">{gap.description}</div>
-                                  <div className="mt-2 text-xs text-muted-foreground">Recommendation: {gap.recommendation}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Missing Clauses quick list */}
-              {extractedDocument && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold">Missing Clauses</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {extractedDocument.gaps.filter(g => g.gapType === 'missing').length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No missing clauses detected.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {extractedDocument.gaps.filter(g => g.gapType === 'missing').map(g => (
-                          <div key={g.id} className="flex items-start justify-between gap-3 border rounded-md p-3">
-                            <div>
-                              <div className="text-sm font-medium">{g.sectionTitle}</div>
-                              <div className="text-xs text-muted-foreground">{g.description}</div>
-                            </div>
-                            {g.suggestedText && (
-                              <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => applyGapSuggestion(g)}>Insert</Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+              {extractedDocument && <ContractCanvas />}
             </div>
           )}
 
@@ -1926,21 +1702,34 @@ The parties agree to the terms herein.`;
           {currentStep === 4 && !extractedDocument && (
             <Button
               onClick={handleDocumentExtraction}
-              disabled={!canExtract || isAnalyzing}
+              disabled={!uploadedFile || isAnalyzing}
               className="flex items-center gap-2"
             >
               {isAnalyzing ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Analyzing...
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  Analyzing Document...
                 </>
               ) : (
                 <>
                   <FileText className="h-4 w-4" />
-                  Extract
+                  Extract & Analyze with AI
                 </>
               )}
             </Button>
+          )}
+          
+          {isAnalyzing && (
+            <div className="mt-2 text-sm text-blue-600">
+              <div className="flex items-center gap-2">
+                <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
+                Gemini AI is analyzing your entire document for suggestions...
+              </div>
+            </div>
+          )}
+
+          {currentStep === 4 && !extractedDocument && (
+            <div></div>
           )}
 
           {currentStep === 4 && extractedDocument && (

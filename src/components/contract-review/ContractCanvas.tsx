@@ -9,7 +9,13 @@ import {
   EyeOff,
   CheckCircle,
   X,
-  Undo2
+  Undo2,
+  History,
+  RotateCcw,
+  Clock,
+  GitBranch,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useContractReviewStore } from '@/store/contractReview';
 
@@ -24,6 +30,7 @@ export const ContractCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData>({ x: 0, y: 0, suggestion: null, visible: false });
   const [showHighlights, setShowHighlights] = useState(true);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   
   const { 
     currentText, 
@@ -32,7 +39,13 @@ export const ContractCanvas: React.FC = () => {
     acceptSuggestion,
     rejectSuggestion,
     revertSuggestion,
-    appliedFixes
+    appliedFixes,
+    // Version control
+    versions,
+    currentVersion,
+    switchToVersion,
+    revertAllChanges,
+    undoLastFix
   } = useContractReviewStore();
 
   const getSeverityColor = (severity: string) => {
@@ -43,6 +56,110 @@ export const ContractCanvas: React.FC = () => {
       case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const getHighlightColor = (suggestion: any) => {
+    switch (suggestion.type) {
+      case 'addition': return 'bg-green-200 border-l-4 border-green-500 text-green-900';
+      case 'deletion': return 'bg-red-200 border-l-4 border-red-500 text-red-900 line-through';
+      case 'modification': return 'bg-yellow-200 border-l-4 border-yellow-500 text-yellow-900';
+      case 'replacement': return 'bg-blue-200 border-l-4 border-blue-500 text-blue-900';
+      default: return 'bg-gray-200 border-l-4 border-gray-500 text-gray-900';
+    }
+  };
+
+  const handleAcceptSuggestion = (suggestionId: string) => {
+    acceptSuggestion(suggestionId);
+  };
+
+  const handleRejectSuggestion = (suggestionId: string) => {
+    rejectSuggestion(suggestionId);
+  };
+
+  const formatTimestamp = (date: Date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  const renderVersionHistory = () => {
+    if (!showVersionHistory || versions.length === 0) return null;
+
+    return (
+      <Card className="mt-4">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <GitBranch className="h-4 w-4" />
+              Version History ({versions.length} versions)
+            </h4>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={undoLastFix}
+                disabled={appliedFixes.length === 0}
+                className="text-xs"
+              >
+                <Undo2 className="h-3 w-3 mr-1" />
+                Undo Last
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={revertAllChanges}
+                disabled={currentVersion === 0}
+                className="text-xs"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Reset All
+              </Button>
+            </div>
+          </div>
+          
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {versions.map((version) => (
+              <div
+                key={version.id}
+                className={`p-3 rounded border cursor-pointer transition-colors ${
+                  version.version === currentVersion
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                }`}
+                onClick={() => switchToVersion(version.version)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={version.version === currentVersion ? "default" : "secondary"} className="text-xs">
+                      v{version.version}
+                    </Badge>
+                    {version.version === currentVersion && (
+                      <Badge variant="outline" className="text-xs">Current</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="h-3 w-3" />
+                    {formatTimestamp(version.timestamp)}
+                  </div>
+                </div>
+                
+                <div className="mt-1">
+                  <p className="text-sm text-gray-700">{version.description}</p>
+                  {version.appliedSuggestionTitle && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Applied: {version.appliedSuggestionTitle}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderTextWithInlineDiffs = () => {
@@ -78,111 +195,71 @@ export const ContractCanvas: React.FC = () => {
             key={suggestion.id}
             className="relative inline-block group"
           >
+            {/* Deletion - Simple red highlight with inline buttons */}
             {suggestion.type === 'deletion' && (
-              <span className="bg-red-200 px-1 rounded line-through decoration-2 text-red-800 relative">
-                {suggestion.originalText}
-                <div className="absolute top-full left-0 mt-1 hidden group-hover:flex gap-1 z-10">
-                  <Button
-                    size="sm"
+              <span className="bg-red-100 border-l-4 border-red-500 px-2 py-1 relative group">
+                <span className="line-through text-red-800">{suggestion.originalText}</span>
+                <span className="ml-2 inline-flex gap-1">
+                  <button
                     onClick={() => handleAcceptSuggestion(suggestion.id)}
-                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 h-6 rounded"
+                    className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    title={suggestion.reasoning}
                   >
-                    Accept
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                    Remove
+                  </button>
+                  <button
                     onClick={() => handleRejectSuggestion(suggestion.id)}
-                    className="text-xs border border-red-600 text-red-600 hover:bg-red-50 px-2 py-1 h-6 rounded"
+                    className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
                   >
-                    Reject
-                  </Button>
-                  {patchStates[suggestion.id] === 'accepted' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => revertSuggestion(suggestion.id)}
-                      className="text-xs border border-blue-600 text-blue-600 hover:bg-blue-50 px-2 py-1 h-6 rounded flex items-center gap-1"
-                    >
-                      <Undo2 className="h-3 w-3" />
-                      Undo
-                    </Button>
-                  )}
-                </div>
+                    Keep
+                  </button>
+                </span>
               </span>
             )}
+
+            {/* Addition - Simple green highlight with inline buttons */}
             {suggestion.type === 'addition' && (
-              <>
-                <span>{suggestion.originalText}</span>
-                <span className="bg-green-200 px-1 rounded text-green-800 ml-1 relative group">
-                  {suggestion.suggestedText}
-                  <div className="absolute top-full left-0 mt-1 hidden group-hover:flex gap-1 z-10">
-                    <Button
-                      size="sm"
-                      onClick={() => handleAcceptSuggestion(suggestion.id)}
-                      className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 h-6 rounded"
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRejectSuggestion(suggestion.id)}
-                      className="text-xs border border-red-600 text-red-600 hover:bg-red-50 px-2 py-1 h-6 rounded"
-                    >
-                      Reject
-                    </Button>
-                    {patchStates[suggestion.id] === 'accepted' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => revertSuggestion(suggestion.id)}
-                        className="text-xs border border-blue-600 text-blue-600 hover:bg-blue-50 px-2 py-1 h-6 rounded flex items-center gap-1"
-                      >
-                        <Undo2 className="h-3 w-3" />
-                        Undo
-                      </Button>
-                    )}
-                  </div>
-                </span>
-              </>
-            )}
-            {(suggestion.type === 'modification' || suggestion.type === 'replacement') && (
-              <span className="relative group">
-                <span className="bg-red-200 px-1 rounded line-through decoration-2 text-red-800">
-                  {suggestion.originalText}
-                </span>
-                <span className="bg-green-200 px-1 rounded text-green-800 ml-1">
-                  {suggestion.suggestedText}
-                </span>
-                <div className="absolute top-full left-0 mt-1 hidden group-hover:flex gap-1 z-10">
-                  <Button
-                    size="sm"
+              <span className="bg-green-100 border-l-4 border-green-500 px-2 py-1 relative">
+                <span className="text-green-800 font-medium">{suggestion.suggestedText}</span>
+                <span className="ml-2 inline-flex gap-1">
+                  <button
                     onClick={() => handleAcceptSuggestion(suggestion.id)}
-                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 h-6 rounded"
+                    className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                    title={suggestion.reasoning}
                   >
-                    Accept
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                    Add
+                  </button>
+                  <button
                     onClick={() => handleRejectSuggestion(suggestion.id)}
-                    className="text-xs border border-red-600 text-red-600 hover:bg-red-50 px-2 py-1 h-6 rounded"
+                    className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
                   >
-                    Reject
-                  </Button>
-                  {patchStates[suggestion.id] === 'accepted' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => revertSuggestion(suggestion.id)}
-                      className="text-xs border border-blue-600 text-blue-600 hover:bg-blue-50 px-2 py-1 h-6 rounded flex items-center gap-1"
-                    >
-                      <Undo2 className="h-3 w-3" />
-                      Undo
-                    </Button>
-                  )}
-                </div>
+                    Skip
+                  </button>
+                </span>
+              </span>
+            )}
+
+            {/* Modification - Simple yellow highlight with inline buttons */}
+            {(suggestion.type === 'modification' || suggestion.type === 'replacement') && (
+              <span className="bg-yellow-100 border-l-4 border-yellow-500 px-2 py-1 relative">
+                <span className="line-through text-red-700">{suggestion.originalText}</span>
+                <span className="mx-2">→</span>
+                <span className="text-green-700 font-medium">{suggestion.suggestedText}</span>
+                <span className="ml-2 inline-flex gap-1">
+                  <button
+                    onClick={() => handleAcceptSuggestion(suggestion.id)}
+                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                    title={suggestion.reasoning}
+                  >
+                    Change
+                  </button>
+                  <button
+                    onClick={() => handleRejectSuggestion(suggestion.id)}
+                    className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
+                  >
+                    Keep
+                  </button>
+                </span>
               </span>
             )}
           </span>
@@ -194,57 +271,125 @@ export const ContractCanvas: React.FC = () => {
 
     if (lastIndex < currentText.length) {
       textElements.push(
-        <span key="text-end">
+        <span key="final-text">
           {currentText.slice(lastIndex)}
         </span>
       );
     }
 
-    return textElements;
-  };
-
-  const handleAcceptSuggestion = (suggestionId: string) => {
-    acceptSuggestion(suggestionId);
-  };
-
-  const handleRejectSuggestion = (suggestionId: string) => {
-    rejectSuggestion(suggestionId);
+    return <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{textElements}</div>;
   };
 
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setShowHighlights(!showHighlights)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                {showHighlights ? 'Hide' : 'Show'} Highlights
-              </Button>
+    <Card className="w-full">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold">Contract Canvas - AI Analysis</h3>
+            <p className="text-sm text-gray-600">Real-time suggestions throughout your document</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHighlights(!showHighlights)}
+              className="flex items-center gap-2"
+            >
+              {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showHighlights ? 'Hide' : 'Show'} Highlights
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowVersionHistory(!showVersionHistory)}
+              className="flex items-center gap-2"
+            >
+              <History className="h-4 w-4" />
+              {showVersionHistory ? 'Hide' : 'Show'} History
+            </Button>
+            
+            {versions.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => switchToVersion(Math.max(0, currentVersion - 1))}
+                  disabled={currentVersion === 0}
+                  className="p-1"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Badge variant="default" className="text-xs px-2">
+                  v{currentVersion}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => switchToVersion(Math.min(versions.length - 1, currentVersion + 1))}
+                  disabled={currentVersion === versions.length - 1}
+                  className="p-1"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            <Badge variant="secondary" className="text-xs">
+              {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {suggestions.length} total suggestions
+            </Badge>
+          </div>
+        </div>
+        
+        <div 
+          ref={containerRef}
+          className="border rounded-lg p-4 bg-white min-h-[400px] max-h-[600px] overflow-y-auto"
+        >
+          {showHighlights ? renderTextWithInlineDiffs() : (
+            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {currentText}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
 
-      {/* Document Container with Inline Diffs */}
-      <Card>
-        <CardContent className="p-6">
-          <div
-            ref={containerRef}
-            className="prose prose-lg max-w-none leading-relaxed text-gray-800"
-            style={{ lineHeight: '1.8' }}
-          >
-            {renderTextWithInlineDiffs()}
+        {suggestions.length > 0 && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <div className="flex gap-4">
+                <span>✅ {suggestions.filter(s => patchStates[s.id] === 'accepted').length} accepted</span>
+                <span>❌ {suggestions.filter(s => patchStates[s.id] === 'rejected').length} rejected</span>
+                <span>⏳ {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending</span>
+              </div>
+              <div className="flex gap-4">
+                <span className="inline-flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-200 border border-green-500 rounded"></div>
+                  Add ({suggestions.filter(s => s.type === 'addition').length})
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-200 border border-red-500 rounded"></div>
+                  Remove ({suggestions.filter(s => s.type === 'deletion').length})
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <div className="w-3 h-3 bg-yellow-200 border border-yellow-500 rounded"></div>
+                  Modify ({suggestions.filter(s => s.type === 'modification' || s.type === 'replacement').length})
+                </span>
+              </div>
+            </div>
+            
+            {suggestions.filter(s => patchStates[s.id] === 'pending').length > 0 && (
+              <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                💡 Tip: Hover over buttons to see why each change is suggested. Click to accept or reject.
+              </div>
+            )}
           </div>
-          
-        </CardContent>
-      </Card>
-    </div>
+        )}
+
+        {/* Version History Panel */}
+        {renderVersionHistory()}
+      </CardContent>
+    </Card>
   );
 };
