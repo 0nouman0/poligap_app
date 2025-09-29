@@ -138,6 +138,7 @@ export interface ContractReviewState {
   // Version history
   versions: DocumentVersion[];
   currentVersion: number;
+  hasUnsavedChanges: boolean;
   
   // Actions
   setStructuredDoc: (doc: StructuredDoc | null) => void;
@@ -163,6 +164,7 @@ export interface ContractReviewState {
   switchToVersion: (version: number) => void;
   updateCurrentText: (text: string) => void;
   exportRevisedDocument: () => string;
+  saveChanges: () => void;
   resetState: () => void;
 }
 
@@ -312,6 +314,7 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
   // Version history
   versions: [],
   currentVersion: 0,
+  hasUnsavedChanges: false,
 
   // Actions
   setStructuredDoc: (doc) => set({ structuredDoc: doc }),
@@ -398,16 +401,11 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
       suggestions: updatedSuggestions,
       currentText: newText,
       patchStates: { ...state.patchStates, [id]: 'accepted' },
-      appliedFixes: [...state.appliedFixes, id]
+      appliedFixes: [...state.appliedFixes, id],
+      hasUnsavedChanges: true // Track that there are unsaved changes
     });
 
-    // Create a new version after applying the suggestion
-    const suggestionTitle = `${suggestion.category} - ${suggestion.clauseType}`;
-    get().createVersion(
-      `Applied ${suggestion.type}: ${suggestionTitle}`,
-      suggestion.id,
-      suggestionTitle
-    );
+    // Note: Version creation is now handled only when user clicks save
   },
   
   rejectSuggestion: (id) => {
@@ -420,7 +418,8 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
 
     set({
       suggestions: updatedSuggestions,
-      patchStates: { ...state.patchStates, [id]: 'rejected' }
+      patchStates: { ...state.patchStates, [id]: 'rejected' },
+      hasUnsavedChanges: true
     });
   },
   
@@ -585,9 +584,27 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
     if (targetVersion) {
       set({
         currentText: targetVersion.content,
-        currentVersion: version
+        currentVersion: version,
+        hasUnsavedChanges: false
       });
     }
+  },
+
+  saveChanges: () => {
+    const state = get();
+    if (!state.hasUnsavedChanges) return;
+
+    // Create a new version with current changes
+    const acceptedSuggestions = state.suggestions.filter(s => s.status === 'accepted');
+    const description = acceptedSuggestions.length > 0 
+      ? `Saved changes: ${acceptedSuggestions.length} suggestions applied`
+      : 'Saved document changes';
+
+    get().createVersion(description);
+    
+    set({
+      hasUnsavedChanges: false
+    });
   },
   
   resetState: () => set({
@@ -607,6 +624,7 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
     appliedFixes: [],
     currentGapIndex: 0,
     versions: [],
-    currentVersion: 0
+    currentVersion: 0,
+    hasUnsavedChanges: false
   })
 }));

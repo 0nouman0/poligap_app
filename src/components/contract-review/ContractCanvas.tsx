@@ -15,7 +15,8 @@ import {
   Clock,
   GitBranch,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Save
 } from 'lucide-react';
 import { useContractReviewStore } from '@/store/contractReview';
 
@@ -43,9 +44,11 @@ export const ContractCanvas: React.FC = () => {
     // Version control
     versions,
     currentVersion,
+    hasUnsavedChanges,
     switchToVersion,
     revertAllChanges,
-    undoLastFix
+    undoLastFix,
+    saveChanges
   } = useContractReviewStore();
 
   const getSeverityColor = (severity: string) => {
@@ -285,10 +288,28 @@ export const ContractCanvas: React.FC = () => {
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold">Contract Canvas - AI Analysis</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">Contract Canvas - AI Analysis</h3>
+              {hasUnsavedChanges && (
+                <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                  Unsaved Changes
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-gray-600">Real-time suggestions throughout your document</p>
           </div>
           <div className="flex items-center gap-2">
+            {hasUnsavedChanges && (
+              <Button
+                size="sm"
+                onClick={saveChanges}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            )}
+            
             <Button
               variant="outline"
               size="sm"

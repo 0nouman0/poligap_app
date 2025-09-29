@@ -1475,6 +1475,25 @@ export default function ContractReview() {
                 </Card>
               </div>
 
+              {/* Analysis Configuration */}
+              {uploadedFile && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Analysis Configuration</CardTitle>
+                    <CardDescription>Configure how your contract will be analyzed</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Apply RuleBase</div>
+                        <div className="text-sm text-muted-foreground">Use your custom company rules during analysis</div>
+                      </div>
+                      <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Upload Tips */}
               <Alert>
                 <Info className="h-4 w-4" />
@@ -1488,32 +1507,16 @@ export default function ContractReview() {
 
           {/* Step 4: Canvas Review */}
           {currentStep === 4 && (
-            <div className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Analysis Options</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">Apply RuleBase</div>
-                      <div className="text-sm text-muted-foreground">Use your custom company rules during analysis</div>
-                    </div>
-                    <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
-                  </div>
-                </CardContent>
-              </Card>
-
+            <div className="space-y-6">
               {!extractedDocument && (
-                <Alert className="mt-2">
+                <Alert>
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Ready to analyze your contract</AlertTitle>
                   <AlertDescription>
-                    Click "Extract & Analyze" to use Gemini Flash 2.0 AI to parse your document and open the interactive canvas.
+                    Click "Extract & Analyze with AI" to use Gemini Flash 2.0 AI to parse your document and open the interactive canvas.
                   </AlertDescription>
                 </Alert>
               )}
-
 
               {extractedDocument && <ContractCanvas />}
             </div>
