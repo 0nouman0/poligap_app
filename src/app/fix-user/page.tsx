@@ -32,7 +32,7 @@ export default function FixUserPage() {
     }
   };
 
-  const useExistingUser = (userId: string) => {
+  const selectExistingUser = (userId: string) => {
     localStorage.setItem('user_id', userId);
     setCurrentUserId(userId);
     alert(`Updated user_id to: ${userId}\nNow refresh the profile page to test.`);
@@ -79,7 +79,7 @@ export default function FixUserPage() {
                           </div>
                           <Button 
                             size="sm" 
-                            onClick={() => useExistingUser(user._id)}
+                            onClick={() => selectExistingUser(user._id)}
                             variant="outline"
                           >
                             Use This User

@@ -194,7 +194,7 @@ export async function GET(req: NextRequest) {
       })),
       ...auditLogs.slice(0, 5).map(log => ({
         type: 'audit',
-        title: log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        title: log.action.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         description: log.entityType ? `${log.entityType} activity` : 'System activity',
         timestamp: log.createdAt,
         metadata: log.metadata

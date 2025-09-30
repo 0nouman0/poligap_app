@@ -187,8 +187,8 @@ export async function POST(req: NextRequest) {
 
     return createApiResponse({
       success: true,
-      message: 'Sample analytics data created successfully',
       data: {
+        message: 'Sample analytics data created successfully',
         analyses: sampleAnalyses.length,
         searches: sampleSearches.length,
         auditLogs: sampleAuditLogs.length,
