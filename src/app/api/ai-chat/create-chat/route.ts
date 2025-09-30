@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
 
     const saveChat = await newChat.save();
 
-    await AgentConversationChat.findByIdAndUpdate(conversation_id, {
+    // Link the newly created chat to the parent conversation
+    await AgentConversation.findByIdAndUpdate(conversation_id, {
       $push: {
         conversationChats: saveChat._id,
       },
