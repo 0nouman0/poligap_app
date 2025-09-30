@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import AuditLogModel from "@/models/auditLog.model";
 import FlaggedIssueModel from "@/models/flaggedIssue.model";
 import SearchHistoryModel from "@/models/searchHistory.model";
+import mongoose from "mongoose";
 
 export async function GET(req: Request) {
   try {
@@ -19,19 +20,23 @@ export async function GET(req: Request) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Ensure ObjectId matching in aggregations/queries
+    const companyObjectId = new mongoose.Types.ObjectId(companyId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     const [searchCountMonth, flaggedByStatus, auditCountMonth] = await Promise.all([
       SearchHistoryModel.countDocuments({
-        companyId,
-        enterpriseUserId: userId,
+        companyId: companyObjectId,
+        enterpriseUserId: userObjectId,
         createdAt: { $gte: monthStart },
       }),
       FlaggedIssueModel.aggregate([
-        { $match: { companyId: (companyId as any) } },
+        { $match: { companyId: companyObjectId } },
         { $group: { _id: "$status", count: { $sum: 1 } } },
       ]),
       AuditLogModel.countDocuments({
-        companyId,
-        userId,
+        companyId: companyObjectId,
+        userId: userObjectId,
         createdAt: { $gte: monthStart },
       }),
     ]);

@@ -345,8 +345,13 @@ const useAIChatStreamHandler = ({
       try {
         if (!agent_id) return;
 
+        // Attach Authorization header if available
+        const sessionRaw = typeof window !== 'undefined' ? localStorage.getItem('__LOGIN_SESSION__') : null;
+        const accessToken = sessionRaw ? (() => { try { return JSON.parse(sessionRaw)?.AccessToken as string | undefined; } catch { return undefined; } })() : undefined;
+
         await streamResponse({
           apiUrl: apiUrl,
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
           requestBody: requestData,
           onChunk: (chunk: RunResponse) => {
             if (chunk.event === RunEvent.RunResponseContent) {

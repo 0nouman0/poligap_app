@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import SearchHistoryModel from "@/models/searchHistory.model";
+import mongoose from "mongoose";
 
 export async function GET(req: Request) {
   try {
@@ -12,9 +13,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Missing userId or companyId" }, { status: 400 });
     }
 
+    const companyObjectId = new mongoose.Types.ObjectId(companyId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     // Flatten text[].title and count
     const results = await SearchHistoryModel.aggregate([
-      { $match: { companyId: (companyId as any), enterpriseUserId: (userId as any) } },
+      { $match: { companyId: companyObjectId, enterpriseUserId: userObjectId } },
       { $unwind: { path: "$text", preserveNullAndEmptyArrays: false } },
       { $match: { "text.title": { $exists: true, $ne: "" } } },
       { $group: { _id: "$text.title", count: { $sum: 1 } } },

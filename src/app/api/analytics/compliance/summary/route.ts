@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import DocumentAnalysisModel from "@/models/documentAnalysis.model";
+import mongoose from "mongoose";
 
 export async function GET(req: Request) {
   try {
@@ -12,20 +13,23 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Missing userId or companyId" }, { status: 400 });
     }
 
+    const companyObjectId = new mongoose.Types.ObjectId(companyId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     const [avgScoreAgg, topCompliances, totalAnalyzed, metricKeyCounts] = await Promise.all([
       DocumentAnalysisModel.aggregate([
-        { $match: { companyId: (companyId as any), userId: (userId as any), score: { $ne: null } } },
+        { $match: { companyId: companyObjectId, userId: userObjectId, score: { $ne: null } } },
         { $group: { _id: null, avgScore: { $avg: "$score" }, count: { $sum: 1 } } },
       ]),
       DocumentAnalysisModel.aggregate([
-        { $match: { companyId: (companyId as any), userId: (userId as any), complianceStandard: { $exists: true, $ne: "" } } },
+        { $match: { companyId: companyObjectId, userId: userObjectId, complianceStandard: { $exists: true, $ne: "" } } },
         { $group: { _id: "$complianceStandard", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: limit },
       ]),
-      DocumentAnalysisModel.countDocuments({ companyId, userId }),
+      DocumentAnalysisModel.countDocuments({ companyId: companyObjectId, userId: userObjectId }),
       DocumentAnalysisModel.aggregate([
-        { $match: { companyId: (companyId as any), userId: (userId as any), metrics: { $type: "object" } } },
+        { $match: { companyId: companyObjectId, userId: userObjectId, metrics: { $type: "object" } } },
         { $project: { keys: { $objectToArray: "$metrics" } } },
         { $unwind: "$keys" },
         { $group: { _id: "$keys.k", count: { $sum: 1 } } },
