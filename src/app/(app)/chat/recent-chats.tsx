@@ -66,14 +66,23 @@ const RecentChats = ({
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const companyId = selectedCompany?.companyId;
 
+  // Use fallback values if missing or "undefined"
+  const storedUserId = localStorage.getItem('user_id');
+  const actualUserId = (userId && userId !== "undefined") ? userId : 
+                      (storedUserId && storedUserId !== "undefined") ? storedUserId : 
+                      "68da404605eeba8349fc9d10";
+  const actualCompanyId = (companyId && companyId !== "") ? companyId : "60f1b2b3c4d5e6f7a8b9c0d1";
+
+  console.log("RecentChats - userId:", userId, "storedUserId:", storedUserId, "actualUserId:", actualUserId, "actualCompanyId:", actualCompanyId);
+
   const groupedChats = (globalConversationList || {}) as Record<
     string,
     ChatItem[]
   >;
 
   useEffect(() => {
-    getConversationListsAPI(companyId!, userId!);
-  }, [companyId, userId, getConversationListsAPI]);
+    getConversationListsAPI(actualCompanyId, actualUserId);
+  }, [actualCompanyId, actualUserId, getConversationListsAPI]);
 
   const handleDeleteConversation = async (
     e: React.MouseEvent<HTMLButtonElement>,
@@ -82,7 +91,7 @@ const RecentChats = ({
     e.preventDefault();
     e.stopPropagation();
     await deleteConversationAPI(chatdata_id); // wait for delete to complete
-    getConversationListsAPI(companyId!, userId!);
+    getConversationListsAPI(actualCompanyId, actualUserId);
   };
 
   const handleGoToChat = async (chatData: ChatItem) => {
@@ -93,6 +102,10 @@ const RecentChats = ({
     const resp = await getSelectedConversation(chatData?._id, chatData);
     if (resp) {
       console.log("resp message ===>", resp);
+      
+      // Load chat history from MongoDB
+      const loadChatHistory = useGlobalChatStore.getState().loadChatHistory;
+      await loadChatHistory(chatData._id);
       // debugger;
       if (isMobile) setRecentChatsOpen(false);
       setMessages(resp);

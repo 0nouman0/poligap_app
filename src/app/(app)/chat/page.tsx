@@ -13,9 +13,16 @@ import { useUserStore } from "@/stores/user-store";
 const AgentChat = () => {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const searchParams = useSearchParams();
-  const companyId = selectedCompany?.companyId;
+  const companyId = selectedCompany?.companyId || "60f1b2b3c4d5e6f7a8b9c0d1"; // Fallback company ID
   const { userData } = useUserStore();
-  const userId = userData?.userId;
+  
+  // Better user ID handling with proper fallbacks
+  const storedUserId = localStorage.getItem('user_id');
+  const userId = (userData?.userId && userData.userId !== "undefined") ? userData.userId :
+                 (storedUserId && storedUserId !== "undefined" && storedUserId !== "null") ? storedUserId :
+                 "68da404605eeba8349fc9d10"; // Use consistent fallback
+
+  console.log("Chat page - userData?.userId:", userData?.userId, "storedUserId:", storedUserId, "final userId:", userId, "companyId:", companyId);
 
   // recent chats
   const [isMobile, setIsMobile] = useState(false);

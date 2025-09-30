@@ -229,28 +229,73 @@ export const useGlobalChatStore = create((set: any) => ({
     }
   },
 
-  // saveGlobalChat: async (apiData: PlaygroundChatMessage) => {
-  //   try {
-  //     // debugger;
-  //     // await krooloHttpClient.post("/kroolo-ai/create-chat", apiData);
-  //     const res = await fetch("/api/ai-chat/create-chat", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify(apiData),
-  //     });
+  saveGlobalChat: async (messageData: any) => {
+    try {
+      console.log("💾 Saving global chat message:", messageData);
+      
+      const res = await fetch("/api/ai-chat/save-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messageData),
+      });
 
-  //     const resp = await res.json();
-  //     console.log("save global chat resp =>", resp);
-  //   } catch (error) {
-  //     toastError(
-  //       `Chat Creation Failed: ${
-  //         error instanceof Error ? error.message : String(error)
-  //       }`
-  //     );
-  //   }
-  // },
+      const resp = await res.json();
+      console.log("💾 Save message response:", resp);
+      
+      if (resp?.success) {
+        console.log("✅ Message saved to MongoDB successfully");
+      } else {
+        console.error("❌ Failed to save message:", resp.error);
+        toastWarning("Save Failed", resp.error || "Failed to save message");
+      }
+      
+      return resp;
+    } catch (error) {
+      console.error("❌ Error saving message:", error);
+      toastWarning(
+        "Chat Save Failed",
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  },
+
+  saveChat: async (messageData: any) => {
+    // Alias for saveGlobalChat for compatibility
+    return useGlobalChatStore.getState().saveGlobalChat(messageData);
+  },
+
+  loadChatHistory: async (conversationId: string) => {
+    try {
+      console.log("📖 Loading chat history for conversation:", conversationId);
+      
+      const res = await fetch(`/api/ai-chat/get-messages?conversationId=${conversationId}`);
+      const resp = await res.json();
+      
+      if (resp?.success) {
+        console.log(`📨 Loaded ${resp.data.length} messages from MongoDB`);
+        
+        // Update messages in store
+        set({
+          messages: resp.data,
+        });
+        
+        return resp.data;
+      } else {
+        console.error("❌ Failed to load chat history:", resp.error);
+        toastWarning("Load Failed", resp.error || "Failed to load chat history");
+        return [];
+      }
+    } catch (error) {
+      console.error("❌ Error loading chat history:", error);
+      toastWarning(
+        "Chat Load Failed",
+        error instanceof Error ? error.message : String(error)
+      );
+      return [];
+    }
+  },
   createConversationAPI: async (requestData: any): Promise<any> => {
     // debugger;
     try {

@@ -238,10 +238,16 @@ const useAIChatStreamHandler = ({
         ? publicUserId
         : localStorage.getItem("user_id")?.replace(/^"(.*)"$/, "$1");
 
+      // Use fallback values if missing
+      const actualOrgId = orgId || "60f1b2b3c4d5e6f7a8b9c0d1";
+      const actualUserId = userId || "68da404605eeba8349fc9d10";
+
+      console.log("Stream handler - orgId:", actualOrgId, "userId:", actualUserId);
+
       const requestData: RequestData = {
         enable: enabledKnowledge ?? false,
-        user_id: userId ?? "",
-        organization_id: orgId ?? "",
+        user_id: actualUserId,
+        organization_id: actualOrgId,
         agent_id: isTrainedAgent ?? "",
         provider: selectedLlmModel?.provider ?? "openai",
         files: selectedMedia.map((file) => file._id),

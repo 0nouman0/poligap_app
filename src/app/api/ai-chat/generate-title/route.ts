@@ -12,6 +12,14 @@ async function agentTitleGenerator(userPrompt: string) {
       });
     }
 
+    // Check if Portkey API key is available
+    if (!process.env.PORTKEY_API_KEY) {
+      console.log("⚠️ PORTKEY_API_KEY not found, using fallback title generation");
+      // Generate a simple title based on the user prompt
+      const words = userPrompt.split(' ').slice(0, 5).join(' ');
+      return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
+    }
+
     const portkeyClient = new PortkeyClient();
     const response = await portkeyClient.client.prompts.completions.create({
       promptID: "pp-agent-titl-a0a456",
@@ -20,8 +28,10 @@ async function agentTitleGenerator(userPrompt: string) {
 
     return response.choices[0].message.content;
   } catch (error) {
-    console.error(error);
-    throw error;
+    console.error("Portkey API error:", error);
+    // Fallback title generation
+    const words = userPrompt.split(' ').slice(0, 5).join(' ');
+    return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
   }
 }
 

@@ -19,6 +19,18 @@ export interface IUser extends Document {
   };
   about: string;
   status: string;
+  designation?: string;
+  role?: string;
+  memberStatus?: string;
+  companyName?: string;
+  reportingManager?: {
+    name: string;
+    email: string;
+  } | null;
+  createdBy?: {
+    name: string;
+    email: string;
+  } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,6 +100,42 @@ const UserSchema: Schema = new Schema(
       },
       yOffset: {
         type: Number,
+        required: false,
+      },
+    },
+    designation: {
+      type: String,
+      required: false,
+    },
+    role: {
+      type: String,
+      required: false,
+    },
+    memberStatus: {
+      type: String,
+      required: false,
+    },
+    companyName: {
+      type: String,
+      required: false,
+    },
+    reportingManager: {
+      name: {
+        type: String,
+        required: false,
+      },
+      email: {
+        type: String,
+        required: false,
+      },
+    },
+    createdBy: {
+      name: {
+        type: String,
+        required: false,
+      },
+      email: {
+        type: String,
         required: false,
       },
     },

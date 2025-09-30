@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type React from "react";
 import { Header } from "@/components/header";
 import { AppSidebar } from "@/components/app-sidebar";
+import { UserInitializer } from "@/components/UserInitializer";
 
 export default async function AppPagesLayout({
   children,
@@ -18,6 +19,7 @@ export default async function AppPagesLayout({
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <UserInitializer />
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar />
