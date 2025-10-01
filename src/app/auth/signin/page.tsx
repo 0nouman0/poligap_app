@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { validateUser } from "@/app/api/enterpriseSearch/enterpriseSearch";
-import TermsAndPrivacyLinks from "@/components/common/term-and-privacy-link";
 import LoginSidePanel from "@/components/common/sso-login-side-panel";
 
 // Validation schema
@@ -147,7 +146,7 @@ export default function SignInPage() {
           {/* Logo and Header */}
           <div className="text-center space-y-6">
             <div className="flex items-center justify-center">
-              <Image src={krooloLogoSrc} alt="Poligap AI" width={150} height={32} />
+              <Image src={krooloLogoSrc} alt="PoliGap AI Logo" width={120} height={120} priority />
             </div>
 
             <div className="space-y-2">
@@ -156,9 +155,7 @@ export default function SignInPage() {
                 <span className="text-base-purple">PoliGap AI</span>
               </h1>
               <p className="text-gray-700 dark:text-gray-300 text-xs leading-relaxed">
-                Unlock a smarter, faster way to master compliance with PoliGap AI’s advanced technology.
-                <br />
-                This empowers your team to prioritize growth while we handle the complexity of compliance challenges.
+                Master compliance faster with PoliGap AI.
               </p>
             </div>
           </div>
@@ -265,16 +262,8 @@ export default function SignInPage() {
               </Link>
             </div>
 
-            <div className="mt-4 text-center text-sm text-gray-600">
-              <Link
-                href={`/login/sso`}
-                rel="noopener noreferrer"
-                className="text-base-purple hover:text-base-purple-hover font-medium"
-              >
-                Login with SSO
-              </Link>
-            </div>
-            <TermsAndPrivacyLinks />
+            {/* SSO login temporarily removed */}
+            {/* Terms and Privacy links temporarily removed */}
           </div>
         </div>
       </div>

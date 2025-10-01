@@ -77,11 +77,11 @@ export default function RootLayout({
           sizes="32x32"
         />
       </head>
-      <body className={`${Inter.className} antialiased h-screen overflow-hidden`} suppressHydrationWarning>
+      <body className={`${Inter.className} antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem={true}
           disableTransitionOnChange
         >
           <QueryProvider>{children}</QueryProvider>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { FileText, Upload, Eye, Download, AlertTriangle, CheckCircle, Clock, User, ChevronRight, ChevronLeft, Building, Users, Shield, Handshake, Award, Home, TrendingUp, Car, ShoppingCart, Truck, Crown, Network, Search, Filter, Briefcase, Globe, Heart, Zap, Wifi, Database, Code, Palette, Music, Camera, Plane, Ship, Factory, Hammer, Wrench, Cog, Book, GraduationCap, Stethoscope, Scale, Gavel, DollarSign, CreditCard, PiggyBank, Landmark, Info, FolderOpen, BookOpen, Library, Edit3, RotateCcw, Save, X, NotebookPen, FileUp } from "lucide-react";
+import { FileText, Upload, Eye, Download, AlertTriangle, CheckCircle, Clock, User, ChevronRight, ChevronLeft, Building, Users, Shield, Handshake, Award, Home, TrendingUp, Car, ShoppingCart, Truck, Crown, Network, Search, Filter, Briefcase, Globe, Heart, Zap, Wifi, Database, Code, Palette, Music, Camera, Plane, Ship, Factory, Hammer, Wrench, Cog, Book, GraduationCap, Stethoscope, Scale, Gavel, DollarSign, CreditCard, PiggyBank, Landmark, Info, FolderOpen, BookOpen, Library, Edit3, RotateCcw, Save, X, NotebookPen, FileUp, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -345,8 +345,14 @@ export default function ContractReview() {
   const [customTemplateText, setCustomTemplateText] = useState<string>("");
   const [isNotepadOpen, setIsNotepadOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Step 3 device upload input ref (separate from custom template ref used in Step 2)
+  const deviceFileInputRef = useRef<HTMLInputElement | null>(null);
+  // Force re-mount of the device file input to clear browser-retained filenames
+  const [deviceInputKey, setDeviceInputKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [applyRuleBase, setApplyRuleBase] = useState(false);
+  // Step 4: optional reviewer notes before analysis
+  const [finalInstructions, setFinalInstructions] = useState<string>("");
   // Removed manual input - using only AI-powered document parsing
   // Bridge to canvas store
   const crStore = useContractReviewStore();
@@ -751,9 +757,9 @@ export default function ContractReview() {
 
   const steps = [
     { id: 1, title: "Select Template", description: "Choose a baseline template from knowledge base" },
-    { id: 2, title: "Template Boilerplate", description: "Review format or provide your own template" },
+    { id: 2, title: "Review Template", description: "Review format or provide your own template" },
     { id: 3, title: "Upload Contract", description: "Upload your contract document" },
-    { id: 4, title: "Canvas Review", description: "Interactive canvas with inline suggestions and diffs" },
+    { id: 4, title: "Contract Analysis", description: "Review suggested changes by Kroolo AI" },
     { id: 5, title: "Make Corrections", description: "Edit and finalize the document" }
   ];
 
@@ -806,7 +812,8 @@ export default function ContractReview() {
         body: JSON.stringify({ 
           text: extractedText, 
           templateClauses: clauses, 
-          contractType: selectedTemplate?.name || 'Contract' 
+          contractType: selectedTemplate?.name || 'Contract',
+          instructions: finalInstructions || undefined
         })
       });
 
@@ -1023,7 +1030,7 @@ export default function ContractReview() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6 space-y-8">
+    <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
@@ -1066,38 +1073,83 @@ export default function ContractReview() {
       {/* Step Content */}
       <Card className="min-h-[600px]">
         <CardContent className="p-10">
+          {/* In-box navigation (top of panel) - hidden on step 4 to avoid duplicate Previous */}
+          {currentStep !== 4 && (
+          <div className="flex items-center justify-between -mt-4 mb-6">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="px-3"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            {currentStep < 4 && (
+              <Button
+                onClick={nextStep}
+                disabled={
+                  (currentStep === 1 && !canProceedToStep2) ||
+                  (currentStep === 2 && !canProceedToStep3) ||
+                  (currentStep === 3 && !canProceedToStep4)
+                }
+                className="px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </div>
+          )}
 
           {/* Step 1: Select Template from Knowledge Base */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-8">
                 <Library className="h-16 w-16 text-primary mx-auto mb-4" />
-                <h3 className="text-2xl font-bold mb-2">Knowledge Base Templates</h3>
+                <h3 className="text-2xl font-bold mb-2">Contract Templates</h3>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
                   Select a baseline template that has been reviewed and approved by legal experts. 
                   Your uploaded contract will be compared against this template to identify gaps and weaknesses.
                 </p>
+                <div className="mt-4 max-w-md mx-auto">
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search template"
+                  />
+                </div>
               </div>
 
               <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm text-muted-foreground">{knowledgeBaseTemplates.length} templates</div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={() => scrollTemplates('left')} aria-label="Scroll left">
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => scrollTemplates('right')} aria-label="Scroll right">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                {(() => {
+                  const filteredTemplates = knowledgeBaseTemplates.filter(t =>
+                    t.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+                  return (
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-sm text-muted-foreground">{filteredTemplates.length} templates</div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="icon" onClick={() => scrollTemplates('left')} aria-label="Scroll left">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => scrollTemplates('right')} aria-label="Scroll right">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+                
 
                 <div
                   ref={templatesContainerRef}
                   className="overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                 >
                   <div className="flex gap-4 pr-2">
-                    {knowledgeBaseTemplates.map((template) => {
+                    {knowledgeBaseTemplates
+                      .filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                      .map((template) => {
                       const selected = selectedTemplate?.id === template.id;
                       const dimNonSelected = !!selectedTemplate && !selected;
                       return (
@@ -1264,7 +1316,7 @@ export default function ContractReview() {
                         setTemplateMode('standard');
                       }}
                     >
-                      Use Knowledge Base
+                      Use Contract Template
                     </Button>
                     <Button
                       variant={templateMode !== 'standard' ? 'default' : 'outline'}
@@ -1448,9 +1500,32 @@ export default function ContractReview() {
                     <div className="flex items-center justify-center border-2 border-dashed rounded-lg p-8">
                       <div className="text-center">
                         <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                        <Input type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+                        <Input key={deviceInputKey} ref={deviceFileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
                         {uploadedFile && (
-                          <p className="text-sm text-muted-foreground mt-2">Selected: {uploadedFile.name}</p>
+                          <div className="mt-2 flex items-center justify-center gap-2 text-sm">
+                            <span className="text-muted-foreground truncate max-w-[260px]" title={uploadedFile.name}>
+                              Selected: {uploadedFile.name}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Remove file"
+                              onClick={() => {
+                                setUploadedFile(null);
+                                setExtractedDocument(null);
+                                setEditedText('');
+                                crStore.setExtractedDocument(null);
+                                crStore.setSuggestions([]);
+                                if (deviceFileInputRef.current) {
+                                  deviceFileInputRef.current.value = "";
+                                }
+                                // re-mount the <input type="file"> so the browser does not show the old filename
+                                setDeviceInputKey((k) => k + 1);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1467,7 +1542,7 @@ export default function ContractReview() {
                       <div className="text-center">
                         <FolderOpen className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
                         <Button variant="secondary" onClick={() => setIsAssetPickerOpen(true)}>
-                          Open Asset Picker
+                          Open Collections
                         </Button>
                       </div>
                     </div>
@@ -1479,13 +1554,13 @@ export default function ContractReview() {
               {uploadedFile && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Analysis Configuration</CardTitle>
+                    <CardTitle className="text-lg">Rules</CardTitle>
                     <CardDescription>Configure how your contract will be analyzed</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium">Apply RuleBase</div>
+                        <div className="font-medium">Rules</div>
                         <div className="text-sm text-muted-foreground">Use your custom company rules during analysis</div>
                       </div>
                       <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
@@ -1508,16 +1583,44 @@ export default function ContractReview() {
           {/* Step 4: Canvas Review */}
           {currentStep === 4 && (
             <div className="space-y-6">
+              {/* Top inline controls */}
+              <div className="flex items-center justify-between">
+                <Button variant="outline" onClick={prevStep}>
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+                {!extractedDocument && (
+                  <Button
+                    onClick={handleDocumentExtraction}
+                    disabled={!uploadedFile || isAnalyzing || !(templateMode === 'standard' ? !!selectedTemplate : (!!customTemplateName || !!customTemplateText))}
+                    className="flex items-center gap-2"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4" />
+                        Extract & Analyze with AI
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {/* Reviewer notes textarea before analysis */}
               {!extractedDocument && (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Ready to analyze your contract</AlertTitle>
-                  <AlertDescription>
-                    Click "Extract & Analyze with AI" to use Gemini Flash 2.0 AI to parse your document and open the interactive canvas.
-                  </AlertDescription>
-                </Alert>
+                <Textarea
+                  placeholder="Any final instructions for contract review.."
+                  value={finalInstructions}
+                  onChange={(e) => setFinalInstructions(e.target.value)}
+                  className="min-h-[120px]"
+                />
               )}
 
+              {/* Canvas after analysis */}
               {extractedDocument && <ContractCanvas />}
             </div>
           )}
@@ -1689,79 +1792,7 @@ export default function ContractReview() {
         </CardContent>
       </Card>
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={prevStep}
-          disabled={currentStep === 1}
-          className="flex items-center gap-2"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Previous
-        </Button>
-
-        <div className="flex gap-2">
-          {currentStep === 4 && !extractedDocument && (
-            <Button
-              onClick={handleDocumentExtraction}
-              disabled={!uploadedFile || isAnalyzing}
-              className="flex items-center gap-2"
-            >
-              {isAnalyzing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  Analyzing Document...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4" />
-                  Extract & Analyze with AI
-                </>
-              )}
-            </Button>
-          )}
-          
-          {isAnalyzing && (
-            <div className="mt-2 text-sm text-blue-600">
-              <div className="flex items-center gap-2">
-                <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
-                Gemini AI is analyzing your entire document for suggestions...
-              </div>
-            </div>
-          )}
-
-          {currentStep === 4 && !extractedDocument && (
-            <div></div>
-          )}
-
-          {currentStep === 4 && extractedDocument && (
-            <Button
-              onClick={handleSaveDocument}
-              disabled={isAnalyzing}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              Save & Generate Results
-            </Button>
-          )}
-
-          {currentStep < 4 && (
-            <Button
-              onClick={nextStep}
-              disabled={
-                (currentStep === 1 && !canProceedToStep2) ||
-                (currentStep === 2 && !canProceedToStep3) ||
-                (currentStep === 3 && !canProceedToStep4)
-              }
-              className="flex items-center gap-2"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
+      {/* Bottom navigation removed: controls are now at top of the panel */}
 
       {/* Asset Picker Modal */}
       <AssetPicker

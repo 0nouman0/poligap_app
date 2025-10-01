@@ -39,7 +39,9 @@ const fetchSearch = async (
   account_ids: string[],
   apps: string[]
 ) => {
-  const response = await fetch(DJANGO_API_ROUTES.SEARCH, {
+  const provider = process.env.NEXT_PUBLIC_SEARCH_PROVIDER;
+  const endpoint = provider === "elastic" ? "/api/search" : DJANGO_API_ROUTES.SEARCH;
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

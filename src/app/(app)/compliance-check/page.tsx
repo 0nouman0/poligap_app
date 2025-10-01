@@ -844,15 +844,49 @@ export default function ComplianceCheckPage() {
 
       {/* Step Title */}
       <div className="text-center">
-        <h2 className="text-xl font-semibold">{steps[currentStep - 1]?.title}</h2>
-        <p className="text-muted-foreground text-sm">{steps[currentStep - 1]?.description}</p>
+        <h2 className="text-2xl font-bold">{steps[currentStep - 1]?.title}</h2>
+        <p className="text-muted-foreground text-lg">{steps[currentStep - 1]?.description}</p>
       </div>
-
-
 
       {/* Step Content */}
       <Card>
         <CardContent className="p-10">
+          {/* In-box navigation for all steps (hidden on Results page) */}
+          {currentStep !== 4 && (
+          <div className="flex justify-end gap-2 -mt-4 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={prevStep}
+              disabled={currentStep === 1 || isAnalyzing}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (currentStep === 3) {
+                  if (canAnalyze) {
+                    handleAnalyze();
+                  }
+                } else {
+                  nextStep();
+                }
+              }}
+              disabled={
+                (currentStep === 1 && !canProceedToStep2) ||
+                (currentStep === 2 && !canProceedToStep3) ||
+                (currentStep === 3 && !canAnalyze) ||
+                currentStep === 5 ||
+                isAnalyzing
+              }
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+          )}
           {/* Step 1: Select Compliance Standards */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -862,7 +896,7 @@ export default function ComplianceCheckPage() {
                     {selectedStandards.length} of {complianceStandards.length} standards selected
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1385,42 +1419,7 @@ export default function ComplianceCheckPage() {
         </CardContent>
       </Card>
 
-      {/* Navigation Buttons */}
-      {currentStep < 4 && !isAnalyzing && (
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={prevStep}
-            disabled={currentStep === 1}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-
-          {currentStep === 3 ? (
-            <Button
-              onClick={handleAnalyze}
-              disabled={!canAnalyze}
-              size="lg"
-              className="px-8"
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              Analyze Now
-            </Button>
-          ) : (
-            <Button
-              onClick={nextStep}
-              disabled={
-                (currentStep === 1 && !canProceedToStep2) ||
-                (currentStep === 2 && !canProceedToStep3)
-              }
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
-        </div>
-      )}
+      {/* Bottom navigation removed per design: navigation is now at the top controls */}
 
         </div>
 

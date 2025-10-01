@@ -404,8 +404,8 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
       appliedFixes: [...state.appliedFixes, id],
       hasUnsavedChanges: true // Track that there are unsaved changes
     });
-
-    // Note: Version creation is now handled only when user clicks save
+    // Auto-create a version for this change to reflect immediately in the Versions list
+    get().createVersion(`Applied change: ${suggestion.section || suggestion.category || suggestion.type}`, id, suggestion.section || undefined);
   },
   
   rejectSuggestion: (id) => {
@@ -421,6 +421,12 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
       patchStates: { ...state.patchStates, [id]: 'rejected' },
       hasUnsavedChanges: true
     });
+
+    // Create a version indicating a rejection was made
+    const suggestion = state.suggestions.find(s => s.id === id);
+    if (suggestion) {
+      get().createVersion(`Rejected change: ${suggestion.section || suggestion.category || suggestion.type}`, id, suggestion.section || undefined);
+    }
   },
   
   acceptAllSuggestions: () => {
@@ -467,6 +473,8 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
         patchStates: { ...state.patchStates, [lastFixId]: 'pending' },
         appliedFixes: state.appliedFixes.slice(0, -1)
       });
+      // Version for undo action
+      get().createVersion('Undid last fix', lastFixId);
     }
   },
   
@@ -543,6 +551,8 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
       },
       appliedFixes: state.appliedFixes.filter(fixId => fixId !== id)
     });
+    // Version for revert action
+    get().createVersion('Reverted a change', id, suggestion?.section);
   },
   
   revertAllChanges: () => {
@@ -558,6 +568,7 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
       }, {} as Record<string, 'pending' | 'accepted' | 'rejected'>),
       appliedFixes: []
     });
+    get().createVersion('Reverted all changes');
   },
   
   createVersion: (description, suggestionId, suggestionTitle) => {

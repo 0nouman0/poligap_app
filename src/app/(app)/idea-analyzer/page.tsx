@@ -96,10 +96,10 @@ export default function IdeaAnalyzerPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 text-foreground">
       <div className="text-center">
         <h1 className="text-2xl font-semibold">Idea Analyzer</h1>
-        <p className="text-sm text-gray-600">Single-page, detailed intake for precise AI-based competitive and execution insights.</p>
+        <p className="text-sm text-muted-foreground">Single-page, detailed intake for precise AI-based competitive and execution insights.</p>
       </div>
 
       <form
@@ -107,7 +107,7 @@ export default function IdeaAnalyzerPage() {
           e.preventDefault();
           analyze();
         }}
-        className="bg-white border rounded-lg p-6 space-y-6"
+        className="bg-card border border-border rounded-lg p-6 space-y-6"
       >
         {/* Basic Details (Core) */}
         <section>
@@ -139,7 +139,7 @@ export default function IdeaAnalyzerPage() {
 
           {/* Advanced Context (collapsible) */}
           <details className="mt-3 group">
-            <summary className="cursor-pointer text-xs text-gray-600 select-none">Advanced context</summary>
+            <summary className="cursor-pointer text-xs text-muted-foreground select-none">Advanced context</summary>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
               <select className="border rounded px-3 py-2 text-sm" value={inputs.companySize} onChange={(e)=>setInputs({...inputs, companySize:e.target.value})}>
                 {["1-10","11-50","51-200","201-1000","1000+"].map(o=> <option key={o}>{o}</option>)}
@@ -179,7 +179,7 @@ export default function IdeaAnalyzerPage() {
           <div className="text-sm font-medium mb-2">Idea & Goals</div>
           <textarea className="w-full border rounded px-3 py-2 text-sm" rows={5} placeholder="Describe the idea in detail" value={inputs.idea} onChange={(e)=>setInputs({...inputs, idea:e.target.value})} />
           <details className="mt-3 group">
-            <summary className="cursor-pointer text-xs text-gray-600 select-none">Execution preferences (optional)</summary>
+            <summary className="cursor-pointer text-xs text-muted-foreground select-none">Execution preferences (optional)</summary>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
               <input className="border rounded px-3 py-2 text-sm" placeholder="Timeline (e.g., 0-3 months)" value={inputs.timeline} onChange={(e)=>setInputs({...inputs, timeline:e.target.value})} />
               <input className="border rounded px-3 py-2 text-sm" placeholder="Objectives / KPIs" value={inputs.objectives} onChange={(e)=>setInputs({...inputs, objectives:e.target.value})} />
@@ -190,15 +190,15 @@ export default function IdeaAnalyzerPage() {
         </section>
 
         <div className="flex items-center justify-between">
-          <Link className="text-sm text-gray-600 hover:underline" href="/ai-agents">Back to Agents</Link>
-          <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-black text-white text-sm disabled:opacity-50">{loading? 'Analyzing…' : 'Analyze Idea'}</button>
+          <Link className="text-sm text-muted-foreground hover:underline" href="/ai-agents">Back to Agents</Link>
+          <button type="submit" disabled={loading} className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm disabled:opacity-50">{loading? 'Analyzing…' : 'Analyze Idea'}</button>
         </div>
 
         {loading && (
-          <div className="mt-4 border rounded-lg p-4 bg-gray-50">
+          <div className="mt-4 border border-border rounded-lg p-4 bg-muted">
             {/* Subtle computer browsing animation */}
-            <div className="mx-auto w-full max-w-md h-40 bg-white border rounded-lg shadow-sm overflow-hidden relative">
-              <div className="h-6 bg-gray-100 flex items-center gap-1 px-2">
+            <div className="mx-auto w-full max-w-md h-40 bg-card border border-border rounded-lg shadow-sm overflow-hidden relative">
+              <div className="h-6 bg-muted flex items-center gap-1 px-2">
                 <span className="w-3 h-3 rounded-full bg-red-300"></span>
                 <span className="w-3 h-3 rounded-full bg-yellow-300"></span>
                 <span className="w-3 h-3 rounded-full bg-green-300"></span>
@@ -222,14 +222,14 @@ export default function IdeaAnalyzerPage() {
 
       {/* Structured Results */}
       {sections && (
-        <div className="bg-white border rounded-lg p-6 space-y-4">
+        <div className="bg-card border border-border rounded-lg p-6 space-y-4">
           {/* Tabs */}
           <div className="flex flex-wrap gap-2">
             {(['SWOT','Competitors','Market Stats','Best Demographics','Suggestions'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 rounded-full text-sm border ${activeTab===tab?'bg-black text-white border-black':'hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 rounded-full text-sm border ${activeTab===tab?'bg-primary text-primary-foreground border-primary':'hover:bg-muted'}`}
               >{tab}</button>
             ))}
           </div>
@@ -269,15 +269,15 @@ export default function IdeaAnalyzerPage() {
 
                 {/* Simple bar viz for balance */}
                 <div className="md:col-span-2">
-                  <div className="text-xs text-gray-600 mb-1">Balance Overview</div>
+                  <div className="text-xs text-muted-foreground mb-1">Balance Overview</div>
                   <div className="grid grid-cols-4 gap-2 text-xs">
                     {['strengths','weaknesses','opportunities','threats'].map((k) => {
                       const n = (sections?.swot?.[k] || []).length as number;
                       return (
                         <div key={k} className="space-y-1">
                           <div className="capitalize">{k}</div>
-                          <div className="h-2 bg-gray-100 rounded">
-                            <div className="h-full bg-black rounded" style={{width: `${Math.min(100, n*20)}%`}}></div>
+                          <div className="h-2 bg-muted rounded">
+                            <div className="h-full bg-primary rounded" style={{width: `${Math.min(100, n*20)}%`}}></div>
                           </div>
                           <div>{n} pts</div>
                         </div>
@@ -291,23 +291,23 @@ export default function IdeaAnalyzerPage() {
             {activeTab === 'Competitors' && (
               <div className="space-y-3">
                 {(sections?.competitors || []).length === 0 && (
-                  <div className="text-sm text-gray-600">No competitors detected.</div>
+                  <div className="text-sm text-muted-foreground">No competitors detected.</div>
                 )}
                 {(sections?.competitors || []).map((c: any, i: number)=> (
                   <div key={i} className="border rounded p-3 flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs">{i+1}</div>
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">{i+1}</div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold">
                         {c.url ? <a href={c.url} target="_blank" rel="noreferrer" className="hover:underline">{c.name || 'Competitor'}</a> : (c.name || 'Competitor')}
                       </div>
-                      {c.summary && <div className="text-xs text-gray-600">{c.summary}</div>}
+                      {c.summary && <div className="text-xs text-muted-foreground">{c.summary}</div>}
                     </div>
                   </div>
                 ))}
                 {/* Sources */}
                 {sources && sources.length > 0 && (
                   <div className="pt-2 border-t">
-                    <div className="text-xs text-gray-600 mb-1">Sources</div>
+                    <div className="text-xs text-muted-foreground mb-1">Sources</div>
                     <ul className="list-disc list-inside text-xs">
                       {sources.map((s, idx)=> (
                         <li key={idx}><a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.title}</a></li>
@@ -321,7 +321,7 @@ export default function IdeaAnalyzerPage() {
             {activeTab === 'Market Stats' && (
               <div className="space-y-2">
                 {(sections?.marketStats || []).length === 0 && (
-                  <div className="text-sm text-gray-600">No market stats available.</div>
+                  <div className="text-sm text-muted-foreground">No market stats available.</div>
                 )}
                 {(sections?.marketStats || []).map((m: any, i: number)=> (
                   <div key={i} className="border rounded p-3 flex items-start gap-3">

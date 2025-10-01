@@ -104,8 +104,10 @@ export function Header() {
     redirect("/auth/signin");
   };
 
-  // Use Poligap PNG logo across themes
-  const headerImageSrc = "/assets/poligap-high-resolution-logo.png";
+  // Use Poligap PNG logo across themes (allow override via env)
+  const headerImageSrc =
+    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-high-resolution-logo.png";
+  const searchEnabled = process.env.NEXT_PUBLIC_SEARCH_ENABLED === "true";
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -119,25 +121,29 @@ export function Header() {
           </div>
         </div>
 
-        {/* Center Search */}
+        {/* Center Search (hidden until Elasticsearch is enabled) */}
         <div className="flex items-center justify-center">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const q = searchText.trim();
-              if (!q) return;
-              router.push(`/chat?q=${encodeURIComponent(q)}`);
-              setSearchText("");
-            }}
-            className="w-full max-w-xl"
-          >
-            <Input
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search across Poligap • Press Enter to send to Chat"
-              className="w-full"
-            />
-          </form>
+          {searchEnabled ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = searchText.trim();
+                if (!q) return;
+                router.push(`/search?q=${encodeURIComponent(q)}`);
+                setSearchText("");
+              }}
+              className="w-full max-w-xl"
+            >
+              <Input
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search across Poligap • Press Enter to search"
+                className="w-full"
+              />
+            </form>
+          ) : (
+            <div className="w-full" />
+          )}
         </div>
 
         {/* Right Section - Theme Switcher and Profile */}

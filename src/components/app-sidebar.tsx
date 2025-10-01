@@ -162,7 +162,7 @@ export function AppSidebar() {
           isActive
             ? "bg-filter-menu text-accent-foreground"
             : ""
-        } cursor-pointer flex items-center gap-1.5 px-3 py-1.5 w-full rounded-md transition-colors`}
+        } cursor-pointer flex items-center gap-1.5 px-2 py-1 w-full rounded-md transition-colors`}
       >
         <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">
           <Icon className="h-5 w-5" />
@@ -217,7 +217,7 @@ export function AppSidebar() {
             onMouseLeave={() => setIsHovered(false)}
           >
             {/* Collapse Button - Always takes up space but only visible on hover */}
-            <div className="flex justify-end p-2 h-10">
+            <div className="flex justify-end p-1.5 h-6">
               {" "}
               {/* Fixed height to prevent layout shift */}
               <Tooltip>
@@ -278,8 +278,8 @@ export function AppSidebar() {
             </div> */}
 
             {/* Navigation Items */}
-            <div className="flex-1 overflow-y-auto py-3">
-              <div className="px-2 space-y-0.5">
+            <div className="flex-1 overflow-y-auto py-1">
+              <div className="px-1 space-y-0.5">
                 {visibleNavigationItems.map((item) => (
                   <MenuItemWithTooltip
                     key={item.title}
@@ -294,8 +294,8 @@ export function AppSidebar() {
             </div>
 
             {/* Bottom Navigation Items */}
-            <div className="mt-auto py-3 border-t border-border">
-              <div className="px-2 space-y-0.5">
+            <div className="mt-auto py-1.5 border-t border-border">
+              <div className="px-1 space-y-0.5">
                 {visibleBottomNavigationItems.map((item) => (
                   <MenuItemWithTooltip
                     key={item.title}

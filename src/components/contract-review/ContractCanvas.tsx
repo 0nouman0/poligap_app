@@ -31,7 +31,6 @@ export const ContractCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData>({ x: 0, y: 0, suggestion: null, visible: false });
   const [showHighlights, setShowHighlights] = useState(true);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
   
   const { 
     currentText, 
@@ -89,15 +88,13 @@ export const ContractCanvas: React.FC = () => {
   };
 
   const renderVersionHistory = () => {
-    if (!showVersionHistory || versions.length === 0) return null;
-
     return (
       <Card className="mt-4">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold flex items-center gap-2">
               <GitBranch className="h-4 w-4" />
-              Version History ({versions.length} versions)
+              Version History ({versions.length} {versions.length === 1 ? 'version' : 'versions'})
             </h4>
             <div className="flex gap-2">
               <Button
@@ -114,7 +111,7 @@ export const ContractCanvas: React.FC = () => {
                 size="sm"
                 variant="outline"
                 onClick={revertAllChanges}
-                disabled={currentVersion === 0}
+                disabled={currentVersion === 0 && versions.length <= 1}
                 className="text-xs"
               >
                 <RotateCcw className="h-3 w-3 mr-1" />
@@ -122,44 +119,68 @@ export const ContractCanvas: React.FC = () => {
               </Button>
             </div>
           </div>
-          
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {versions.map((version) => (
-              <div
-                key={version.id}
-                className={`p-3 rounded border cursor-pointer transition-colors ${
-                  version.version === currentVersion
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                }`}
-                onClick={() => switchToVersion(version.version)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={version.version === currentVersion ? "default" : "secondary"} className="text-xs">
-                      v{version.version}
-                    </Badge>
-                    {version.version === currentVersion && (
-                      <Badge variant="outline" className="text-xs">Current</Badge>
+          {versions.length === 0 ? (
+            <div className="text-xs text-gray-500">No versions yet. Accept or reject a suggestion to create one.</div>
+          ) : (
+            <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+              {versions.map((version) => (
+                <div
+                  key={version.id}
+                  className={`p-3 rounded border cursor-pointer transition-colors ${
+                    version.version === currentVersion
+                      ? 'bg-blue-50 border-blue-200'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                  }`}
+                  onClick={() => switchToVersion(version.version)}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={version.version === currentVersion ? "default" : "secondary"} className="text-xs">
+                        v{version.version}
+                      </Badge>
+                      {version.version === currentVersion && (
+                        <Badge variant="outline" className="text-xs">Current</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Clock className="h-3 w-3" />
+                      {formatTimestamp(version.timestamp)}
+                    </div>
+                  </div>
+                  <div className="mt-1">
+                    <p className="text-sm text-gray-700">{version.description}</p>
+                    {version.appliedSuggestionTitle && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Applied: {version.appliedSuggestionTitle}
+                      </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Clock className="h-3 w-3" />
-                    {formatTimestamp(version.timestamp)}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Version Details */}
+          {versions.length > 0 && (
+            <div className="mt-3 p-3 border rounded bg-gray-50">
+              {(() => {
+                const current = versions.find(v => v.version === currentVersion) || versions[versions.length - 1];
+                const prev = versions.find(v => v.version === (current.version - 1));
+                const delta = prev ? Math.abs((current.content?.length || 0) - (prev.content?.length || 0)) : 0;
+                return (
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold">v{current.version} Details</div>
+                    <div className="text-xs text-gray-700">{current.description || 'Saved changes'}</div>
+                    {current.appliedSuggestionTitle && (
+                      <div className="text-xs"><span className="font-medium">Applied change:</span> {current.appliedSuggestionTitle}</div>
+                    )}
+                    {prev && (
+                      <div className="text-xs text-gray-600">Delta vs v{prev.version}: ~{delta} characters changed</div>
+                    )}
                   </div>
-                </div>
-                
-                <div className="mt-1">
-                  <p className="text-sm text-gray-700">{version.description}</p>
-                  {version.appliedSuggestionTitle && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Applied: {version.appliedSuggestionTitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })()}
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -289,14 +310,14 @@ export const ContractCanvas: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">Contract Canvas - AI Analysis</h3>
+              <h3 className="text-lg font-semibold">Contract Analysis</h3>
               {hasUnsavedChanges && (
                 <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
                   Unsaved Changes
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-600">Real-time suggestions throughout your document</p>
+            <p className="text-sm text-gray-600">Review suggested changes by Kroolo AI</p>
           </div>
           <div className="flex items-center gap-2">
             {hasUnsavedChanges && (
@@ -318,16 +339,6 @@ export const ContractCanvas: React.FC = () => {
             >
               {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showHighlights ? 'Hide' : 'Show'} Highlights
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowVersionHistory(!showVersionHistory)}
-              className="flex items-center gap-2"
-            >
-              <History className="h-4 w-4" />
-              {showVersionHistory ? 'Hide' : 'Show'} History
             </Button>
             
             {versions.length > 0 && (
@@ -364,52 +375,60 @@ export const ContractCanvas: React.FC = () => {
             </Badge>
           </div>
         </div>
-        
-        <div 
-          ref={containerRef}
-          className="border rounded-lg p-4 bg-white min-h-[400px] max-h-[600px] overflow-y-auto"
-        >
-          {showHighlights ? renderTextWithInlineDiffs() : (
-            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {currentText}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Left: Canvas and stats */}
+          <div className="lg:col-span-3">
+            <div 
+              ref={containerRef}
+              className="border rounded-lg p-4 bg-white min-h-[400px] max-h-[70vh] overflow-y-auto"
+            >
+              {showHighlights ? renderTextWithInlineDiffs() : (
+                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {currentText}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {suggestions.length > 0 && (
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <div className="flex gap-4">
-                <span>✅ {suggestions.filter(s => patchStates[s.id] === 'accepted').length} accepted</span>
-                <span>❌ {suggestions.filter(s => patchStates[s.id] === 'rejected').length} rejected</span>
-                <span>⏳ {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending</span>
-              </div>
-              <div className="flex gap-4">
-                <span className="inline-flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-200 border border-green-500 rounded"></div>
-                  Add ({suggestions.filter(s => s.type === 'addition').length})
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-200 border border-red-500 rounded"></div>
-                  Remove ({suggestions.filter(s => s.type === 'deletion').length})
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <div className="w-3 h-3 bg-yellow-200 border border-yellow-500 rounded"></div>
-                  Modify ({suggestions.filter(s => s.type === 'modification' || s.type === 'replacement').length})
-                </span>
-              </div>
-            </div>
-            
-            {suggestions.filter(s => patchStates[s.id] === 'pending').length > 0 && (
-              <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                💡 Tip: Hover over buttons to see why each change is suggested. Click to accept or reject.
+            {suggestions.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <div className="flex gap-4">
+                    <span>✅ {suggestions.filter(s => patchStates[s.id] === 'accepted').length} accepted</span>
+                    <span>❌ {suggestions.filter(s => patchStates[s.id] === 'rejected').length} rejected</span>
+                    <span>⏳ {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending</span>
+                  </div>
+                  <div className="flex gap-4">
+                    <span className="inline-flex items-center gap-1">
+                      <div className="w-3 h-3 bg-green-200 border border-green-500 rounded"></div>
+                      Add ({suggestions.filter(s => s.type === 'addition').length})
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-200 border border-red-500 rounded"></div>
+                      Remove ({suggestions.filter(s => s.type === 'deletion').length})
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <div className="w-3 h-3 bg-yellow-200 border border-yellow-500 rounded"></div>
+                      Modify ({suggestions.filter(s => s.type === 'modification' || s.type === 'replacement').length})
+                    </span>
+                  </div>
+                </div>
+                
+                {suggestions.filter(s => patchStates[s.id] === 'pending').length > 0 && (
+                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                    💡 Tip: Hover over buttons to see why each change is suggested. Click to accept or reject.
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
 
-        {/* Version History Panel */}
-        {renderVersionHistory()}
+          {/* Right: Version History sidebar */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="sticky top-2">
+              {renderVersionHistory()}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
