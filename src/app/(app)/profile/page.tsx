@@ -28,6 +28,7 @@ import { toastSuccess, toastError } from "@/components/toast-varients";
 import { uploadToS3 } from "@/app/api/s3/upload/uploadtos3";
 import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/utils/user.util";
+import { useUserProfile, UserProfile } from "@/lib/hooks/useUserProfile";
 
 interface EditableField {
   field: keyof UserData;
@@ -39,9 +40,19 @@ export default function UserProfilePage() {
   const { userData, setUserData } = useUserStore();
   const { selectedCompany } = useCompanyStore();
   
-  // Profile data state
-  const [profileData, setProfileData] = useState(userData);
-  const [isLoading, setIsLoading] = useState(false);
+  // Use the new profile hook
+  const { 
+    profile, 
+    isLoading, 
+    error, 
+    fetchProfile, 
+    updateProfile, 
+    refreshProfile, 
+    clearError 
+  } = useUserProfile();
+  
+  // Profile data state (use profile from hook or fallback to userData)
+  const [profileData, setProfileData] = useState(profile || userData);
   const [isSaving, setIsSaving] = useState(false);
   
   // Editable fields state
@@ -61,64 +72,51 @@ export default function UserProfilePage() {
     bannerImage = profileData.banner.image;
   }
 
-  // Fetch complete profile data from MongoDB
-  const fetchProfileData = async () => {
-    // Get user ID from store or localStorage
+  // Fetch profile data on component mount - FORCE REAL MONGODB DATA
+  useEffect(() => {
     const userId = userData?.userId || localStorage.getItem('user_id');
-    const email = userData?.email;
+    console.log('🔍 Profile Page: Attempting to fetch real MongoDB data for userId:', userId);
     
-    if (!userId && !email) {
-      console.log('No user ID or email available - user may not be authenticated');
-      setIsLoading(false);
-      return;
+    if (userId) {
+      // Always fetch fresh data from MongoDB, don't rely on cached profile
+      console.log('📡 Fetching fresh profile data from MongoDB...');
+      fetchProfile(userId);
+    } else {
+      console.warn('⚠️ No userId found - cannot fetch profile from MongoDB');
+      toastError('User ID not found', 'Please log in again to load your profile');
     }
-    
-    setIsLoading(true);
-    try {
-      // Build query parameters - prefer userId over email
-      const params = new URLSearchParams();
-      if (userId) {
-        params.append('userId', userId);
-        // Add companyId if available for complete profile data
-        if (selectedCompany?.companyId) {
-          params.append('companyId', selectedCompany.companyId);
-        }
-      } else if (email) {
-        params.append('email', email);
-      }
-      
-      const response = await fetch(`/api/users/profile?${params.toString()}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setProfileData(result.data);
-        setUserData(result.data);
-      } else {
-        console.error('Profile API error:', result.error);
-        if (result.status === 404) {
-          toastError('User profile not found. Please contact your administrator.');
-        } else {
-          toastError('Failed to load profile data');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toastError('Failed to load profile data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [userData?.userId, fetchProfile]);
 
+  // Update profile data when profile from hook changes - PRIORITIZE MONGODB DATA
   useEffect(() => {
-    fetchProfileData();
-  }, [userData?.userId, userData?.email, selectedCompany?.companyId]);
-
-  // Also fetch on component mount
-  useEffect(() => {
-    if (!profileData) {
-      fetchProfileData();
+    if (profile) {
+      console.log('✅ MongoDB Profile Data Loaded:', {
+        name: profile.name,
+        email: profile.email,
+        source: 'MongoDB Atlas',
+        hasRealData: true
+      });
+      setProfileData(profile);
+    } else if (userData) {
+      console.log('⚠️ Using fallback userData (not from MongoDB):', {
+        name: userData.name,
+        email: userData.email,
+        source: 'User Store/Cache',
+        hasRealData: false
+      });
+      setProfileData(userData);
+    } else {
+      console.log('❌ No profile data available');
     }
-  }, []);
+  }, [profile, userData]);
+
+  // Clear error when component mounts
+  useEffect(() => {
+    if (error) {
+      toastError('Profile Error', error);
+      clearError();
+    }
+  }, [error, clearError]);
 
   // Reset previews when images change
   useEffect(() => {
@@ -153,25 +151,15 @@ export default function UserProfilePage() {
     setIsSaving(true);
     try {
       const updateData = {
-        userId: profileData.userId,
         [fieldName]: fieldData.value
       };
 
-      const response = await fetch('/api/users/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
+      const updatedProfile = await updateProfile(updateData);
 
-      const result = await response.json();
-
-      if (result.success) {
-        setProfileData(result.data);
-        setUserData(result.data);
+      if (updatedProfile) {
+        setProfileData(updatedProfile);
         cancelEditing(fieldName);
-        toastSuccess(`${fieldName} updated successfully`);
+        // Success toast is handled by the hook
       } else {
         toastError(`Failed to update ${fieldName}`);
       }
@@ -458,10 +446,48 @@ export default function UserProfilePage() {
                 <Badge variant="outline" className="text-xs">
                   {profileData?.status || 'Active'}
                 </Badge>
+                {profile && (
+                  <Badge variant="default" className="text-xs bg-green-600">
+                    MongoDB Data
+                  </Badge>
+                )}
+                {!profile && profileData && (
+                  <Badge variant="secondary" className="text-xs">
+                    Cached Data
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshProfile}
+                  disabled={isLoading}
+                  className="ml-auto"
+                  title="Refresh profile data from MongoDB Atlas"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Refresh MongoDB"
+                  )}
+                </Button>
               </div>
               <p className="text-muted-foreground">
                 {profileData?.email || "No email provided"}
               </p>
+              {error && (
+                <p className="text-sm text-red-600 mt-1">
+                  Error: {error}
+                </p>
+              )}
+              
+              {/* Debug Info - Shows data source */}
+              {(profile || profileData) && (
+                <div className="text-xs text-muted-foreground mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                  <strong>Data Source:</strong> {profile ? 'MongoDB Atlas Database' : 'Cached/Store Data'} | 
+                  <strong> User ID:</strong> {profileData?.userId || 'Not available'} | 
+                  <strong> Last Updated:</strong> {profileData?.updatedAt ? new Date(profileData.updatedAt).toLocaleString() : 'Unknown'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -476,6 +502,16 @@ export default function UserProfilePage() {
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Personal Information
+                    {profile && (
+                      <Badge variant="default" className="text-xs bg-green-600 ml-auto">
+                        Live MongoDB Data
+                      </Badge>
+                    )}
+                    {!profile && profileData && (
+                      <Badge variant="secondary" className="text-xs ml-auto">
+                        Cached/Fallback Data
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -520,6 +556,16 @@ export default function UserProfilePage() {
                   <CardTitle className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />
                     Professional Information
+                    {profile && (
+                      <Badge variant="default" className="text-xs bg-green-600 ml-auto">
+                        Live MongoDB Data
+                      </Badge>
+                    )}
+                    {!profile && profileData && (
+                      <Badge variant="secondary" className="text-xs ml-auto">
+                        Cached/Fallback Data
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

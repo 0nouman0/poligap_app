@@ -31,7 +31,11 @@ function Tooltip({
 function TooltipTrigger({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+  // Use asChild so the trigger does not render its own <button>,
+  // preventing nested <button> when the child is an actual button.
+  return (
+    <TooltipPrimitive.Trigger asChild data-slot="tooltip-trigger" {...props} />
+  )
 }
 
 function TooltipContent({

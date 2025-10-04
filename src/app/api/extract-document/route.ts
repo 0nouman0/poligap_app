@@ -51,17 +51,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Basic extraction only for non-PDF files
-    if (!extractedText && (file.type !== 'application/pdf' && !file.name.endsWith('.pdf'))) {
+    if (!extractedText && (file.type !== 'application/pdf' && !(file.name && file.name.endsWith('.pdf')))) {
       console.log("Using basic extraction for non-PDF files...");
       extractedText = await basicExtraction(file);
       method = 'basic-fallback';
     }
     
     // For PDFs, if Gemini failed, return error instead of gibberish
-    if (!extractedText && (file.type === 'application/pdf' || file.name.endsWith('.pdf'))) {
+    if (!extractedText && (file.type === 'application/pdf' || (file.name && file.name.endsWith('.pdf')))) {
       console.log("PDF extraction failed - Gemini processing required");
       return NextResponse.json({ 
-        error: `PDF processing failed for ${file.name}. This PDF may be:
+        error: `PDF processing failed for ${file.name || 'uploaded file'}. This PDF may be:
 1. Encrypted or password-protected
 2. Image-based (scanned document)
 3. Corrupted or malformed
@@ -98,16 +98,31 @@ Please try:
       text: extractedText,
       length: extractedText.length,
       fileName: file.name,
-      method: method
     });
 
   } catch (error) {
     console.error("Document extraction error:", error);
     
+    // Provide more specific error messages
+    let errorMessage = "Failed to extract text from document";
+    
+    if (error instanceof Error) {
+      if (error.message.includes('endsWith')) {
+        errorMessage = "File processing error: Invalid file properties. Please try uploading the file again.";
+      } else if (error.message.includes('API key')) {
+        errorMessage = "AI service configuration error. Please contact support.";
+      } else if (error.message.includes('quota') || error.message.includes('limit')) {
+        errorMessage = "Service temporarily unavailable due to usage limits. Please try again later.";
+      } else {
+        errorMessage = `Document processing failed: ${error.message}`;
+      }
+    }
+    
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : "Document extraction failed",
-        details: "Check server logs for more information"
+        error: errorMessage,
+        fileName: file?.name || 'unknown',
+        fileType: file?.type || 'unknown'
       },
       { status: 500 }
     );
@@ -134,7 +149,7 @@ async function extractWithGemini(file: File, apiKey: string): Promise<string> {
       const model = genAI.getGenerativeModel({ model: modelName });
       
       // For text files, use direct text processing
-      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+      if (file.type === 'text/plain' || (file.name && file.name.endsWith('.txt'))) {
         const fileText = await file.text();
         
         const prompt = `You are an expert document parser and legal text analyst. Clean, structure, and organize this document text with the following requirements:
@@ -161,7 +176,7 @@ ${fileText}`;
       }
       
       // For PDFs, use Gemini's advanced document understanding
-      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      if (file.type === 'application/pdf' || (file.name && file.name.endsWith('.pdf'))) {
         const arrayBuffer = await file.arrayBuffer();
         const base64Data = Buffer.from(arrayBuffer).toString('base64');
         
@@ -239,12 +254,12 @@ ${basicText.substring(0, 8000)}`;
 
 async function basicExtraction(file: File): Promise<string> {
   // Handle text files only - reject PDFs at basic level
-  if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+  if (file.type === 'text/plain' || (file.name && file.name.endsWith('.txt'))) {
     return await file.text();
   }
   
   // For PDFs, return empty string to force Gemini processing or failure
-  if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+  if (file.type === 'application/pdf' || (file.name && file.name.endsWith('.pdf'))) {
     console.log("PDF detected - basic extraction not supported, requires Gemini processing");
     return '';
   }

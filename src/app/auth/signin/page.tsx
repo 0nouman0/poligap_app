@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -40,11 +40,20 @@ export default function SignInPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Force light mode on this page and restore previous theme on unmount
+    prevThemeRef.current = theme ?? resolvedTheme;
+    setTheme("light");
+    return () => {
+      if (prevThemeRef.current) {
+        setTheme(prevThemeRef.current);
+      }
+    };
   }, []);
 
   const {
@@ -139,24 +148,21 @@ export default function SignInPage() {
   const krooloLogoSrc = "/assets/poligap-high-resolution-logo.png";
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white text-gray-900">
       {/* Left Side - Sign In Form */}
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md space-y-8">
-          {/* Logo and Header */}
-          <div className="text-center space-y-6">
+          {/* Logo only */}
+          <div className="text-center">
             <div className="flex items-center justify-center">
-              <Image src={krooloLogoSrc} alt="PoliGap AI Logo" width={120} height={120} priority />
-            </div>
-
-            <div className="space-y-2">
-              <h1 className="text-xl font-semibold">
-                Empower Your Compliance Journey with{" "}
-                <span className="text-base-purple">PoliGap AI</span>
-              </h1>
-              <p className="text-gray-700 dark:text-gray-300 text-xs leading-relaxed">
-                Master compliance faster with PoliGap AI.
-              </p>
+              <Image
+                src={krooloLogoSrc}
+                alt="PoliGap AI Logo"
+                width={200}
+                height={200}
+                priority
+                className="object-contain"
+              />
             </div>
           </div>
 

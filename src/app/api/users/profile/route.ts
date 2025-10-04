@@ -51,52 +51,145 @@ export async function GET(req: NextRequest) {
         query.email = email;
       }
 
-      console.log('Searching for user with query:', query);
+      console.log('=== MongoDB User Search Debug ===');
+      console.log('Original userId parameter:', userId);
+      console.log('Search query:', JSON.stringify(query, null, 2));
+      
       const user = await User.findOne(query)
         .select('-__v') // Exclude version field
         .lean();
 
       console.log('User found:', user ? 'YES' : 'NO');
       if (user) {
-        console.log('User data:', {
+        console.log('Found user data:', {
           _id: user._id?.toString(),
           userId: user.userId?.toString(),
           email: user.email,
           name: user.name
         });
-      }
-
-      if (!user) {
-        // Also try searching by _id in case userId is stored as _id
+      } else {
+        // Try different search strategies
+        console.log('=== Trying Alternative Search Methods ===');
+        
+        // Try searching by string userId
+        const userByStringId = await User.findOne({ userId: userId }).lean();
+        console.log('Search by string userId result:', userByStringId ? 'FOUND' : 'NOT FOUND');
+        
+        // Try searching by _id directly
         try {
-          const userById = await User.findById(userId).select('-__v').lean();
-          if (userById) {
-            console.log('Found user by _id instead of userId');
-            const userObj = userById as any;
-            const transformedUser = {
-              ...userObj,
-              userId: userObj._id?.toString(),
-              _id: userObj._id?.toString(),
-              designation: userObj.designation || '',
-              role: userObj.role || 'User',
-              memberStatus: userObj.memberStatus || userObj.status || 'ACTIVE',
-              companyName: userObj.companyName || '',
-              reportingManager: userObj.reportingManager || null,
-              createdBy: userObj.createdBy || null,
-            };
-            
-            return createApiResponse({
-              success: true,
-              data: transformedUser,
+          const userByDirectId = await User.findById(userId).lean();
+          console.log('Search by _id result:', userByDirectId ? 'FOUND' : 'NOT FOUND');
+          if (userByDirectId) {
+            console.log('Found via _id:', {
+              _id: userByDirectId._id?.toString(),
+              email: userByDirectId.email,
+              name: userByDirectId.name
             });
           }
-        } catch (error) {
-          console.log('Error searching by _id:', error);
+        } catch (idError) {
+          console.log('_id search failed:', idError instanceof Error ? idError.message : 'Unknown error');
         }
+        
+        // List some users to see the actual data structure
+        const sampleUsers = await User.find({}).limit(3).select('_id userId email name').lean();
+        console.log('Sample users in database:', sampleUsers.map(u => ({
+          _id: u._id?.toString(),
+          userId: u.userId?.toString(),
+          email: u.email,
+          name: u.name
+        })));
+      }
 
+      // If no user found, try all possible search methods
+      if (!user) {
+        console.log('=== Comprehensive User Search ===');
+        let foundUser = null;
+        
+        // Method 1: Search by _id directly
+        try {
+          foundUser = await User.findById(userId).select('-__v').lean();
+          if (foundUser) {
+            console.log('✅ Found user by _id');
+          }
+        } catch (error) {
+          console.log('❌ _id search failed:', error instanceof Error ? error.message : 'Unknown error');
+        }
+        
+        // Method 2: Search by userId as string
+        if (!foundUser) {
+          try {
+            foundUser = await User.findOne({ userId: userId }).select('-__v').lean();
+            if (foundUser) {
+              console.log('✅ Found user by userId string');
+            }
+          } catch (error) {
+            console.log('❌ userId string search failed:', error instanceof Error ? error.message : 'Unknown error');
+          }
+        }
+        
+        // Method 3: Search by partial userId match
+        if (!foundUser && userId && userId.length >= 8) {
+          try {
+            const regex = new RegExp(userId, 'i');
+            foundUser = await User.findOne({
+              $or: [
+                { userId: regex },
+                { _id: { $regex: userId } }
+              ]
+            }).select('-__v').lean();
+            if (foundUser) {
+              console.log('✅ Found user by partial match');
+            }
+          } catch (error) {
+            console.log('❌ Partial match search failed:', error instanceof Error ? error.message : 'Unknown error');
+          }
+        }
+        
+        // Method 4: If still not found, search by any field containing the ID
+        if (!foundUser && userId) {
+          try {
+            foundUser = await User.findOne({
+              $or: [
+                { uniqueId: userId },
+                { email: userId }
+              ]
+            }).select('-__v').lean();
+            if (foundUser) {
+              console.log('✅ Found user by uniqueId or email');
+            }
+          } catch (error) {
+            console.log('❌ Alternative field search failed:', error instanceof Error ? error.message : 'Unknown error');
+          }
+        }
+        
+        if (foundUser) {
+          console.log('🎉 User found via alternative method');
+          const userObj = foundUser as any;
+          const transformedUser = {
+            ...userObj,
+            userId: userObj.userId?.toString() || userObj._id?.toString(),
+            _id: userObj._id?.toString(),
+            designation: userObj.designation || '',
+            role: userObj.role || 'User',
+            memberStatus: userObj.memberStatus || userObj.status || 'ACTIVE',
+            companyName: userObj.companyName || '',
+            reportingManager: userObj.reportingManager || null,
+            createdBy: userObj.createdBy || null,
+          };
+          
+          return createApiResponse({
+            success: true,
+            data: transformedUser,
+          });
+        }
+        
+        // If still no user found, provide detailed error info
+        const totalUsers = await User.countDocuments();
+        console.log(`❌ No user found. Total users in database: ${totalUsers}`);
+        
         return createApiResponse({
           success: false,
-          error: 'User not found in MongoDB Atlas database',
+          error: `User not found. Searched for ID: ${userId}. Database contains ${totalUsers} users. Check console for debug info.`,
           status: 404,
         });
       }

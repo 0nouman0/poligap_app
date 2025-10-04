@@ -11,6 +11,7 @@ import { PlaygroundChatMessage } from "@/types/agent";
 // import { PlaygroundChatMessage } from "@/types/agent";
 import { useCompanyStore } from "@/stores/company-store";
 import { useUserStore } from "@/stores/user-store";
+import { saveChatMessage, saveChatMessagesBatch } from "@/lib/utils/chatHistory";
 
 // Utility function to group conversations by date
 export function groupConversationsByDate(
@@ -185,6 +186,51 @@ export const useGlobalChatStore = create((set: any) => ({
         typeof messages === "function" ? messages(state.messages) : messages,
     })),
   clearMessages: () => set({ messages: [] }),
+
+  // Auto-save messages to MongoDB
+  setMessagesWithAutoSave: async (
+    messages:
+      | PlaygroundChatMessage[]
+      | ((prevMessages: PlaygroundChatMessage[]) => PlaygroundChatMessage[]),
+    conversationId?: string
+  ) => {
+    // Update the store first
+    set((state: any) => ({
+      messages:
+        typeof messages === "function" ? messages(state.messages) : messages,
+    }));
+
+    // If conversationId is provided, auto-save to MongoDB
+    if (conversationId) {
+      try {
+        const currentMessages = useGlobalChatStore.getState().messages;
+        const latestMessage = currentMessages[currentMessages.length - 1];
+        
+        if (latestMessage) {
+          await saveChatMessage(latestMessage, conversationId);
+        }
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        // Don't throw error to avoid breaking the UI
+      }
+    }
+  },
+
+  // Batch save all messages for a conversation
+  saveAllMessagesToHistory: async (conversationId: string) => {
+    try {
+      const { messages } = useGlobalChatStore.getState();
+      if (messages.length > 0) {
+        const result = await saveChatMessagesBatch(messages, conversationId);
+        console.log(`Saved ${result.savedCount}/${messages.length} messages to history`);
+        return result;
+      }
+      return { success: true, savedCount: 0, errorCount: 0 };
+    } catch (error) {
+      console.error('Batch save failed:', error);
+      return { success: false, savedCount: 0, errorCount: 0 };
+    }
+  },
 
   abortFetchReq: (): void => {
     const { fetchController } = useGlobalChatStore.getState() as any;

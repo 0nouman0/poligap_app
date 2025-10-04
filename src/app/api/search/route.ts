@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 // Basic Elasticsearch proxy for server-side search.
 // Env vars:
 // - ELASTICSEARCH_URL (e.g. https://your-es:9200/index-name/_search)
-// - ELASTICSEARCH_API_KEY (optional, for Bearer auth)
+//   or compose from:
+// - ELASTICSEARCH_BASE_URL (e.g. https://your-es:9200)
+// - ELASTICSEARCH_INDEX (e.g. my-index)
+// - ELASTICSEARCH_API_KEY (optional, for ApiKey auth on Elastic Cloud)
 // - ELASTICSEARCH_BASIC_AUTH (optional, for Basic auth header "user:pass" base64)
 // - ELASTICSEARCH_KNN (optional flag to enable vector search path)
 
@@ -11,9 +14,16 @@ export async function POST(req: NextRequest) {
   try {
     const { query, user_email, external_user_id, account_ids, apps } = await req.json();
 
-    if (!process.env.ELASTICSEARCH_URL) {
+    // Resolve ES endpoint: prefer explicit ELASTICSEARCH_URL, otherwise compose
+    const explicitUrl = process.env.ELASTICSEARCH_URL;
+    const baseUrl = process.env.ELASTICSEARCH_BASE_URL;
+    const index = process.env.ELASTICSEARCH_INDEX;
+    const composedUrl = baseUrl && index ? `${baseUrl.replace(/\/$/, "")}/${index}/_search` : undefined;
+    const esUrl = explicitUrl || composedUrl;
+
+    if (!esUrl) {
       return NextResponse.json(
-        { error: "ELASTICSEARCH_URL not configured" },
+        { error: "Elasticsearch endpoint not configured. Set ELASTICSEARCH_URL or ELASTICSEARCH_BASE_URL + ELASTICSEARCH_INDEX." },
         { status: 500 }
       );
     }
@@ -58,7 +68,8 @@ export async function POST(req: NextRequest) {
       "Content-Type": "application/json",
     };
     if (process.env.ELASTICSEARCH_API_KEY) {
-      headers["Authorization"] = `Bearer ${process.env.ELASTICSEARCH_API_KEY}`;
+      // Elastic Cloud expects ApiKey scheme with a base64 API key value
+      headers["Authorization"] = `ApiKey ${process.env.ELASTICSEARCH_API_KEY}`;
     } else if (process.env.ELASTICSEARCH_BASIC_AUTH) {
       headers["Authorization"] = `Basic ${Buffer.from(
         process.env.ELASTICSEARCH_BASIC_AUTH,
@@ -66,7 +77,7 @@ export async function POST(req: NextRequest) {
       ).toString("base64")}`;
     }
 
-    const esResp = await fetch(process.env.ELASTICSEARCH_URL, {
+    const esResp = await fetch(esUrl, {
       method: "POST",
       headers,
       body: JSON.stringify(esBody),

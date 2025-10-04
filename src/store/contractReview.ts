@@ -8,6 +8,10 @@ export interface DocumentVersion {
   description: string;
   appliedSuggestionId?: string;
   appliedSuggestionTitle?: string;
+  // Snapshots to ensure consistent restore of a version
+  patchStates?: Record<string, 'pending' | 'accepted' | 'rejected'>;
+  appliedFixes?: string[];
+  suggestionsStatus?: Record<string, 'pending' | 'accepted' | 'rejected' | 'reviewing'>;
 }
 
 export interface ContractTemplate {
@@ -327,7 +331,10 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
         version: 0,
         content: doc.fullText,
         timestamp: new Date(),
-        description: 'Original document'
+        description: 'Original document',
+        patchStates: {},
+        appliedFixes: [],
+        suggestionsStatus: {}
       };
       
       set({ 
@@ -473,8 +480,6 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
         patchStates: { ...state.patchStates, [lastFixId]: 'pending' },
         appliedFixes: state.appliedFixes.slice(0, -1)
       });
-      // Version for undo action
-      get().createVersion('Undid last fix', lastFixId);
     }
   },
   
@@ -573,6 +578,11 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
   
   createVersion: (description, suggestionId, suggestionTitle) => {
     const state = get();
+    // snapshot current statuses
+    const suggestionsStatus = state.suggestions.reduce<Record<string, 'pending' | 'accepted' | 'rejected' | 'reviewing'>>((acc, s) => {
+      acc[s.id] = s.status;
+      return acc;
+    }, {});
     const newVersion: DocumentVersion = {
       id: `v${state.versions.length}`,
       version: state.versions.length,
@@ -580,7 +590,10 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
       timestamp: new Date(),
       description,
       appliedSuggestionId: suggestionId,
-      appliedSuggestionTitle: suggestionTitle
+      appliedSuggestionTitle: suggestionTitle,
+      patchStates: { ...state.patchStates },
+      appliedFixes: [...state.appliedFixes],
+      suggestionsStatus
     };
     
     set({
@@ -593,10 +606,23 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
     const state = get();
     const targetVersion = state.versions.find(v => v.version === version);
     if (targetVersion) {
+      // restore suggestion statuses from snapshot if present
+      const updatedSuggestions = state.suggestions.map(s => {
+        const snapStatus = targetVersion.suggestionsStatus?.[s.id];
+        if (snapStatus) {
+          return { ...s, status: snapStatus as typeof s.status, acceptedAt: undefined, rejectedAt: undefined };
+        }
+        // default to pending if no snapshot
+        return { ...s, status: 'pending' as const, acceptedAt: undefined, rejectedAt: undefined };
+      });
+
       set({
         currentText: targetVersion.content,
         currentVersion: version,
-        hasUnsavedChanges: false
+        hasUnsavedChanges: false,
+        patchStates: targetVersion.patchStates ?? state.patchStates,
+        appliedFixes: targetVersion.appliedFixes ?? [],
+        suggestions: updatedSuggestions
       });
     }
   },

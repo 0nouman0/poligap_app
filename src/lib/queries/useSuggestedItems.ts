@@ -10,7 +10,6 @@ export interface SuggestedItem {
   url: string;
   integration_type: string;
   author_email: string;
-  created_at: string;
   last_updated: string;
   account_id: string;
   file_type: string;
@@ -21,6 +20,10 @@ const fetchSuggestedItems = async (
   external_user_id: string,
   user_email: string
 ): Promise<SuggestedItem[]> => {
+  // If we're using Elasticsearch directly, skip external suggestions API
+  if (process.env.NEXT_PUBLIC_SEARCH_PROVIDER === "elastic") {
+    return [];
+  }
   const res = await fetch(DJANGO_API_ROUTES.SUGGESTED, {
     method: "POST",
     headers: {
@@ -86,6 +89,10 @@ const fetchDynamicSuggestions = async (
   external_user_id: string,
   user_email: string
 ): Promise<DynamicSuggestionItem[]> => {
+  // If we're using Elasticsearch directly, skip external suggestions API
+  if (process.env.NEXT_PUBLIC_SEARCH_PROVIDER === "elastic") {
+    return [];
+  }
   const res = await fetch(DJANGO_API_ROUTES.DYNAMIC_SUGGESTIONS_MULTI_ACCOUNT, {
     method: "POST",
     headers: {

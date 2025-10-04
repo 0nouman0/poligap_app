@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -32,10 +32,19 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    // Force light mode while on this page; restore on unmount
+    prevThemeRef.current = theme ?? resolvedTheme;
+    setTheme("light");
+    return () => {
+      if (prevThemeRef.current) setTheme(prevThemeRef.current);
+    };
+  }, []);
 
   const { register, handleSubmit, formState: { errors }, setError } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -105,18 +114,12 @@ export default function SignUpPage() {
   const logoSrc = "/assets/poligap-high-resolution-logo.png";
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white text-gray-900">
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md space-y-8">
-          <div className="text-center space-y-6">
+          <div className="text-center">
             <div className="flex items-center justify-center">
-              <Image src={logoSrc} alt="Poligap AI" width={150} height={32} />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-xl font-semibold">Create your PoliGap AI account</h1>
-              <p className="text-gray-700 dark:text-gray-300 text-xs leading-relaxed">
-                Sign up to start analyzing your compliance documents.
-              </p>
+              <Image src={logoSrc} alt="Poligap AI" width={200} height={200} className="object-contain" />
             </div>
           </div>
 

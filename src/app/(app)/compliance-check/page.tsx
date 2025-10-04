@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { toastSuccess, toastError } from "@/components/toast-varients";
 
 interface ComplianceStandard {
   id: string;
@@ -431,18 +432,49 @@ export default function ComplianceCheckPage() {
     }
   };
 
-  // Save current results (for safety) and navigate away
+  // Save current results to MongoDB and return to first step
   const handleSaveAndExit = async () => {
     try {
       if (results && results.length > 0) {
+        // Save all results to MongoDB
         for (const r of results) {
           await saveAuditLog(r);
         }
+        
+        // Show success notification
+        toastSuccess(
+          'Analysis Saved Successfully', 
+          `${results.length} compliance ${results.length === 1 ? 'result' : 'results'} saved to your audit history.`
+        );
+      } else {
+        // Show info message if no results to save
+        toastSuccess('Session Reset', 'Compliance check has been reset to start a new analysis.');
       }
+      
+      // Reset the compliance check to the first step
+      setCurrentStep(1);
+      setSelectedStandards([]);
+      setUploadedFile(null);
+      setResults([]);
+      setIsAnalyzing(false);
+      setApplyRuleBase(false);
+      
     } catch (e) {
       console.error('Save & Exit failed to save some logs', e);
-    } finally {
-      router.push('/');
+      
+      // Show error notification
+      toastError(
+        'Save Failed', 
+        'There was an error saving your analysis. Please try again or contact support.'
+      );
+      
+      // Still reset to first step even if saving fails
+      setCurrentStep(1);
+      setSelectedStandards([]);
+      setUploadedFile(null);
+      setResults([]);
+      setIsAnalyzing(false);
+      setApplyRuleBase(false);
     }
   };
 

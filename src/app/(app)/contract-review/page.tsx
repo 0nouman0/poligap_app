@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { ContractCanvas } from "@/components/contract-review/ContractCanvas";
+import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useContractReviewStore } from "@/store/contractReview";
 
 interface ContractTemplate {
@@ -373,8 +374,123 @@ export default function ContractReview() {
     el.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
   };
 
+  // Also write a template-scoped audit log so the right-side history updates
+  const saveTemplateAuditLog = async (doc: ExtractedDocument, sug: any[]) => {
+    try {
+      if (!selectedTemplate?.id) return; // only when a template is selected
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const status = doc.overallScore >= 90 ? 'compliant' : doc.overallScore >= 70 ? 'partial' : 'non-compliant';
+      const suggestionsText: string[] = (sug || [])
+        .map((s: any) => s.suggestedText || s.reasoning || s.originalText || s.description)
+        .filter(Boolean);
+
+      const payload = {
+        templateId: selectedTemplate.id,
+        templateName: selectedTemplate.name,
+        action: 'analyzed',
+        fileName: doc.fileName,
+        score: doc.overallScore,
+        status,
+        gapsCount: (doc.gaps || []).length,
+        fileSize: uploadedFile?.size || 0,
+        analysisMethod: 'contract-review',
+        userId: userId || undefined,
+        snapshot: {
+          gaps: (doc.gaps || []).map(g => ({
+            id: g.id,
+            title: g.sectionTitle,
+            description: g.description,
+            priority: (g.severity as any) || 'medium',
+            category: selectedTemplate?.name || 'Contract',
+            recommendation: g.recommendation || '',
+            section: g.sectionTitle,
+          })),
+          suggestions: suggestionsText,
+          fullResult: { document: doc, suggestions: sug }
+        }
+      };
+
+      const resp = await fetch('/api/template-audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.error('Failed to save template audit log', err);
+        toastError('Template Log Save Failed', err?.error || 'Could not save template audit log');
+      } else {
+        console.debug('Saved template audit log');
+        toastSuccess('Template Audit Updated', 'Template history updated with this analysis.');
+      }
+    } catch (e) {
+      console.error('Error saving template audit log:', e);
+    }
+  };
+
+  // Save Contract Review analysis to shared audit logs (used by Compliance too)
+  const saveContractAuditLog = async (doc: ExtractedDocument, sug: any[]) => {
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const status = doc.overallScore >= 90 ? 'compliant' : doc.overallScore >= 70 ? 'partial' : 'non-compliant';
+      const suggestionsText: string[] = (sug || [])
+        .map((s: any) => s.suggestedText || s.reasoning || s.originalText || s.description)
+        .filter(Boolean);
+
+      const auditLogData = {
+        fileName: doc.fileName,
+        standards: [selectedTemplate?.name || 'Contract Review'],
+        score: doc.overallScore,
+        status,
+        gapsCount: (doc.gaps || []).length,
+        fileSize: uploadedFile?.size || 0,
+        analysisMethod: 'contract-review',
+        userId: userId || undefined,
+        snapshot: {
+          gaps: (doc.gaps || []).map(g => ({
+            id: g.id,
+            title: g.sectionTitle,
+            description: g.description,
+            priority: (g.severity as any) || 'medium',
+            category: selectedTemplate?.name || 'Contract',
+            recommendation: g.recommendation || '',
+            section: g.sectionTitle,
+          })),
+          suggestions: suggestionsText,
+          fullResult: { document: doc, suggestions: sug }
+        }
+      };
+
+      const resp = await fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(auditLogData)
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.error('Failed to save contract audit log', err);
+        toastError('Audit Log Save Failed', err?.error || 'Could not save contract audit log');
+      } else {
+        const json = await resp.json().catch(() => null);
+        console.debug('Saved contract review audit log', {
+          gaps: auditLogData.snapshot?.gaps?.length || 0,
+          suggestions: auditLogData.snapshot?.suggestions?.length || 0,
+          id: json?.id
+        });
+        toastSuccess('Audit Log Saved', 'Contract analysis saved to audit history.');
+      }
+    } catch (e) {
+      console.error('Error saving contract audit log:', e);
+    }
+  };
+
   // Server-side text extraction for uploaded files
   const extractFileText = async (file: File): Promise<string> => {
+    // Validate file parameter
+    if (!file) {
+      throw new Error('No file provided for text extraction');
+    }
+
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -393,21 +509,36 @@ export default function ContractReview() {
       return data.text || '';
     } catch (error) {
       console.error('Text extraction failed:', error);
+      
       // Fallback to basic client-side extraction for text files
-      if (file.type.includes('text') || file.name.endsWith('.txt')) {
+      const fileName = file.name || '';
+      const fileType = file.type || '';
+      
+      if (fileType.includes('text') || fileName.endsWith('.txt')) {
         try {
           return await file.text();
         } catch {
           return '';
         }
       }
+      
       // For PDFs, provide a helpful error message
-      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
         throw new Error('Gemini AI could not parse this PDF. Please try a different PDF file or use the manual text input option.');
       }
+      
+      // For Word documents
+      if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        throw new Error('Document processing failed. Please try uploading the file again or use a different format.');
+      }
+      
       throw error;
     }
   };
+
+  // Consistent short date formatter e.g., "Sep 10, 2025"
+  const formatDateShort = (iso: string | number | Date) =>
+    new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
   // Compute inline diff HTML between original extracted text and editedText
   const inlineDiffHtml = (original: string, revised: string) => {
@@ -533,10 +664,15 @@ export default function ContractReview() {
     setLogsError(null);
     try {
       const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      if (!userId) {
+        setTemplateLogs([]);
+        setLogsError('Sign in required to view audit logs (missing user_id).');
+        return;
+      }
       const params = new URLSearchParams();
       params.set('templateId', selectedTemplate.id);
       params.set('limit', '20');
-      if (userId) params.set('userId', userId);
+      params.set('userId', userId);
       const res = await fetch(`/api/template-audit-logs?${params.toString()}`);
       const data = await res.json();
       if (data?.success) {
@@ -554,6 +690,26 @@ export default function ContractReview() {
   useEffect(() => {
     reloadTemplateLogs();
   }, [selectedTemplate]);
+
+  // Log template selection event (for history analytics)
+  const saveTemplateSelectedLog = async (template: ContractTemplate) => {
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      if (!userId) return;
+      await fetch('/api/template-audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: template.id,
+          templateName: template.name,
+          action: 'selected',
+          userId
+        })
+      });
+    } catch (e) {
+      console.error('Failed to log template selection', e);
+    }
+  };
 
   // Cleanup on unmount: clear any pending timers and reset analyzing flag
   useEffect(() => {
@@ -765,6 +921,8 @@ export default function ContractReview() {
 
   const handleTemplateSelect = (template: ContractTemplate) => {
     setSelectedTemplate(template);
+    // Log selection and let the effect reload the history
+    void saveTemplateSelectedLog(template);
   };
 
   const handleDocumentExtraction = async () => {
@@ -790,6 +948,11 @@ export default function ContractReview() {
     try {
       // Extract text from uploaded file or use manual input
       let extractedText = '';
+      
+      // Double-check that uploadedFile is still valid
+      if (!uploadedFile) {
+        throw new Error('No file selected for analysis');
+      }
       
       extractedText = await extractFileText(uploadedFile);
       if (!extractedText.trim()) {
@@ -883,6 +1046,12 @@ export default function ContractReview() {
       }));
       
       crStore.setSuggestions(suggestions as any);
+
+      // Save to audit logs (similar to Compliance)
+      await saveContractAuditLog(document, suggestions);
+      // Save to template-specific audit logs and refresh sidebar history
+      await saveTemplateAuditLog(document, suggestions);
+      await reloadTemplateLogs();
     } catch (error) {
       console.error('Document extraction and analysis failed:', error);
       
@@ -938,7 +1107,7 @@ export default function ContractReview() {
   };
 
   const nextStep = () => {
-    if (currentStep < steps.length) {
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -947,6 +1116,116 @@ export default function ContractReview() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const downloadContract = async () => {
+    if (!uploadedFile) return;
+    
+    try {
+      // Create a download link for the original file with track changes
+      const blob = new Blob([uploadedFile], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${uploadedFile.name.replace(/\.[^/.]+$/, '')}_tracked.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading contract:', error);
+    }
+  };
+
+  const viewContractDetails = () => {
+    if (!extractedDocument) return;
+    
+    // Create a detailed view of the contract analysis
+    const detailsWindow = window.open('', '_blank', 'width=800,height=600');
+    if (detailsWindow) {
+      detailsWindow.document.write(`
+        <html>
+          <head>
+            <title>Contract Analysis Details</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              .header { color: #dc2626; font-size: 24px; margin-bottom: 20px; }
+              .section { margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; }
+              .critical { border-left: 4px solid #dc2626; }
+              .high { border-left: 4px solid #f59e0b; }
+              .medium { border-left: 4px solid #3b82f6; }
+              .low { border-left: 4px solid #10b981; }
+            </style>
+          </head>
+          <body>
+            <div class="header">Contract Analysis Details</div>
+            <div class="section">
+              <h3>Overall Score: ${extractedDocument.overallScore}%</h3>
+              <p>File: ${uploadedFile?.name}</p>
+              <p>Analysis Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+            </div>
+            <div class="section">
+              <h3>Issues Found (${extractedDocument.gaps.length})</h3>
+              ${extractedDocument.gaps.map(gap => `
+                <div class="section ${gap.severity}">
+                  <h4>${gap.sectionTitle}</h4>
+                  <p><strong>Severity:</strong> ${gap.severity}</p>
+                  <p><strong>Description:</strong> ${gap.description}</p>
+                  <p><strong>Recommendation:</strong> ${gap.recommendation}</p>
+                </div>
+              `).join('')}
+            </div>
+          </body>
+        </html>
+      `);
+      detailsWindow.document.close();
+    }
+  };
+
+  const exportContractReport = async () => {
+    if (!extractedDocument || !uploadedFile) return;
+    
+    try {
+      // Generate a comprehensive report
+      const reportData = {
+        fileName: uploadedFile.name,
+        analysisDate: new Date().toISOString(),
+        overallScore: extractedDocument.overallScore,
+        totalIssues: extractedDocument.gaps.length,
+        criticalIssues: extractedDocument.gaps.filter(g => g.severity === 'critical').length,
+        highIssues: extractedDocument.gaps.filter(g => g.severity === 'high').length,
+        mediumIssues: extractedDocument.gaps.filter(g => g.severity === 'medium').length,
+        lowIssues: extractedDocument.gaps.filter(g => g.severity === 'low').length,
+        gaps: extractedDocument.gaps,
+        template: selectedTemplate?.name || 'Custom Analysis'
+      };
+
+      // Create and download JSON report
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${uploadedFile.name.replace(/\.[^/.]+$/, '')}_analysis_report.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting report:', error);
+    }
+  };
+
+  const analyzeNewContract = () => {
+    // Reset the entire analysis process
+    setCurrentStep(1);
+    setReviews([]);
+    setSelectedContractTypes([]);
+    setUploadedFile(null);
+    setExtractedDocument(null);
+    setSelectedTemplate(null);
+    setIsAnalyzing(false);
   };
 
   const handleContractTypeToggle = (typeId: string) => {
@@ -1085,19 +1364,48 @@ export default function ContractReview() {
               <ChevronLeft className="h-4 w-4 mr-2" />
               Previous
             </Button>
-            {currentStep < 4 && (
+            {currentStep < 5 && (
               <Button
                 onClick={nextStep}
                 disabled={
                   (currentStep === 1 && !canProceedToStep2) ||
                   (currentStep === 2 && !canProceedToStep3) ||
-                  (currentStep === 3 && !canProceedToStep4)
+                  (currentStep === 3 && !canProceedToStep4) ||
+                  (currentStep === 4 && !extractedDocument)
                 }
                 className="px-3"
               >
-                Next
+                {currentStep === 4 ? 'Proceed to Download' : 'Next'}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
+            )}
+            {currentStep === 5 && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={analyzeNewContract}
+                  variant="outline"
+                  className="px-4"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Analyze New Contract
+                </Button>
+                <Button
+                  onClick={exportContractReport}
+                  disabled={!extractedDocument || !uploadedFile}
+                  className="px-4"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Report
+                </Button>
+                <Button
+                  onClick={downloadContract}
+                  disabled={!uploadedFile}
+                  className="px-4 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete & Download
+                </Button>
+              </div>
             )}
           </div>
           )}
@@ -1589,25 +1897,36 @@ export default function ContractReview() {
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
-                {!extractedDocument && (
-                  <Button
-                    onClick={handleDocumentExtraction}
-                    disabled={!uploadedFile || isAnalyzing || !(templateMode === 'standard' ? !!selectedTemplate : (!!customTemplateName || !!customTemplateText))}
-                    className="flex items-center gap-2"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        Extract & Analyze with AI
-                      </>
-                    )}
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {!extractedDocument && (
+                    <Button
+                      onClick={handleDocumentExtraction}
+                      disabled={!uploadedFile || isAnalyzing || !(templateMode === 'standard' ? !!selectedTemplate : (!!customTemplateName || !!customTemplateText))}
+                      className="flex items-center gap-2"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          Extract & Analyze with AI
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {extractedDocument && (
+                    <Button
+                      onClick={nextStep}
+                      className="flex items-center gap-2"
+                    >
+                      Proceed to Download
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Reviewer notes textarea before analysis */}
@@ -1628,6 +1947,24 @@ export default function ContractReview() {
           {/* Step 5: Results */}
           {currentStep === 5 && (
             <div className="space-y-6">
+              {/* Step 5 Subtitle under main title */}
+              <div className="text-center -mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Contract Assessment — Based on the conducted analysis and review
+                </p>
+              </div>
+              {/* Completion Status Banner */}
+              <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                  <div>
+                    <h3 className="font-semibold text-green-800 dark:text-green-200">Analysis Complete!</h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Your contract has been successfully analyzed. Review the results below and use the action buttons to proceed.
+                    </p>
+                  </div>
+                </div>
+              </div>
               {reviews.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -1647,10 +1984,11 @@ export default function ContractReview() {
                             {review.fileName}
                           </h3>
                           <p className="text-muted-foreground">
-                            {review.contractType} • Analyzed on {new Date(review.uploadDate).toLocaleDateString()}
+                            {review.contractType} • Analyzed on {formatDateShort(review.uploadDate)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase">Assessed</span>
                           <Badge className={getStatusColor(review.status)}>
                             {getStatusIcon(review.status)}
                             <span className="ml-1">{review.status.replace("-", " ")}</span>
@@ -1761,23 +2099,75 @@ export default function ContractReview() {
                         )}
                       </div>
 
+                      {/* Make it working section */}
+                      <div className="mt-6 p-4 border-2 border-red-200 rounded-lg bg-red-50 dark:bg-red-950/20">
+                        <h3 className="text-lg font-bold text-red-600 mb-3">Make it working</h3>
+                        <div className="flex gap-2 pt-2">
+                          <Button 
+                            variant="outline" 
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            onClick={viewContractDetails}
+                            disabled={!extractedDocument}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            onClick={exportContractReport}
+                            disabled={!extractedDocument || !uploadedFile}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Export Report
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            onClick={analyzeNewContract}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Analyze New Contract
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Download Contract section */}
+                      <div className="mt-4 p-4 border-2 border-red-200 rounded-lg bg-red-50 dark:bg-red-950/20">
+                        <h3 className="text-lg font-bold mb-2">Download Contract (.Docx)</h3>
+                        <p className="text-red-600 font-semibold text-sm mb-3">
+                          Most updated Docx will be downloaded in track mode
+                        </p>
+                        <Button 
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                          onClick={downloadContract}
+                          disabled={!uploadedFile}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Contract
+                        </Button>
+                      </div>
+
                       <div className="flex gap-2 pt-4">
-                        <Button variant="outline">
+                        <Button 
+                          variant="outline"
+                          onClick={viewContractDetails}
+                          disabled={!extractedDocument}
+                        >
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </Button>
-                        <Button variant="outline">
+                        <Button 
+                          variant="outline"
+                          onClick={exportContractReport}
+                          disabled={!extractedDocument || !uploadedFile}
+                        >
                           <Download className="h-4 w-4 mr-2" />
                           Export Report
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => {
-                            setCurrentStep(1);
-                            setReviews([]);
-                            setSelectedContractTypes([]);
-                            setUploadedFile(null);
-                          }}
+                          onClick={analyzeNewContract}
                         >
                           <FileText className="h-4 w-4 mr-2" />
                           Analyze New Contract

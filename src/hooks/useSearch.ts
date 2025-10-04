@@ -54,9 +54,15 @@ const fetchSearch = async (
       apps,
     }),
   });
-  const data = await response.json();
+  if (!response.ok) {
+    // Avoid undefined data in React Query
+    console.warn("search request failed", response.status);
+    return [] as SearchResult[];
+  }
+  const data = await response.json().catch(() => ({}));
   console.log("search data ==>", data);
-  return data.results;
+  const results = Array.isArray(data?.results) ? (data.results as SearchResult[]) : [];
+  return results;
 };
 
 // Custom hook for debounced search, debounceMs: number = 300

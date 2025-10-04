@@ -1,32 +1,48 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { triggerN8NEmailWorkflow, EMAIL_TEMPLATES, EmailTemplateType } from "@/lib/utils/n8n-webhook";
+import { 
+  Mail, 
+  Scale, 
+  Bot, 
+  Sparkles, 
+  Zap, 
+  Upload,
+  Send,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Construction
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AIAgentsPage() {
   const [open, setOpen] = useState(false);
   const [activeAgent, setActiveAgent] = useState<
-    "Email Notifier" | "Law Scanner" | "IP Verification" | null
+    "Email Notifier" | "Law Scanner" | null
   >(null);
-  const [activeTab, setActiveTab] = useState<
-    "Database" | "Knowledge Base" | "Actions" | "Settings"
-  >("Database");
+  const [activeTab, setActiveTab] = useState<"Actions">("Actions");
 
   const tabs: Array<{
-    key: "Database" | "Knowledge Base" | "Actions" | "Settings";
+    key: "Actions";
     label: string;
   }> = useMemo(
     () => [
-      { key: "Database", label: "Database" },
-      { key: "Knowledge Base", label: "Knowledge Base" },
       { key: "Actions", label: "Actions" },
-      { key: "Settings", label: "Settings" },
     ],
     []
   );
 
-  const openAgent = (agent: "Email Notifier" | "Law Scanner" | "IP Verification") => {
+  const openAgent = (agent: "Email Notifier" | "Law Scanner") => {
     setActiveAgent(agent);
-    setActiveTab("Database");
+    setActiveTab("Actions");
     setOpen(true);
   };
 
@@ -113,29 +129,7 @@ export default function AIAgentsPage() {
   };
 
   const getPreview = () => {
-    const map: Record<string, { subject: string; body: string }> = {
-      policy_changes: {
-        subject: "Important: Policy Changes",
-        body: "We have updated our policies. Please review the changes at your earliest convenience.",
-      },
-      terms_updates: {
-        subject: "Update: Terms & Conditions",
-        body: "Our Terms & Conditions have been updated. Visit your account to read the new terms.",
-      },
-      feature_launch: {
-        subject: "New Feature Launch 🚀",
-        body: "We're excited to announce a new feature now available in your workspace.",
-      },
-      maintenance: { subject: "Scheduled Maintenance", body: "We will perform scheduled maintenance during the listed window." },
-      downtime: { subject: "Incident: Service Downtime", body: "We experienced downtime. The issue has been resolved. Details inside." },
-      security: { subject: "Security Advisory", body: "A security-related update requires your attention." },
-      newsletter: { subject: "Monthly Newsletter", body: "Catch up on product updates, tips, and resources." },
-      promotion: { subject: "Limited-time Promotion", body: "Unlock special discounts available for a short time." },
-      survey: { subject: "We value your feedback", body: "Please take a quick survey to help us improve." },
-      webinar: { subject: "You're invited: Webinar", body: "Join our upcoming webinar. Save your seat now!" },
-      billing: { subject: "Billing Update", body: "There has been an update to your billing information or invoice." },
-    };
-    return map[selectedAction];
+    return EMAIL_TEMPLATES[selectedAction as EmailTemplateType] || EMAIL_TEMPLATES.policy_changes;
   };
 
   const sendNotifications = async () => {
@@ -143,237 +137,267 @@ export default function AIAgentsPage() {
     setSendResult(null);
     try {
       const recipients = parseEmails(emailsText);
-      const res = await fetch("/api/email-notifier/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipients, actionType: selectedAction }),
+      const preview = getPreview();
+      
+      // Call the n8n webhook using utility function
+      const result = await triggerN8NEmailWorkflow({
+        recipients, 
+        actionType: selectedAction,
+        subject: preview.subject,
+        message: preview.body,
+        notificationType: selectedAction
       });
-      const data = await res.json();
-      setSendResult({ sent: data?.sent || 0, failed: data?.failed || 0 });
+      
+      if (result.success) {
+        setSendResult({ sent: recipients.length, failed: 0 });
+      } else {
+        setSendResult({ sent: 0, failed: recipients.length });
+      }
     } catch (e) {
-      setSendResult({ sent: 0, failed: 0 });
+      setSendResult({ sent: 0, failed: parseEmails(emailsText).length });
     } finally {
       setSending(false);
     }
   };
   return (
-    <div className="h-full min-h-0 overflow-hidden bg-gray-50 flex flex-col items-center px-1 sm:px-2">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="text-center w-full max-w-screen-2xl pt-4 pb-3">
-        <h1 className="text-2xl font-semibold text-purple-600 flex items-center justify-center gap-2">
-          AI Agents<span className="text-yellow-400">✨</span>
-        </h1>
-        <p className="text-sm text-gray-600 mt-2">
-          Curated, task-specific agents to accelerate your workflows. Choose an agent below to get started.
-        </p>
-      </div>
-
-      {/* Scrollable Content Area */}
-      <div className="flex-1 w-full max-w-screen-2xl overflow-y-auto">
-        {/* Agents Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-3 w-full">
-        {/* Email Notifier Agent */}
-        <div className="bg-purple-50 border border-purple-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center">
-          <div className="bg-purple-200/70 p-3 rounded-full mb-3">
-            <span className="text-purple-700 text-xl">✉️</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800">Email Notifier</h3>
-          <p className="text-sm text-gray-600 mt-1">Automate email alerts and notifications for key events.</p>
-          <button onClick={() => openAgent("Email Notifier")} className="mt-4 bg-black text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800 transition">Use Agent</button>
-        </div>
-
-        {/* Law Scanner Agent */}
-        <div className="bg-purple-50 border border-purple-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center">
-          <div className="bg-purple-200/70 p-3 rounded-full mb-3">
-            <span className="text-purple-700 text-xl">⚖️</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800">Law Scanner</h3>
-          <p className="text-sm text-gray-600 mt-1">Scan documents for legal clauses, risks, and compliance.</p>
-          <button onClick={() => openAgent("Law Scanner")} className="mt-4 bg-black text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800 transition">Use Agent</button>
-        </div>
-
-        {/* IP Verification Agent (Intellectual Property) */}
-        <div className="bg-purple-50 border border-purple-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center">
-          <div className="bg-purple-200/70 p-3 rounded-full mb-3">
-            <span className="text-purple-700 text-xl">🛡️</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800">IP Verification</h3>
-          <p className="text-sm text-gray-600 mt-1">Verify Intellectual Property (IP) ownership, conflicts, and prior art signals.</p>
-          <button onClick={() => openAgent("IP Verification")} className="mt-4 bg-black text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800 transition">Use Agent</button>
-        </div>
-
-        {/* More to come (In Development) */}
-        <div className="bg-white border border-dashed border-purple-200 p-6 rounded-xl flex flex-col items-center text-center">
-          <div className="bg-purple-50 p-3 rounded-full mb-3">
-            <span className="text-purple-600 text-xl">🚧</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800">More Coming Soon</h3>
-          <p className="text-sm text-gray-600 mt-1">New specialized agents are in development. Stay tuned!</p>
-          <button className="mt-4 bg-gray-900/80 text-white px-4 py-2 rounded-md text-sm cursor-not-allowed opacity-70">In Development</button>
-        </div>
-        </div>
-      </div>
-
-      {/* Footer with Input */}
-      <div className="w-full max-w-screen-2xl py-3">
-        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 flex items-center justify-between">
-          <input
-            type="text"
-            placeholder="Ask anything..."
-            className="flex-1 text-sm text-gray-600 outline-none"
-          />
-          <div className="flex items-center space-x-2">
-            <button className="text-gray-400 hover:text-gray-600">
-              <span>📎</span>
-            </button>
-            <button className="text-gray-400 hover:text-gray-600">
-              <span>📩</span>
-            </button>
-            <button className="text-gray-400 hover:text-gray-600">
-              <span>🔗</span>
-            </button>
-            <span className="text-xs text-gray-400">•</span>
-            <span className="text-xs text-green-600">Gpt-4.1</span>
-            <span className="text-xs text-gray-400">•</span>
-            <select className="text-xs text-gray-600 bg-transparent border-none outline-none">
-              <option>Output in - English</option>
-            </select>
-            <button className="text-gray-400 hover:text-gray-600">
-              <span>🎙️</span>
-            </button>
-            <button className="text-gray-400 hover:text-gray-600">
-              <span>🔍</span>
-            </button>
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <div className="flex items-center gap-2">
+            <Bot className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-semibold">AI Agents</h1>
+            <Sparkles className="h-4 w-4 text-yellow-500" />
           </div>
         </div>
       </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 text-center">
+            <p className="text-muted-foreground text-lg">
+              Curated, task-specific agents to accelerate your workflows. Choose an agent below to get started.
+            </p>
+          </div>
+
+          {/* Agents Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center max-w-5xl mx-auto">
+            {/* Email Notifier Agent */}
+            <Card className="cursor-pointer transition-all hover:shadow-lg group w-full max-w-sm h-full">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                    <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <Badge variant="secondary">Active</Badge>
+                </div>
+                <CardTitle className="text-lg font-semibold">Email Notifier</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground min-h-[3rem]">
+                  Automate email alerts and notifications for key events and policy changes.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button 
+                  onClick={() => openAgent("Email Notifier")} 
+                  className="w-full"
+                  size="sm"
+                >
+                  Use Agent
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Law Scanner Agent */}
+            <Card className="cursor-pointer transition-all hover:shadow-lg group w-full max-w-sm h-full">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                    <Scale className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <Badge variant="secondary">Active</Badge>
+                </div>
+                <CardTitle className="text-lg font-semibold">Law Scanner</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground min-h-[3rem]">
+                  Scan documents for legal clauses, risks, and compliance issues.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button 
+                  onClick={() => openAgent("Law Scanner")} 
+                  className="w-full"
+                  size="sm"
+                >
+                  Use Agent
+                </Button>
+              </CardContent>
+            </Card>
+
+
+            {/* Coming Soon Card */}
+            <Card className="border-dashed opacity-60 w-full max-w-sm h-full">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <Construction className="h-6 w-6 text-gray-500" />
+                  </div>
+                  <Badge variant="outline">Coming Soon</Badge>
+                </div>
+                <CardTitle className="text-lg font-semibold">More Agents</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground min-h-[3rem]">
+                  New specialized agents are in development. Stay tuned for updates!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button 
+                  disabled 
+                  className="w-full"
+                  size="sm"
+                  variant="outline"
+                >
+                  In Development
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
       {/* Modal: Agent Workspace */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
-          <div className="relative bg-white w-[95vw] max-w-5xl h-[46vh] max-h-[46vh] rounded-xl shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b px-4 sm:px-5 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-purple-600">🤖</span>
-                <h2 className="text-base sm:text-lg font-semibold text-gray-800">{activeAgent} Agent</h2>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-none w-[98vw] h-[95vh] p-0">
+            <DialogHeader className="px-6 py-4 border-b">
+              <div className="flex items-center gap-3">
+                {activeAgent === "Email Notifier" && <Mail className="h-5 w-5 text-blue-600" />}
+                {activeAgent === "Law Scanner" && <Scale className="h-5 w-5 text-purple-600" />}
+                <DialogTitle className="text-xl font-semibold">{activeAgent} Agent</DialogTitle>
               </div>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 text-xl leading-none">×</button>
-            </div>
-            {/* Body */}
-            <div className="flex h-[calc(46vh-48px)]">
-              {/* Sidebar */}
-              <aside className="w-36 sm:w-48 border-r bg-gray-50/60 p-2">
-                <nav className="space-y-1">
-                  {tabs.map((t) => (
-                    <button
-                      key={t.key}
-                      onClick={() => setActiveTab(t.key)}
-                      className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-md text-sm transition ${
-                        activeTab === t.key
-                          ? "bg-purple-100 text-purple-800"
-                          : "hover:bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      <span className="text-base">
-                        {t.key === "Database" && "🗄️"}
-                        {t.key === "Knowledge Base" && "🧠"}
-                        {t.key === "Actions" && "⚡"}
-                        {t.key === "Settings" && "⚙️"}
-                      </span>
-                      <span>{t.label}</span>
-                    </button>
-                  ))}
-                </nav>
-              </aside>
-              {/* Content */}
-              <section className="flex-1 p-3 sm:p-5 overflow-y-auto">
-                {activeTab === "Database" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><span>🗄️</span> Database</h3>
-                    <p className="text-sm text-gray-600 mt-1">Placeholder: Connect and manage this agent's structured data sources.</p>
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div className="border rounded-lg p-3">
-                        <p className="text-sm font-medium text-gray-800">Tables</p>
-                        <p className="text-xs text-gray-500">0 connected</p>
-                      </div>
-                      <div className="border rounded-lg p-3">
-                        <p className="text-sm font-medium text-gray-800">Integrations</p>
-                        <p className="text-xs text-gray-500">Add Postgres, MySQL, etc.</p>
-                      </div>
+            </DialogHeader>
+            {/* Content - Full Width */}
+            <div className="h-[calc(95vh-80px)] overflow-y-auto">
+              <section className="p-12">
+                {/* Actions Content - Always Visible */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Actions</h3>
                     </div>
-                  </div>
-                )}
-                {activeTab === "Knowledge Base" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><span>🧠</span> Knowledge Base</h3>
-                    <p className="text-sm text-gray-600 mt-1">Placeholder: Upload documents, URLs, and media for the agent to learn from.</p>
-                    <div className="mt-4 border-dashed border-2 border-purple-200 rounded-lg p-6 text-center text-sm text-gray-600">Drop files or click to upload</div>
-                  </div>
-                )}
-                {activeTab === "Actions" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><span>⚡</span> Actions</h3>
+                    
                     {activeAgent === "Email Notifier" ? (
-                      <div className="mt-4 space-y-4">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                          <div className="lg:col-span-2 border rounded-lg p-3">
-                            <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><span>📧</span> Recipients (comma, space or newline separated)</label>
-                            <textarea
-                              value={emailsText}
-                              onChange={(e) => setEmailsText(e.target.value)}
-                              rows={6}
-                              className="w-full border rounded-md px-3 py-2 text-sm resize-y"
-                              placeholder="alice@example.com, bob@example.com\nor paste from a spreadsheet"
-                            />
-                            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                              <div>Parsed: {parseEmails(emailsText).length} emails</div>
-                              <label className="inline-flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="file"
-                                  accept=".csv,.txt,.tsv"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) onUploadEmails(f);
-                                    // reset input so same file can be reselected
-                                    e.currentTarget.value = "";
-                                  }}
-                                />
-                                <span className="px-2 py-1 border rounded-md bg-gray-50">Upload CSV/TXT</span>
-                              </label>
-                            </div>
-                          </div>
-                          <div className="border rounded-lg p-3">
-                            <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><span>🪄</span> Notification type</label>
-                            <select
-                              value={selectedAction}
-                              onChange={(e) => setSelectedAction(e.target.value)}
-                              className="w-full border rounded-md px-3 py-2 text-sm"
-                            >
-                              {emailActions.map((a) => (
-                                <option key={a.value} value={a.value}>{a.label}</option>
-                              ))}
-                            </select>
-                            <div className="mt-4 border rounded-md p-3 bg-purple-50/40">
-                              <div className="text-xs uppercase tracking-wide text-purple-700 mb-1 flex items-center gap-1"><span>👁️</span> Preview</div>
-                              <div className="text-sm font-medium text-gray-800">{getPreview().subject}</div>
-                              <div className="text-sm text-gray-600 mt-1">{getPreview().body}</div>
-                            </div>
-                          </div>
+                      <div className="space-y-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-1 gap-12">
+                          <Card className="lg:col-span-1">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2 text-base">
+                                <Mail className="h-4 w-4" />
+                                Recipients
+                              </CardTitle>
+                              <CardDescription>
+                                Enter email addresses separated by commas, spaces, or new lines
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <Textarea
+                                value={emailsText}
+                                onChange={(e) => setEmailsText(e.target.value)}
+                                rows={10}
+                                placeholder="alice@example.com, bob@example.com&#10;or paste from a spreadsheet"
+                                className="resize-y min-h-[250px]"
+                              />
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary">
+                                  {parseEmails(emailsText).length} emails parsed
+                                </Badge>
+                                <label className="cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept=".csv,.txt,.tsv"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) onUploadEmails(f);
+                                      e.currentTarget.value = "";
+                                    }}
+                                  />
+                                  <Button variant="outline" size="sm" asChild>
+                                    <span className="flex items-center gap-2">
+                                      <Upload className="h-4 w-4" />
+                                      Upload CSV/TXT
+                                    </span>
+                                  </Button>
+                                </label>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          
+                          <Card className="xl:col-span-2">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2 text-base">
+                                <Sparkles className="h-4 w-4" />
+                                Notification Type
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <Select value={selectedAction} onValueChange={setSelectedAction}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {emailActions.map((a) => (
+                                    <SelectItem key={a.value} value={a.value}>
+                                      {a.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              
+                              <Card className="bg-muted/50">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-sm flex items-center gap-2">
+                                    👁️ Preview
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                  <div className="font-medium text-sm">{getPreview().subject}</div>
+                                  <div className="text-sm text-muted-foreground">{getPreview().body}</div>
+                                </CardContent>
+                              </Card>
+                            </CardContent>
+                          </Card>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <button
+                        <div className="flex items-center gap-4">
+                          <Button
                             onClick={sendNotifications}
                             disabled={sending || parseEmails(emailsText).length === 0}
-                            className="px-4 py-2 rounded-md text-sm text-white bg-black disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2"
                           >
-                            {sending ? "Sending..." : "Send Notifications"}
-                          </button>
+                            {sending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4" />
+                                Send Notifications
+                              </>
+                            )}
+                          </Button>
+                          
                           {sendResult && (
-                            <div className="text-xs text-gray-600">
-                              Sent: <span className="font-semibold text-green-700">{sendResult.sent}</span> • Failed: <span className="font-semibold text-red-700">{sendResult.failed}</span>
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="flex items-center gap-1">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <span className="font-medium text-green-700">{sendResult.sent} sent</span>
+                              </div>
+                              {sendResult.failed > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                  <span className="font-medium text-red-700">{sendResult.failed} failed</span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -454,30 +478,10 @@ export default function AIAgentsPage() {
                       </>
                     )}
                   </div>
-                )}
-                {activeTab === "Settings" && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2"><span>⚙️</span> Settings</h3>
-                    <p className="text-sm text-gray-600 mt-1">Placeholder: Configure model, permissions, and notifications.</p>
-                    <div className="mt-4 space-y-3">
-                      <div className="flex items-center justify-between border rounded-lg p-3">
-                        <span className="text-sm text-gray-700">Enable notifications</span>
-                        <input type="checkbox" className="toggle toggle-sm" />
-                      </div>
-                      <div className="border rounded-lg p-3">
-                        <label className="block text-xs text-gray-500 mb-1">Model</label>
-                        <select className="w-full border rounded-md px-3 py-2 text-sm">
-                          <option>Default</option>
-                          <option>Advanced</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </section>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

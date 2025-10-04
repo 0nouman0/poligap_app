@@ -111,14 +111,16 @@ export function Header() {
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container grid grid-cols-[auto_1fr_auto] h-[60px] max-w-screen items-center px-6 gap-4">
+      <div className="container grid grid-cols-[auto_1fr_auto] h-[56px] max-w-screen items-center px-6 gap-4">
         {/* Logo Section */}
         <div className="flex items-center">
-          <img src={headerImageSrc} alt="Poligap" width={32} height={32} className="h-8 w-8 mr-2 object-contain" />
-          <div className="flex flex-col justify-center">
-            <h1 className="text-lg font-bold text-foreground leading-tight">Poligap</h1>
-            <span className="text-xs text-muted-foreground leading-tight">Poligap AI</span>
-          </div>
+          <img
+            src={headerImageSrc}
+            alt="Poligap"
+            width={56}
+            height={56}
+            className="h-12 w-12 md:h-14 md:w-14 object-contain"
+          />
         </div>
 
         {/* Center Search (hidden until Elasticsearch is enabled) */}

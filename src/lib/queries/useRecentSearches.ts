@@ -19,6 +19,10 @@ const fetchRecentSearches = async (
   external_user_id: string,
   user_email: string
 ): Promise<RecentSearch[]> => {
+  // If we're using Elasticsearch directly, skip external recent-searches API
+  if (process.env.NEXT_PUBLIC_SEARCH_PROVIDER === "elastic") {
+    return [];
+  }
   const res = await fetch(DJANGO_API_ROUTES.RECENT, {
     method: "POST",
     headers: {
