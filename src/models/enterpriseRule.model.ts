@@ -66,9 +66,6 @@ EnterpriseRuleSchema.post("save", async function (doc) {
   }
 });
 
-const EnterpriseRuleModel = connection.enterprise.model<IEnterpriseRule>(
-  "EnterpriseRule",
-  EnterpriseRuleSchema
-);
+const EnterpriseRuleModel = mongoose.models.EnterpriseRule || mongoose.model<IEnterpriseRule>("EnterpriseRule", EnterpriseRuleSchema);
 
 export default EnterpriseRuleModel;

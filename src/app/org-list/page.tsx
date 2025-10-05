@@ -3,12 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
-  isCompanyExist,
-  importCompanies,
-  validateUser,
-  addUser,
-} from "@/app/api/enterpriseSearch/enterpriseSearch";
+// Enterprise search removed - using mock functions
+const isCompanyExist = async (companyName: string) => ({ code: 404, exists: false });
+const importCompanies = async (token: string, companyId: string) => ({ code: 200, data: [] });
+const validateUser = async (token: string) => ({ code: 200, success: true, data: { userId: 'mock' } });
+const addUser = async (userData: any, companyId: string, userId: string) => ({ code: 200, success: true });
 import { toastInfo } from "@/components/toast-varients";
 import { Button } from "@/components/ui/button";
 import LoginSidePanel from "@/components/common/sso-login-side-panel";

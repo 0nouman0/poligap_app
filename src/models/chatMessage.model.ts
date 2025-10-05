@@ -83,9 +83,24 @@ const ChatMessageSchema: Schema = new Schema(
 // Index for efficient querying
 ChatMessageSchema.index({ conversationId: 1, createdAt: 1 });
 
-const ChatMessageModel = connection.enterprise.model<IChatMessage>(
-  "ChatMessage",
-  ChatMessageSchema
-);
+// Create model with fallback to default mongoose connection
+let ChatMessageModel: mongoose.Model<IChatMessage>;
+
+try {
+  const mainConnection = connection.main;
+  if (mainConnection) {
+    // Check if model already exists to avoid OverwriteModelError
+    ChatMessageModel = mainConnection.models.ChatMessage || 
+      mainConnection.model<IChatMessage>("ChatMessage", ChatMessageSchema);
+  } else {
+    console.warn('⚠️ Main connection not available, using default mongoose connection for ChatMessage');
+    ChatMessageModel = mongoose.models.ChatMessage || 
+      mongoose.model<IChatMessage>("ChatMessage", ChatMessageSchema);
+  }
+} catch (error) {
+  console.error('❌ Error creating ChatMessage model:', error);
+  ChatMessageModel = mongoose.models.ChatMessage || 
+    mongoose.model<IChatMessage>("ChatMessage", ChatMessageSchema);
+}
 
 export default ChatMessageModel;

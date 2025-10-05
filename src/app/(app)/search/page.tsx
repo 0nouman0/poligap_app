@@ -51,7 +51,8 @@ import { useSearch, type SearchResult } from "@/hooks/useSearch";
 import { useUserStore } from "@/stores/user-store";
 import { SearchItem } from "@/types/search.types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getUserEnterpriseIntegration } from "@/app/api/enterpriseSearch/enterpriseSearch";
+// Enterprise search removed - using mock function
+const getUserEnterpriseIntegration = async (userId: string, companyId: string) => ({ data: [] });
 import { useCompanyStore } from "@/stores/company-store";
 import { useIntegrationStore } from "@/stores/integration-store";
 import { getSourceIcon } from "@/utils/search.util";

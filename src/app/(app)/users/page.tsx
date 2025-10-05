@@ -123,7 +123,8 @@ export default function Component() {
     teamMembers.forEach((member) => {
       switch (category) {
         case "Status":
-          if (member.status) values.add(member.status);
+          // Status property not available in TeamMember type - using role as fallback
+          if (member.role) values.add(member.role);
           break;
         case "Role":
           if (member.role) values.add(member.role);

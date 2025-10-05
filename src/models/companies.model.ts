@@ -42,9 +42,20 @@ const CompanySchema: Schema = new Schema(
   }
 );
 
-const CompanyModel = connection.enterprise.model<ICompany>(
-  "Company",
-  CompanySchema
-);
+// Create model with fallback to default mongoose connection
+let CompanyModel: mongoose.Model<ICompany>;
+
+try {
+  const mainConnection = connection.main;
+  if (mainConnection) {
+    CompanyModel = mainConnection.model<ICompany>("Company", CompanySchema);
+  } else {
+    console.warn('⚠️ Main connection not available, using default mongoose connection for Company');
+    CompanyModel = mongoose.model<ICompany>("Company", CompanySchema);
+  }
+} catch (error) {
+  console.error('❌ Error creating Company model:', error);
+  CompanyModel = mongoose.model<ICompany>("Company", CompanySchema);
+}
 
 export default CompanyModel;

@@ -1,4 +1,4 @@
-import { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 import connection from "@/lib/db";
 
 export interface IIntegrationPlatform extends Document {
@@ -82,10 +82,6 @@ IntegrationPlatformSchema.virtual("connectedUser", {
   justOne: true,
 });
 
-const IntegrationPlatformModel =
-  connection.enterprise.model<IIntegrationPlatform>(
-    "IntegrationPlatform",
-    IntegrationPlatformSchema
-  );
+const IntegrationPlatformModel = mongoose.models.IntegrationPlatform || mongoose.model<IIntegrationPlatform>("IntegrationPlatform", IntegrationPlatformSchema);
 
 export default IntegrationPlatformModel;

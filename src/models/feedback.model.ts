@@ -36,9 +36,6 @@ const FeedbackSchema: Schema = new Schema(
   }
 );
 
-const FeedbackModel = connection.enterprise.model<IFeedback>(
-  "Feedback",
-  FeedbackSchema
-);
+const FeedbackModel = mongoose.models.Feedback || mongoose.model<IFeedback>("Feedback", FeedbackSchema);
 
 export default FeedbackModel;

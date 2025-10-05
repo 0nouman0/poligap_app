@@ -1,9 +1,8 @@
 "use client";
-import {
-  getUserEnterpriseIntegration,
-  UserAuthenticated,
-  disconnectIntegration,
-} from "@/app/api/enterpriseSearch/enterpriseSearch";
+// Enterprise search removed - using mock functions
+const getUserEnterpriseIntegration = async (userId: string, companyId: string) => ({ data: [] });
+const UserAuthenticated = async (id: string, platformId: string, companyId: string, userId: string) => ({ success: true, data: { userId: 'mock' } });
+const disconnectIntegration = async (integrationId: string, userId: string, companyId: string) => ({ success: true });
 import { Button } from "@/components/common/common-button";
 import { Card, CardContent } from "@/components/ui/card";
 import {

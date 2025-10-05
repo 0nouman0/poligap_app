@@ -166,23 +166,22 @@ export async function GET(req: NextRequest) {
 
     // Calculate key metrics
     const totalFlaggedIssues = flaggedIssues.length;
-    const newFlaggedIssues = flaggedIssues.filter(issue => issue.status === 'new').length;
-    const resolvedFlaggedIssues = flaggedIssues.filter(issue => issue.status === 'resolved').length;
+    const newFlaggedIssues = flaggedIssues.filter((issue: any) => issue.status === 'new').length;
+    const resolvedFlaggedIssues = flaggedIssues.filter((issue: any) => issue.status === 'resolved').length;
 
     const averageComplianceScore = complianceAnalyses.length > 0 
-      ? complianceAnalyses.reduce((sum, analysis) => sum + (analysis.score || 0), 0) / complianceAnalyses.length
+      ? complianceAnalyses.reduce((sum: number, analysis: any) => sum + (analysis.score || 0), 0) / complianceAnalyses.length
       : 0;
 
     // Recent activity combining searches, analyses, and audit logs
     const recentActivity = [
-      ...recentSearches.map(search => ({
-        type: 'search',
+      ...recentSearches.map((search: any) => ({
         title: search.text?.[0]?.title || 'Search performed',
         description: search.text?.[0]?.description || 'Document search',
         timestamp: search.createdAt,
         metadata: { searchType: search.text?.[0]?.type }
       })),
-      ...complianceAnalyses.slice(0, 5).map(analysis => ({
+      ...complianceAnalyses.slice(0, 10).map((analysis: any) => ({
         type: 'analysis',
         title: analysis.title || 'Document Analysis',
         description: `${analysis.complianceStandard} compliance check - Score: ${analysis.score || 'N/A'}`,
@@ -192,7 +191,7 @@ export async function GET(req: NextRequest) {
           score: analysis.score 
         }
       })),
-      ...auditLogs.slice(0, 5).map(log => ({
+      ...auditLogs.slice(0, 5).map((log: any) => ({
         type: 'audit',
         title: log.action.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         description: log.entityType ? `${log.entityType} activity` : 'System activity',
@@ -217,7 +216,7 @@ export async function GET(req: NextRequest) {
       
       searches: {
         total: totalSearches,
-        topTerms: topSearchTerms.map(term => ({
+        topSearchTerms: topSearchTerms.map((term: any) => ({
           term: term._id,
           count: term.count,
           type: term.type
@@ -227,14 +226,14 @@ export async function GET(req: NextRequest) {
       compliance: {
         totalAnalyses: totalDocumentAnalyses,
         averageScore: Math.round(averageComplianceScore * 100) / 100,
-        byStandard: complianceScores.map(score => ({
+        byStandard: complianceScores.map((score: any) => ({
           standard: score._id || 'Unknown',
           averageScore: Math.round(score.averageScore * 100) / 100,
           count: score.count,
           minScore: score.minScore,
           maxScore: score.maxScore
         })),
-        recentAnalyses: complianceAnalyses.slice(0, 10).map(analysis => ({
+        recentAnalyses: complianceAnalyses.slice(0, 5).map((analysis: any) => ({
           title: analysis.title,
           standard: analysis.complianceStandard,
           score: analysis.score,
@@ -248,11 +247,12 @@ export async function GET(req: NextRequest) {
         resolved: resolvedFlaggedIssues,
         byStatus: {
           new: newFlaggedIssues,
-          viewed: flaggedIssues.filter(issue => issue.status === 'viewed').length,
+          viewed: flaggedIssues.filter((issue: any) => issue.status === 'viewed').length,
           resolved: resolvedFlaggedIssues,
-          rejected: flaggedIssues.filter(issue => issue.status === 'rejected').length
+          rejected: flaggedIssues.filter((issue: any) => issue.status === 'rejected').length,
+          newIssues: flaggedIssues.filter((issue: any) => issue.status === 'new' && new Date(issue.createdAt) >= startDate).length
         },
-        recent: flaggedIssues.slice(0, 5).map(issue => ({
+        recent: flaggedIssues.slice(0, 5).map((issue: any) => ({
           title: issue.title,
           reason: issue.reason,
           status: issue.status,
@@ -262,7 +262,7 @@ export async function GET(req: NextRequest) {
 
       activity: {
         recent: recentActivity,
-        trends: activityTrends.map(trend => ({
+        trends: activityTrends.map((trend: any) => ({
           date: trend._id,
           totalActivities: trend.totalCount,
           breakdown: trend.activities

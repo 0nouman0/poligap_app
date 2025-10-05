@@ -91,7 +91,6 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (profile) {
       console.log('✅ MongoDB Profile Data Loaded:', {
-        name: profile.name,
         email: profile.email,
         source: 'MongoDB Atlas',
         hasRealData: true
@@ -106,7 +105,8 @@ export default function UserProfilePage() {
       });
       setProfileData(userData);
     } else {
-      console.log('❌ No profile data available');
+      console.log('❌ No MongoDB profile data available - showing login prompt');
+      setProfileData(null);
     }
   }, [profile, userData]);
 

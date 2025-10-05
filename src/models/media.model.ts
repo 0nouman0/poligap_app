@@ -60,8 +60,6 @@ const MediaSchema: Schema = new Schema(
 MediaSchema.set("toObject", { virtuals: true });
 MediaSchema.set("toJSON", { virtuals: true });
 
-const MediaModel =
-  connection.enterprise.models.Media ||
-  connection.enterprise.model<IMedia>("Media", MediaSchema);
+const MediaModel = mongoose.models.Media || mongoose.model<IMedia>("Media", MediaSchema);
 
 export default MediaModel;

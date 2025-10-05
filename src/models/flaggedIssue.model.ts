@@ -70,11 +70,6 @@ const FlaggedIssueSchema: Schema = new Schema(
   }
 );
 
-const FlaggedIssueModel =
-  connection.enterprise.models.FlaggedIssue ||
-  connection.enterprise.model<IFlaggedIssue>(
-    "FlaggedIssue",
-    FlaggedIssueSchema
-  );
+const FlaggedIssueModel = mongoose.models.FlaggedIssue || mongoose.model<IFlaggedIssue>("FlaggedIssue", FlaggedIssueSchema);
 
 export default FlaggedIssueModel;

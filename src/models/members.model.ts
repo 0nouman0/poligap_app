@@ -78,9 +78,20 @@ const MemberSchema: Schema = new Schema(
   }
 );
 
-const MembersModel = connection.enterprise.model<IMember>(
-  "Members",
-  MemberSchema
-);
+// Create model with fallback to default mongoose connection
+let MembersModel: mongoose.Model<IMember>;
+
+try {
+  const mainConnection = connection.main;
+  if (mainConnection) {
+    MembersModel = mainConnection.model<IMember>("Members", MemberSchema);
+  } else {
+    console.warn('⚠️ Main connection not available, using default mongoose connection for Members');
+    MembersModel = mongoose.model<IMember>("Members", MemberSchema);
+  }
+} catch (error) {
+  console.error('❌ Error creating Members model:', error);
+  MembersModel = mongoose.model<IMember>("Members", MemberSchema);
+}
 
 export default MembersModel;

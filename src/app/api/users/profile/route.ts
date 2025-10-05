@@ -1,15 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import User from '@/models/users.model';
 import { createApiResponse } from '@/lib/apiResponse';
-import { fetchUserProfileDetails } from '@/app/api/enterpriseSearch/enterpriseSearch';
 
-// GET - Fetch complete user profile
+// Retry wrapper for database operations
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Database operation attempt ${attempt}/${maxRetries}`);
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      console.log(`❌ Attempt ${attempt} failed:`, lastError.message);
+      
+      if (attempt < maxRetries) {
+        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+// GET - Fetch user profile
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-    const companyId = searchParams.get('companyId');
     const email = searchParams.get('email');
+
+    console.log('=== Profile API Request ===');
+    console.log('userId:', userId);
+    console.log('email:', email);
+
+    // Check if database connection is available
+    if (!User.db || User.db.readyState !== 1) {
+      console.error('❌ Database connection not ready. State:', User.db?.readyState);
+      return createApiResponse({
+        success: false,
+        error: 'Database connection not available - MongoDB connection required',
+        status: 503,
+      });
+    }
 
     if (!userId && !email) {
       return createApiResponse({
@@ -19,239 +58,42 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    let userProfileData;
-
-    if (userId && companyId) {
-      // Use the existing fetchUserProfileDetails function for complete data
-      const result = await fetchUserProfileDetails(userId, companyId);
-      
-      if (result.code === 200) {
-        userProfileData = result.data;
-      } else {
-        return createApiResponse({
-          success: false,
-          error: result.message,
-          status: result.code,
-        });
+    // Simple user lookup by userId or email
+    let query: any = {};
+    if (userId) {
+      // Handle both string and ObjectId formats
+      try {
+        const objectId = new User.base.Types.ObjectId(userId);
+        query._id = objectId;
+      } catch {
+        // If ObjectId creation fails, try direct string match
+        query._id = userId;
       }
-    } else {
-      // Fallback: fetch basic user data if no companyId provided
-      let query: any = {};
-      if (userId) {
-        // Handle both string and ObjectId formats for MongoDB Atlas
-        try {
-          // Try to create ObjectId from the userId string
-          const objectId = new User.base.Types.ObjectId(userId);
-          query.userId = objectId;
-        } catch {
-          // If ObjectId creation fails, try direct string match
-          query.userId = userId;
-        }
-      } else if (email) {
-        query.email = email;
-      }
-
-      console.log('=== MongoDB User Search Debug ===');
-      console.log('Original userId parameter:', userId);
-      console.log('Search query:', JSON.stringify(query, null, 2));
-      
-      const user = await User.findOne(query)
-        .select('-__v') // Exclude version field
-        .lean();
-
-      console.log('User found:', user ? 'YES' : 'NO');
-      if (user) {
-        console.log('Found user data:', {
-          _id: user._id?.toString(),
-          userId: user.userId?.toString(),
-          email: user.email,
-          name: user.name
-        });
-      } else {
-        // Try different search strategies
-        console.log('=== Trying Alternative Search Methods ===');
-        
-        // Try searching by string userId
-        const userByStringId = await User.findOne({ userId: userId }).lean();
-        console.log('Search by string userId result:', userByStringId ? 'FOUND' : 'NOT FOUND');
-        
-        // Try searching by _id directly
-        try {
-          const userByDirectId = await User.findById(userId).lean();
-          console.log('Search by _id result:', userByDirectId ? 'FOUND' : 'NOT FOUND');
-          if (userByDirectId) {
-            console.log('Found via _id:', {
-              _id: userByDirectId._id?.toString(),
-              email: userByDirectId.email,
-              name: userByDirectId.name
-            });
-          }
-        } catch (idError) {
-          console.log('_id search failed:', idError instanceof Error ? idError.message : 'Unknown error');
-        }
-        
-        // List some users to see the actual data structure
-        const sampleUsers = await User.find({}).limit(3).select('_id userId email name').lean();
-        console.log('Sample users in database:', sampleUsers.map(u => ({
-          _id: u._id?.toString(),
-          userId: u.userId?.toString(),
-          email: u.email,
-          name: u.name
-        })));
-      }
-
-      // If no user found, try all possible search methods
-      if (!user) {
-        console.log('=== Comprehensive User Search ===');
-        let foundUser = null;
-        
-        // Method 1: Search by _id directly
-        try {
-          foundUser = await User.findById(userId).select('-__v').lean();
-          if (foundUser) {
-            console.log('✅ Found user by _id');
-          }
-        } catch (error) {
-          console.log('❌ _id search failed:', error instanceof Error ? error.message : 'Unknown error');
-        }
-        
-        // Method 2: Search by userId as string
-        if (!foundUser) {
-          try {
-            foundUser = await User.findOne({ userId: userId }).select('-__v').lean();
-            if (foundUser) {
-              console.log('✅ Found user by userId string');
-            }
-          } catch (error) {
-            console.log('❌ userId string search failed:', error instanceof Error ? error.message : 'Unknown error');
-          }
-        }
-        
-        // Method 3: Search by partial userId match
-        if (!foundUser && userId && userId.length >= 8) {
-          try {
-            const regex = new RegExp(userId, 'i');
-            foundUser = await User.findOne({
-              $or: [
-                { userId: regex },
-                { _id: { $regex: userId } }
-              ]
-            }).select('-__v').lean();
-            if (foundUser) {
-              console.log('✅ Found user by partial match');
-            }
-          } catch (error) {
-            console.log('❌ Partial match search failed:', error instanceof Error ? error.message : 'Unknown error');
-          }
-        }
-        
-        // Method 4: If still not found, search by any field containing the ID
-        if (!foundUser && userId) {
-          try {
-            foundUser = await User.findOne({
-              $or: [
-                { uniqueId: userId },
-                { email: userId }
-              ]
-            }).select('-__v').lean();
-            if (foundUser) {
-              console.log('✅ Found user by uniqueId or email');
-            }
-          } catch (error) {
-            console.log('❌ Alternative field search failed:', error instanceof Error ? error.message : 'Unknown error');
-          }
-        }
-        
-        if (foundUser) {
-          console.log('🎉 User found via alternative method');
-          const userObj = foundUser as any;
-          const transformedUser = {
-            ...userObj,
-            userId: userObj.userId?.toString() || userObj._id?.toString(),
-            _id: userObj._id?.toString(),
-            designation: userObj.designation || '',
-            role: userObj.role || 'User',
-            memberStatus: userObj.memberStatus || userObj.status || 'ACTIVE',
-            companyName: userObj.companyName || '',
-            reportingManager: userObj.reportingManager || null,
-            createdBy: userObj.createdBy || null,
-          };
-          
-          return createApiResponse({
-            success: true,
-            data: transformedUser,
-          });
-        }
-        
-        // If still no user found, provide detailed error info
-        const totalUsers = await User.countDocuments();
-        console.log(`❌ No user found. Total users in database: ${totalUsers}`);
-        
-        return createApiResponse({
-          success: false,
-          error: `User not found. Searched for ID: ${userId}. Database contains ${totalUsers} users. Check console for debug info.`,
-          status: 404,
-        });
-      }
-
-      // Transform basic user data
-      const userObj = user as any;
-      userProfileData = {
-        ...userObj,
-        userId: userObj.userId?.toString() || userObj._id?.toString(),
-        _id: userObj._id?.toString(),
-        designation: userObj.designation || '',
-        role: userObj.role || 'User',
-        memberStatus: userObj.memberStatus || userObj.status || 'ACTIVE',
-        companyName: userObj.companyName || '',
-        reportingManager: userObj.reportingManager || null,
-        createdBy: userObj.createdBy || null,
-      };
+    } else if (email) {
+      query.email = email;
     }
 
-    return createApiResponse({
-      success: true,
-      data: userProfileData,
+    console.log('=== MongoDB User Search ===');
+    console.log('Search query:', JSON.stringify(query, null, 2));
+    
+    // Use retry mechanism for database query
+    const user = await retryOperation(async () => {
+      return await User.findOne(query)
+        .select('-__v') // Exclude version field
+        .lean()
+        .maxTimeMS(10000); // Set 10 second timeout for this query
     });
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    return createApiResponse({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch profile',
-      status: 500,
-    });
-  }
-}
 
-// PUT - Update user profile
-export async function PUT(req: NextRequest) {
-  try {
-    const { userId, ...updateData } = await req.json();
-
-    if (!userId) {
-      return createApiResponse({
-        success: false,
-        error: 'User ID is required',
-        status: 400,
+    console.log('User found:', user ? 'YES' : 'NO');
+    if (user) {
+      console.log('Found user data:', {
+        _id: user._id?.toString(),
+        email: user.email,
+        name: user.name
       });
     }
 
-    // Remove fields that shouldn't be updated directly
-    const { _id, createdAt, updatedAt, ...allowedUpdates } = updateData;
-
-    const updatedUser = await User.findOneAndUpdate(
-      { userId },
-      { 
-        ...allowedUpdates,
-        updatedAt: new Date()
-      },
-      { 
-        new: true, 
-        runValidators: true 
-      }
-    ).select('-__v').lean();
-
-    if (!updatedUser) {
+    if (!user) {
       return createApiResponse({
         success: false,
         error: 'User not found',
@@ -259,15 +101,29 @@ export async function PUT(req: NextRequest) {
       });
     }
 
+    // Transform user data for response
+    const profileData = {
+      _id: user._id?.toString(),
+      userId: user._id?.toString(),
+      name: user.name,
+      email: user.email,
+      designation: user.designation,
+      companyName: user.companyName,
+      source: 'MongoDB Atlas'
+    };
+
+    console.log('✅ Returning user profile:', profileData.email);
+    
     return createApiResponse({
       success: true,
-      data: updatedUser,
+      data: profileData
     });
+
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    console.error('❌ Profile API error:', error);
     return createApiResponse({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update profile',
+      error: `Profile fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       status: 500,
     });
   }

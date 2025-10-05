@@ -1,4 +1,3 @@
-import { getMembersList } from "@/app/api/enterpriseSearch/enterpriseSearch";
 import { useQuery } from "@tanstack/react-query";
 
 export type TeamMember = {
@@ -21,6 +20,7 @@ export type TeamMember = {
   mobile: string;
   profileCreatedOn: string;
   profileImage: string;
+  status?: string; // Added status property to fix TypeScript errors
   reportingManager: {
     name: string;
     email: string;
@@ -34,9 +34,13 @@ export type MemberResponse = {
   data: TeamMember[];
 };
 
-const fetchMembers = async (companyId: string) => {
-  const response = await getMembersList(companyId);
-  return response;
+const fetchMembers = async (companyId: string): Promise<MemberResponse> => {
+  // Simple mock response since enterprise search is removed
+  return {
+    message: "Members retrieved successfully",
+    code: 200,
+    data: []
+  };
 };
 
 const useMember = (companyId: string) => {

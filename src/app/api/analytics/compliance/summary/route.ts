@@ -42,8 +42,8 @@ export async function GET(req: Request) {
       averageScore: avgScoreAgg?.[0]?.avgScore ?? null,
       analyzedCount: avgScoreAgg?.[0]?.count ?? 0,
       totalAnalyzed,
-      topCompliances: topCompliances.map((r) => ({ name: r._id, count: r.count })),
-      topMetricKeys: metricKeyCounts.map((r) => ({ key: r._id, count: r.count })),
+      topCompliances: topCompliances.map((r: any) => ({ name: r._id, count: r.count })),
+      topMetricKeys: metricKeyCounts.map((r: any) => ({ key: r._id, count: r.count })),
     });
   } catch (e: any) {
     console.error("/api/analytics/compliance/summary error", e);

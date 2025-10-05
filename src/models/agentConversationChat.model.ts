@@ -72,10 +72,6 @@ const AgentConversationSchema: Schema = new Schema(
   }
 );
 
-const AgentConversationModel =
-  connection.enterprise.model<IAgentConversationChat>(
-    "AgentConversationChat",
-    AgentConversationSchema
-  );
+const AgentConversationModel = mongoose.models.AgentConversationChat || mongoose.model<IAgentConversationChat>("AgentConversationChat", AgentConversationSchema);
 
 export default AgentConversationModel;

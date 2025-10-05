@@ -47,11 +47,23 @@ const SearchHistorySchema: Schema = new Schema(
 //   SearchHistorySchema
 // );
 
-const SearchHistorysModel =
-  connection.enterprise.models.SearchHistory ||
-  connection.enterprise.model<ISearchHistory>(
-    "SearchHistory",
-    SearchHistorySchema
-  );
+// Create model with fallback to default mongoose connection
+let SearchHistorysModel: mongoose.Model<ISearchHistory>;
+
+try {
+  const mainConnection = connection.main;
+  if (mainConnection) {
+    SearchHistorysModel = mainConnection.models.SearchHistory || 
+      mainConnection.model<ISearchHistory>("SearchHistory", SearchHistorySchema);
+  } else {
+    console.warn('⚠️ Main connection not available, using default mongoose connection for SearchHistory');
+    SearchHistorysModel = mongoose.models.SearchHistory || 
+      mongoose.model<ISearchHistory>("SearchHistory", SearchHistorySchema);
+  }
+} catch (error) {
+  console.error('❌ Error creating SearchHistory model:', error);
+  SearchHistorysModel = mongoose.models.SearchHistory || 
+    mongoose.model<ISearchHistory>("SearchHistory", SearchHistorySchema);
+}
 
 export default SearchHistorysModel;

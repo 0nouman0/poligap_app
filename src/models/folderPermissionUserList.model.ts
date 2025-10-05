@@ -24,10 +24,6 @@ const FolderPermissionUserListSchema = new Schema(
   }
 );
 
-const FolderPermissionUserListModel =
-  connection.enterprise.model<IFolderPermissionUserList>(
-    "FolderPermissionUserList",
-    FolderPermissionUserListSchema
-  );
+const FolderPermissionUserListModel = mongoose.models.FolderPermissionUserList || mongoose.model<IFolderPermissionUserList>("FolderPermissionUserList", FolderPermissionUserListSchema);
 
 export default FolderPermissionUserListModel;

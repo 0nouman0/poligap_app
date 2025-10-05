@@ -26,11 +26,6 @@ const DocumentAnalysisSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-const DocumentAnalysisModel =
-  connection.enterprise.models.DocumentAnalysis ||
-  connection.enterprise.model<IDocumentAnalysis>(
-    "DocumentAnalysis",
-    DocumentAnalysisSchema
-  );
+const DocumentAnalysisModel = mongoose.models.DocumentAnalysis || mongoose.model<IDocumentAnalysis>("DocumentAnalysis", DocumentAnalysisSchema);
 
 export default DocumentAnalysisModel;

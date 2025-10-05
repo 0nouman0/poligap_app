@@ -1,7 +1,7 @@
 export const DB_CONFIG = {
-  enterprise: {
-    uri: process.env.MONGODB_ENTERPRISE_SEARCH_URI,
-    name: "poligap", // Updated to match your actual database name
+  main: {
+    uri: process.env.MONGODB_URI,
+    name: "poligap",
   },
 } as const;
 

@@ -145,6 +145,23 @@ const UserSchema: Schema = new Schema(
   }
 );
 
-const UserModel = connection.enterprise.model<IUser>("User", UserSchema);
+// Create model with fallback to default mongoose connection
+let UserModel: mongoose.Model<IUser>;
+
+try {
+  const mainConnection = connection.main;
+  if (mainConnection) {
+    // Check if model already exists to avoid OverwriteModelError
+    UserModel = mainConnection.models.User || mainConnection.model<IUser>("User", UserSchema);
+  } else {
+    // Fallback to default mongoose connection
+    console.warn('⚠️ Main connection not available, using default mongoose connection');
+    UserModel = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+  }
+} catch (error) {
+  console.error('❌ Error creating User model:', error);
+  // Create with default connection as fallback, check if exists first
+  UserModel = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+}
 
 export default UserModel;

@@ -49,9 +49,26 @@ const AgentConversationSchema: Schema = new Schema(
   }
 );
 
-const AgentConversationModel = connection.enterprise.model<IAgentConversation>(
-  "AgentConversation",
-  AgentConversationSchema
-);
+// Create model with fallback to default mongoose connection
+let AgentConversationModel: mongoose.Model<IAgentConversation>;
+
+try {
+  const mainConnection = connection.main;
+  if (mainConnection) {
+    // Check if model already exists to avoid OverwriteModelError
+    AgentConversationModel = mainConnection.models.AgentConversation || 
+      mainConnection.model<IAgentConversation>("AgentConversation", AgentConversationSchema);
+  } else {
+    // Fallback to default mongoose connection
+    console.warn('⚠️ Main connection not available, using default mongoose connection for AgentConversation');
+    AgentConversationModel = mongoose.models.AgentConversation || 
+      mongoose.model<IAgentConversation>("AgentConversation", AgentConversationSchema);
+  }
+} catch (error) {
+  console.error('❌ Error creating AgentConversation model:', error);
+  // Create with default connection as fallback, check if exists first
+  AgentConversationModel = mongoose.models.AgentConversation || 
+    mongoose.model<IAgentConversation>("AgentConversation", AgentConversationSchema);
+}
 
 export default AgentConversationModel;

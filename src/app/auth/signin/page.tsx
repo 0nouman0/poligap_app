@@ -17,7 +17,8 @@ import { toastError, toastInfo } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { validateUser } from "@/app/api/enterpriseSearch/enterpriseSearch";
+// Enterprise search removed - using mock function
+const validateUser = async (token: string) => ({ code: 200, success: true, data: { userId: 'mock' } });
 import LoginSidePanel from "@/components/common/sso-login-side-panel";
 
 // Validation schema

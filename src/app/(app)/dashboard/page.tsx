@@ -181,7 +181,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div className="space-y-3">
             <h1 className="text-3xl font-bold text-foreground">
-              Good afternoon, {userData?.name || 'Chat User'}
+              Good afternoon, {userData?.name || 'User'}
             </h1>
             <p className="text-lg text-muted-foreground">
               {new Date().toLocaleDateString('en-US', { 
@@ -252,7 +252,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div className="space-y-3">
           <h1 className="text-3xl font-bold text-foreground">
-            Good afternoon, {userData?.name || 'Chat User'}
+            Good afternoon, {userData?.name || 'User'}
           </h1>
           <p className="text-lg text-muted-foreground">
             {new Date().toLocaleDateString('en-US', { 

@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       { $limit: limit },
     ]);
 
-    return NextResponse.json({ items: results.map(r => ({ title: r._id, count: r.count })) });
+    return NextResponse.json({ items: results.map((r: any) => ({ title: r._id, count: r.count })) });
   } catch (e: any) {
     console.error("/api/analytics/searches/top error", e);
     return NextResponse.json({ message: e?.message || "Server error" }, { status: 500 });
