@@ -1,33 +1,4 @@
-# MongoDB Timeout Fix
 
-## Issue
-MongoDB operations are timing out with error: `Operation 'users.findOne()' buffering timed out after 10000ms`
-
-## Root Cause
-1. **Missing/Incorrect Environment Variables**: The app expects `MONGODB_ENTERPRISE_SEARCH_URI` but might be missing
-2. **Connection Timeout**: Default MongoDB connection settings are too restrictive
-3. **Buffering Issues**: Mongoose buffering is causing queries to queue up
-
-## Solution Applied
-
-### 1. Updated MongoDB Connection Settings
-- ✅ Disabled mongoose buffering (`bufferCommands: false`)
-- ✅ Added proper timeouts (30s connection, 45s socket)
-- ✅ Added connection pooling (5-10 connections)
-- ✅ Added retry logic with exponential backoff
-
-### 2. Added Retry Mechanism
-- ✅ Database operations now retry 3 times with exponential backoff
-- ✅ Each query has a 10-second timeout (`maxTimeMS`)
-
-### 3. Environment Variables Needed
-Add these to your `.env` file:
-
-```env
-# MongoDB Connection (use your actual MongoDB Atlas URI)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/poligap?retryWrites=true&w=majority
-MONGODB_ENTERPRISE_SEARCH_URI=mongodb+srv://username:password@cluster.mongodb.net/poligap?retryWrites=true&w=majority
-```
 
 ## Quick Fix Steps
 

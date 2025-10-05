@@ -78,12 +78,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${Inter.className} antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem={true}
-          disableTransitionOnChange
-        >
+        <ThemeProvider>
           <QueryProvider>{children}</QueryProvider>
           <ToastProvider />
         </ThemeProvider>

@@ -29,48 +29,48 @@ function MultiSelect({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full border rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200"
+        className="w-full border border-input rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
       >
         <span className="truncate">
           {value.length === 0 ? (
-            <span className="text-gray-400">{placeholder}</span>
+            <span className="text-muted-foreground">{placeholder}</span>
           ) : (
             <span className="flex items-center gap-2">
               <span className="flex flex-wrap gap-1">
                 {value.slice(0, 3).map(v => (
-                  <span key={v} className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs border border-purple-200">{v}</span>
+                  <span key={v} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs border border-primary/20">{v}</span>
                 ))}
               </span>
               {value.length > 3 && (
-                <span className="text-xs text-gray-500">+{value.length - 3} more</span>
+                <span className="text-xs text-muted-foreground">+{value.length - 3} more</span>
               )}
             </span>
           )}
         </span>
-        <span className="text-xs text-gray-500 mr-2">{value.length} selected</span>
+        <span className="text-xs text-muted-foreground mr-2">{value.length} selected</span>
         <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-full bg-white border rounded-md shadow-lg">
-          <div className="p-2 border-b flex gap-2 items-center">
-            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search frameworks..." className="flex-1 border rounded px-2 py-1 text-sm"/>
-            <button type="button" onClick={selectAll} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">All</button>
-            <button type="button" onClick={clearAll} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">Clear</button>
+        <div className="absolute z-20 mt-2 w-full bg-popover border border-border rounded-md shadow-lg">
+          <div className="p-2 border-b border-border flex gap-2 items-center">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search frameworks..." className="flex-1 border border-input rounded px-2 py-1 text-sm bg-background text-foreground"/>
+            <button type="button" onClick={selectAll} className="text-xs px-2 py-1 border border-input rounded hover:bg-accent bg-background text-foreground">All</button>
+            <button type="button" onClick={clearAll} className="text-xs px-2 py-1 border border-input rounded hover:bg-accent bg-background text-foreground">Clear</button>
           </div>
-          <div className="px-2 pt-2 text-[11px] text-gray-500">Quick select:</div>
+          <div className="px-2 pt-2 text-[11px] text-muted-foreground">Quick select:</div>
           <div className="px-2 pb-1 flex gap-1 flex-wrap">
             {['GDPR','ISO 27001','SOC 2','NIST CSF','PCI DSS'].map(q => (
-              <button key={q} type="button" onClick={()=>toggle(q)} className="px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 border text-[11px]">{q}</button>
+              <button key={q} type="button" onClick={()=>toggle(q)} className="px-2 py-0.5 rounded-full bg-muted hover:bg-accent text-foreground border border-border text-[11px]">{q}</button>
             ))}
           </div>
           <div className="max-h-56 overflow-y-auto p-2 space-y-1">
             {filtered.map(opt => (
-              <label key={opt} className="flex items-center gap-2 text-sm px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
-                <input type="checkbox" className="accent-purple-600" checked={value.includes(opt)} onChange={()=>toggle(opt)} />
+              <label key={opt} className="flex items-center gap-2 text-sm px-2 py-1 rounded hover:bg-accent cursor-pointer text-foreground">
+                <input type="checkbox" className="accent-primary" checked={value.includes(opt)} onChange={()=>toggle(opt)} />
                 <span>{opt}</span>
               </label>
             ))}
-            {filtered.length === 0 && <div className="text-xs text-gray-500 px-2 py-1">No results</div>}
+            {filtered.length === 0 && <div className="text-xs text-muted-foreground px-2 py-1">No results</div>}
           </div>
         </div>
       )}
@@ -90,22 +90,22 @@ function SearchSelect({
   const current = value || "";
   return (
     <div className="relative">
-      <button type="button" onClick={()=>setOpen(!open)} className="w-full border rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-gray-50">
-        <span className={`truncate ${current ? '' : 'text-gray-400'}`}>{current || placeholder}</span>
+      <button type="button" onClick={()=>setOpen(!open)} className="w-full border border-input rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-accent bg-background text-foreground">
+        <span className={`truncate ${current ? '' : 'text-muted-foreground'}`}>{current || placeholder}</span>
         <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-full bg-white border rounded-md shadow-lg">
-          <div className="p-2 border-b">
-            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="w-full border rounded px-2 py-1 text-sm"/>
+        <div className="absolute z-20 mt-2 w-full bg-popover border border-border rounded-md shadow-lg">
+          <div className="p-2 border-b border-border">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="w-full border border-input rounded px-2 py-1 text-sm bg-background text-foreground"/>
           </div>
           <div className="max-h-56 overflow-y-auto p-2">
             {filtered.map(opt => (
-              <button key={opt} type="button" className="w-full text-left px-2 py-1 text-sm rounded hover:bg-gray-50" onClick={()=>{ onChange(opt); setOpen(false); }}>
+              <button key={opt} type="button" className="w-full text-left px-2 py-1 text-sm rounded hover:bg-accent text-foreground" onClick={()=>{ onChange(opt); setOpen(false); }}>
                 {opt}
               </button>
             ))}
-            {filtered.length === 0 && <div className="text-xs text-gray-500 px-2 py-1">No results</div>}
+            {filtered.length === 0 && <div className="text-xs text-muted-foreground px-2 py-1">No results</div>}
           </div>
         </div>
       )}
@@ -330,13 +330,13 @@ export default function PolicyGeneratorPage() {
       </div>
 
       {/* Main Card */}
-      <div className="bg-white rounded-lg border shadow-sm">
+      <div className="bg-card rounded-lg border border-border shadow-sm">
         <div className="p-6">
           {currentStep === 1 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Policy Type</label>
-                <select value={inputs.policyType} onChange={(e)=>setInputs({...inputs, policyType:e.target.value})} className="w-full border rounded-md px-3 py-2 text-sm">
+                <label className="block text-xs text-muted-foreground mb-1">Policy Type</label>
+                <select value={inputs.policyType} onChange={(e)=>setInputs({...inputs, policyType:e.target.value})} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground">
                   {[
                     "Privacy Policy",
                     "Cookie Policy",
@@ -348,11 +348,11 @@ export default function PolicyGeneratorPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Industry / Domain</label>
-                <input className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.industry} onChange={(e)=>setInputs({...inputs, industry:e.target.value})} placeholder="e.g., SaaS, FinTech" />
+                <label className="block text-xs text-muted-foreground mb-1">Industry / Domain</label>
+                <input className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground" value={inputs.industry} onChange={(e)=>setInputs({...inputs, industry:e.target.value})} placeholder="e.g., SaaS, FinTech" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Region / Country</label>
+                <label className="block text-xs text-muted-foreground mb-1">Region / Country</label>
                 <SearchSelect
                   options={AVAILABLE_REGIONS}
                   value={inputs.region}
@@ -361,8 +361,8 @@ export default function PolicyGeneratorPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Organization Type</label>
-                <select value={inputs.orgType} onChange={(e)=>setInputs({...inputs, orgType:e.target.value})} className="w-full border rounded-md px-3 py-2 text-sm">
+                <label className="block text-xs text-muted-foreground mb-1">Organization Type</label>
+                <select value={inputs.orgType} onChange={(e)=>setInputs({...inputs, orgType:e.target.value})} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground">
                   <option value="">Select…</option>
                   <option value="startup">Startup</option>
                   <option value="smb">SMB</option>
@@ -372,7 +372,7 @@ export default function PolicyGeneratorPage() {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs text-gray-500 mb-1">Frameworks</label>
+                <label className="block text-xs text-muted-foreground mb-1">Frameworks</label>
                 <MultiSelect
                   options={AVAILABLE_FRAMEWORKS}
                   value={inputs.frameworks}
@@ -382,7 +382,7 @@ export default function PolicyGeneratorPage() {
                 {inputs.frameworks.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {inputs.frameworks.map(fw => (
-                      <span key={fw} className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs border border-purple-200">{fw}</span>
+                      <span key={fw} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs border border-primary/20">{fw}</span>
                     ))}
                   </div>
                 )}
@@ -392,7 +392,7 @@ export default function PolicyGeneratorPage() {
                   <input type="checkbox" checked={inputs.applyRuleBase} onChange={(e)=>setInputs({...inputs, applyRuleBase:e.target.checked})} />
                   Apply RuleBase during generation
                 </label>
-                <div className="text-xs text-gray-500 mt-1">RuleBase guides clause selection and phrasing to your compliance profile.</div>
+                <div className="text-xs text-muted-foreground mt-1">RuleBase guides clause selection and phrasing to your compliance profile.</div>
               </div>
             </div>
           )}
@@ -400,25 +400,25 @@ export default function PolicyGeneratorPage() {
           {currentStep === 2 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><Database className="h-3 w-3"/> Knowledge Base Notes</label>
-                <textarea rows={5} className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.kbNotes} onChange={(e)=>setInputs({...inputs, kbNotes:e.target.value})} placeholder="Describe your data types, processing activities, retention needs, etc." />
+                <label className="block text-xs text-muted-foreground mb-1 flex items-center gap-1"><Database className="h-3 w-3"/> Knowledge Base Notes</label>
+                <textarea rows={5} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground" value={inputs.kbNotes} onChange={(e)=>setInputs({...inputs, kbNotes:e.target.value})} placeholder="Describe your data types, processing activities, retention needs, etc." />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="h-3 w-3"/> Custom Rules</label>
-                <textarea rows={5} className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.customRules} onChange={(e)=>setInputs({...inputs, customRules:e.target.value})} placeholder="Enter any specific clauses, exclusions, or constraints you want enforced" />
+                <label className="block text-xs text-muted-foreground mb-1 flex items-center gap-1"><Settings className="h-3 w-3"/> Custom Rules</label>
+                <textarea rows={5} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground" value={inputs.customRules} onChange={(e)=>setInputs({...inputs, customRules:e.target.value})} placeholder="Enter any specific clauses, exclusions, or constraints you want enforced" />
               </div>
-              <div className="text-xs text-gray-500">Tip: You can later move your notes to a proper Knowledge Base page and select assets for reuse.</div>
+              <div className="text-xs text-muted-foreground">Tip: You can later move your notes to a proper Knowledge Base page and select assets for reuse.</div>
             </div>
           )}
 
           {currentStep === 3 && (
             <div className="space-y-4">
               {/* Statutory warning */}
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-sm flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 text-yellow-700"/>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3 rounded text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 text-yellow-700 dark:text-yellow-400"/>
                 <div>
-                  <div className="font-semibold text-yellow-800">Statutory Warning</div>
-                  <div className="text-yellow-700">
+                  <div className="font-semibold text-yellow-800 dark:text-yellow-300">Statutory Warning</div>
+                  <div className="text-yellow-700 dark:text-yellow-400">
                     This Policy Generator produces draft content for reference only. It is not legal advice and should not be used as-is in real-world scenarios. Use responsibly and have your organization's legal/compliance team review before any adoption.
                   </div>
                 </div>
@@ -426,17 +426,17 @@ export default function PolicyGeneratorPage() {
               {/* Metadata summary */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div className="font-medium">Context</div>
-                  <div className="text-gray-600">Type: {inputs.policyType}</div>
-                  <div className="text-gray-600">Industry: {inputs.industry || '-'} | Region: {inputs.region || '-'} | Org: {inputs.orgType || '-'}</div>
-                  <div className="text-gray-600">Generated On: {new Date().toLocaleString()}</div>
+                  <div className="font-medium text-foreground">Context</div>
+                  <div className="text-muted-foreground">Type: {inputs.policyType}</div>
+                  <div className="text-muted-foreground">Industry: {inputs.industry || '-'} | Region: {inputs.region || '-'} | Org: {inputs.orgType || '-'}</div>
+                  <div className="text-muted-foreground">Generated On: {new Date().toLocaleString()}</div>
                 </div>
                 <div>
-                  <div className="font-medium">Configuration</div>
-                  <div className="text-gray-600">Frameworks ({inputs.frameworks.length}): {inputs.frameworks.join(', ') || '-'}</div>
-                  <div className="text-gray-600">RuleBase: {inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
-                  <div className="text-gray-600">Knowledge Notes: {inputs.kbNotes.trim().length > 0 ? `${inputs.kbNotes.trim().length} chars` : 'None'}</div>
-                  <div className="text-gray-600">Custom Rules: {inputs.customRules.trim().length > 0 ? `${inputs.customRules.trim().length} chars` : 'None'}</div>
+                  <div className="font-medium text-foreground">Configuration</div>
+                  <div className="text-muted-foreground">Frameworks ({inputs.frameworks.length}): {inputs.frameworks.join(', ') || '-'}</div>
+                  <div className="text-muted-foreground">RuleBase: {inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
+                  <div className="text-muted-foreground">Knowledge Notes: {inputs.kbNotes.trim().length > 0 ? `${inputs.kbNotes.trim().length} chars` : 'None'}</div>
+                  <div className="text-muted-foreground">Custom Rules: {inputs.customRules.trim().length > 0 ? `${inputs.customRules.trim().length} chars` : 'None'}</div>
                 </div>
               </div>
               {/* Note: Generate action moved to bottom navigation. */}
@@ -445,16 +445,16 @@ export default function PolicyGeneratorPage() {
 
           {currentStep === 4 && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600"><Info className="h-4 w-4"/> Generated for: {inputs.policyType} ({inputs.region || 'Global'})</div>
-              <div className="border rounded-lg p-4 bg-white max-h-[60vh] overflow-y-auto prose prose-sm dark:prose-invert">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Info className="h-4 w-4"/> Generated for: {inputs.policyType} ({inputs.region || 'Global'})</div>
+              <div className="border border-border rounded-lg p-4 bg-card max-h-[60vh] overflow-y-auto prose prose-sm dark:prose-invert">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{result || 'No content.'}</ReactMarkdown>
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={() => navigator.clipboard.writeText(result)} className="px-3 py-2 rounded-md border text-sm flex items-center gap-2"><Copy className="h-4 w-4"/> Copy</button>
+                <button onClick={() => navigator.clipboard.writeText(result)} className="px-3 py-2 rounded-md border border-input text-sm flex items-center gap-2 bg-background text-foreground hover:bg-accent"><Copy className="h-4 w-4"/> Copy</button>
                 <a
                   href={`data:text/markdown;charset=utf-8,${encodeURIComponent(result)}`}
                   download={`${inputs.policyType.replace(/\s+/g,'-').toLowerCase()}-draft.md`}
-                  className="px-3 py-2 rounded-md border text-sm flex items-center gap-2"
+                  className="px-3 py-2 rounded-md border border-input text-sm flex items-center gap-2 bg-background text-foreground hover:bg-accent"
                 >
                   <Download className="h-4 w-4"/> Export .md
                 </a>
@@ -465,7 +465,7 @@ export default function PolicyGeneratorPage() {
       </div>
 
       {/* Audit Logs */}
-      <div className="bg-white rounded-lg border shadow-sm p-4">
+      <div className="bg-card rounded-lg border border-border shadow-sm p-4">
         <div className="flex items-center gap-2 mb-1">
           <Shield className="h-4 w-4 text-primary" />
           <div className="font-semibold">Audit Logs</div>
@@ -489,7 +489,7 @@ export default function PolicyGeneratorPage() {
         {!logsLoading && !logsError && policyLogs.length > 0 && (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
             {policyLogs.map((log: any) => (
-              <div key={log._id} className="border rounded-md p-3 hover:bg-muted/40 transition-colors">
+              <div key={log._id} className="border border-border rounded-md p-3 hover:bg-muted/40 transition-colors bg-background">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium truncate">
                     {log.fileName || inputs.policyType}
@@ -540,12 +540,12 @@ export default function PolicyGeneratorPage() {
       {/* Nav Buttons */}
       {currentStep < 4 && (
         <div className="flex justify-between">
-          <button onClick={()=> setCurrentStep(Math.max(1, currentStep-1))} className="px-3 py-2 rounded-md border text-sm">Previous</button>
+          <button onClick={()=> setCurrentStep(Math.max(1, currentStep-1))} className="px-3 py-2 rounded-md border border-input text-sm bg-background text-foreground hover:bg-accent">Previous</button>
           {currentStep === 3 ? (
             <button
               onClick={generatePolicy}
               disabled={!canGenerate}
-              className="px-4 py-2 rounded-md text-sm text-white bg-black disabled:opacity-50"
+              className="px-4 py-2 rounded-md text-sm text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50"
             >
               {isGenerating ? 'Generating…' : 'Generate Policy'}
             </button>
@@ -553,7 +553,7 @@ export default function PolicyGeneratorPage() {
             <button
               onClick={()=> setCurrentStep(currentStep+1)}
               disabled={(currentStep===1 && !canProceed1) || isGenerating}
-              className="px-3 py-2 rounded-md border text-sm"
+              className="px-3 py-2 rounded-md border border-input text-sm bg-background text-foreground hover:bg-accent disabled:opacity-50"
             >
               Next
             </button>

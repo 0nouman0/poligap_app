@@ -1,14 +1,4 @@
-# Fix MongoDB URI in .env file
-
-## Your Current URI (INCORRECT):
-```
-MONGODB_URI="mongodb+srv:///mohammednouman:nouman@poligap.ejtdob1.mongodb.net/?retryWrites=true&w=majority&appName=Poligap"
-```
-
-## Corrected URI (ADD TO YOUR .env FILE):
-```
-MONGODB_URI="mongodb+srv://mohammednouman:nouman@poligap.ejtdob1.mongodb.net/poligap?retryWrites=true&w=majority&appName=Poligap"
-MONGODB_ENTERPRISE_SEARCH_URI="mongodb+srv://mohammednouman:nouman@poligap.ejtdob1.mongodb.net/poligap?retryWrites=true&w=majority&appName=Poligap"
+"
 ```
 
 ## Changes Made:

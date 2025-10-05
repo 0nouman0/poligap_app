@@ -76,15 +76,15 @@ const navigationItems = [
   },
   {
     title: "Policy Generator",
-    icon: BookOpen,
+    icon: FileText,
     page: "/policy-generator" as PageType,
   },
-  {
-    title: "Idea Analyzer",
-    icon: Lightbulb,
-    page: "/idea-analyzer" as PageType,
-    beta: true,
-  },
+  // {
+  //   title: "Idea Analyzer",
+  //   icon: Lightbulb,
+  //   page: "/idea-analyzer" as PageType,
+  //   beta: true,
+  // },
   {
     title: "AI Agents",
     icon: Bot,

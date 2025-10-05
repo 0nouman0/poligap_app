@@ -1,7 +1,6 @@
 "use client";
-import { PiMoonStars, PiSun } from "react-icons/pi";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useUserStore } from "@/stores/user-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -15,7 +14,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import Image from "next/image";
 import { redirect, useRouter } from "next/navigation";
 import { LogOut, User, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { useCompanyStore } from "@/stores/company-store";
@@ -25,8 +23,6 @@ import { Input } from "@/components/ui/input";
 
 export function Header() {
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [storedId, setStoredId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const { setUserData, clearUserData } = useUserStore();
@@ -39,12 +35,9 @@ export function Header() {
   const profilePictureUrl = userData?.profileImage;
 
   useEffect(() => {
-    setMounted(true);
     // Access localStorage only on client side
     setStoredId(localStorage.getItem("user_id"));
   }, []);
-
-  useEffect(() => {}, []);
 
   const { data } = useUserProfileDetails(
     storedId || "",
@@ -81,9 +74,7 @@ export function Header() {
     }
   }, [data, setUserData, storedId]);
 
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  };
+  // Theme is handled via <ThemeToggle /> component
 
   const handleSignOut = async () => {
     // Call API to clear the cookie
@@ -107,7 +98,8 @@ export function Header() {
   // Use Poligap PNG logo across themes (allow override via env)
   const headerImageSrc =
     process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-high-resolution-logo.png";
-  const searchEnabled = process.env.NEXT_PUBLIC_SEARCH_ENABLED === "true";
+  // Search bar is hidden by default
+  const searchEnabled = false;
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -153,23 +145,7 @@ export function Header() {
           {/* Companies Drop Down */}
           <CompanyDropdown />
           {/* Theme Switcher */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 cursor-pointer"
-            onClick={toggleTheme}
-          >
-            {mounted ? (
-              resolvedTheme === "dark" ? (
-                <PiMoonStars className="h-4 w-4" />
-              ) : (
-                <PiSun className="h-4 w-4" />
-              )
-            ) : (
-              <PiSun className="h-4 w-4" />
-            )}
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+          <ThemeToggle />
 
           {/* Profile Picture */}
           <DropdownMenu>
