@@ -586,14 +586,19 @@ export const useGlobalChatStore = create((set: any) => ({
     chatData?: any
   ): Promise<any> => {
     try {
+      console.log("🔍 Getting selected conversation:", requestData);
+      
+      // Validate input
+      if (!requestData?.conversationId || requestData.conversationId === "undefined") {
+        console.error("❌ No valid conversation ID provided");
+        useGlobalChatStore.setState({ isCreatingConversation: false });
+        return null;
+      }
+
       useGlobalChatStore.setState({ isCreatingConversation: true });
-      // const { data: resp } = await krooloHttpClient.post(
-      //   "/kroolo-ai/get-selected-chat",
-      //   requestData
-      // );
 
       const res = await fetch(
-        `/api/ai-chat/get-selected-chat?conversationId=${requestData?.conversationId}`,
+        `/api/ai-chat/get-selected-chat?conversationId=${requestData.conversationId}`,
         {
           method: "GET",
         }

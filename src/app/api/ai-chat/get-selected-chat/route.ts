@@ -6,12 +6,40 @@ import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
+    // Ensure database connection
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        console.log('🔄 Establishing database connection...');
+        await mongoose.connect(process.env.MONGODB_URI as string);
+        console.log('✅ Database connection established');
+      } catch (dbError) {
+        console.error("❌ Database connection failed:", dbError);
+        return createApiResponse({
+          success: false,
+          error: "Database connection failed",
+          status: 500,
+        });
+      }
+    }
+
     const conversationId = request.nextUrl.searchParams.get("conversationId");
 
-    if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId)) {
+    console.log("get-selected-chat - conversationId:", conversationId);
+
+    if (!conversationId || conversationId === "undefined" || conversationId === "null") {
+      console.log("⚠️ Invalid conversationId:", conversationId);
       return createApiResponse({
         success: false,
-        error: "Invalid or missing conversationId",
+        error: "Valid conversation ID is required",
+        status: 400,
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+      console.log("⚠️ Invalid ObjectId format:", conversationId);
+      return createApiResponse({
+        success: false,
+        error: "Invalid conversation ID format",
         status: 400,
       });
     }
@@ -45,17 +73,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    console.log("✅ Found conversation with", chats.length, "messages");
     return createApiResponse({
       success: true,
-      error: "Conversation found",
       data: chats,
       status: 200,
     });
   } catch (error) {
-    console.error("Error in getSelectedChat:", error);
+    console.error("❌ Error in getSelectedChat:", error);
     return createApiResponse({
       success: false,
-      error: "Failed to get conversation",
+      error: error instanceof Error ? error.message : "Failed to get conversation",
       status: 500,
     });
   }

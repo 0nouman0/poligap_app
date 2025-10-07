@@ -90,16 +90,33 @@ const RecentChats = ({
   ) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    console.log("🗑️ handleDeleteConversation called with ID:", chatdata_id);
+    
+    // Validate chatdata_id
+    if (!chatdata_id || chatdata_id === "undefined") {
+      console.error("❌ No valid chat ID provided to handleDeleteConversation");
+      return;
+    }
+    
     await deleteConversationAPI({ conversationId: chatdata_id }); // pass as object with conversationId property
     getConversationListsAPI(actualCompanyId, actualUserId);
   };
 
   const handleGoToChat = async (chatData: ChatItem) => {
     // debugger;
+    console.log("🔍 handleGoToChat called with:", chatData);
+    
+    // Validate chatData has a valid _id
+    if (!chatData?._id) {
+      console.error("❌ No valid chat ID provided to handleGoToChat");
+      return;
+    }
+    
     useGlobalChatStore.setState({
       openModalView: true,
     });
-    const resp = await getSelectedConversation(chatData?._id, chatData);
+    const resp = await getSelectedConversation({ conversationId: chatData._id }, chatData);
     if (resp) {
       console.log("resp message ===>", resp);
       
