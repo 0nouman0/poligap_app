@@ -15,13 +15,16 @@ export async function GET(req: NextRequest) {
     // Create fallback profile based on known user data
     let fallbackProfile = null;
 
-    // Check for your specific user ID or email
-    if (userId === '68e234f5beac9a8683d1158e' || email === 'mohammednouman604@gmail.com') {
+    // Check for fallback user configuration
+    const fallbackUserId = process.env.FALLBACK_USER_ID;
+    const fallbackUserEmail = process.env.FALLBACK_USER_EMAIL;
+    
+    if ((fallbackUserId && userId === fallbackUserId) || (fallbackUserEmail && email === fallbackUserEmail)) {
       fallbackProfile = {
-        _id: '68e234f5beac9a8683d1158e',
-        userId: '68e234f5beac9a8683d1158e',
-        name: 'Mohammed Nouman',
-        email: 'mohammednouman604@gmail.com',
+        _id: fallbackUserId || '68e234f5beac9a8683d1158e',
+        userId: fallbackUserId || '68e234f5beac9a8683d1158e',
+        name: process.env.FALLBACK_USER_NAME || 'Default User',
+        email: fallbackUserEmail || 'user@example.com',
         designation: 'User',
         companyName: 'Company',
         source: 'Fallback API - MongoDB Unavailable',
@@ -32,10 +35,10 @@ export async function GET(req: NextRequest) {
     // Check for the old hardcoded user ID
     else if (userId === '68d6b1725d67a98149c47532') {
       fallbackProfile = {
-        _id: '68e234f5beac9a8683d1158e', // Return your real ID
-        userId: '68e234f5beac9a8683d1158e',
-        name: 'Mohammed Nouman',
-        email: 'mohammednouman604@gmail.com',
+        _id: fallbackUserId || '68e234f5beac9a8683d1158e',
+        userId: fallbackUserId || '68e234f5beac9a8683d1158e',
+        name: process.env.FALLBACK_USER_NAME || 'Default User',
+        email: fallbackUserEmail || 'user@example.com',
         designation: 'User',
         companyName: 'Company',
         source: 'Fallback API - ID Corrected',

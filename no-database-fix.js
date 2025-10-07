@@ -54,8 +54,8 @@ async function noDatabaseFix() {
     const manualProfile = {
       _id: yourUserId,
       userId: yourUserId,
-      name: 'Mohammed Nouman',
-      email: 'mohammednouman604@gmail.com',
+      name: 'Default User',
+      email: 'user@example.com',
       designation: 'User',
       companyName: 'Company',
       source: 'Manual Profile - No Database Required',

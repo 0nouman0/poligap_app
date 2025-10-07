@@ -59,8 +59,8 @@ async function finalMongoDBFix() {
     const emergencyProfile = {
       _id: yourRealUserId,
       userId: yourRealUserId,
-      name: 'Mohammed Nouman',
-      email: 'mohammednouman604@gmail.com',
+      name: 'Default User',
+      email: 'user@example.com',
       designation: 'User',
       companyName: 'Company',
       source: 'Emergency Profile - MongoDB Connection Issues',

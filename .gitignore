@@ -34,6 +34,18 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Security - Never commit these files
+*.key
+*.pem
+*.p12
+*.pfx
+config/secrets.json
+secrets/
+credentials/
+
+# SonarQube
+.scannerwork/
+
 # vercel
 .vercel
 

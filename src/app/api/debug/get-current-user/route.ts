@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
     console.log('Debug: Returning basic user info');
     
     const debugUser = {
-      _id: '68e234f5beac9a8683d1158e',
-      userId: '68e234f5beac9a8683d1158e',
-      name: 'Mohammed Nouman',
-      email: 'mohammednouman604@gmail.com',
+      _id: process.env.FALLBACK_USER_ID || '68e234f5beac9a8683d1158e',
+      userId: process.env.FALLBACK_USER_ID || '68e234f5beac9a8683d1158e',
+      name: process.env.FALLBACK_USER_NAME || 'Default User',
+      email: process.env.FALLBACK_USER_EMAIL || 'user@example.com',
       designation: 'User',
       companyName: 'Company'
     };

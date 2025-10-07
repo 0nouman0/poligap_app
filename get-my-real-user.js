@@ -1,14 +1,14 @@
-// Run this in browser console to get YOUR REAL user ID for mohammednouman604@gmail.com
+// Run this in browser console to get your real user ID
 
-console.log('🔍 Finding your REAL user ID for mohammednouman604@gmail.com...');
+console.log('🔍 Finding your real user ID...');
 
 // Step 1: Check what's currently in localStorage
 console.log('Current localStorage:');
 console.log('- user_id:', localStorage.getItem('user_id'));
 console.log('- accessToken:', localStorage.getItem('accessToken') ? 'EXISTS' : 'MISSING');
 
-// Step 2: Search for your real user by email
-fetch('/api/users/profile?email=mohammednouman604@gmail.com')
+// Step 2: Search for your real user by email (replace with your actual email)
+fetch('/api/users/profile?email=user@example.com')
   .then(response => response.json())
   .then(data => {
     console.log('🎯 Search by email response:', data);
@@ -43,8 +43,8 @@ fetch('/api/users/profile?email=mohammednouman604@gmail.com')
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: localStorage.getItem('user_id'),
-          email: 'mohammednouman604@gmail.com',
-          name: 'Mohammed Nouman'
+          email: 'user@example.com',
+          name: 'Default User'
         })
       })
       .then(response => response.json())
@@ -61,5 +61,5 @@ fetch('/api/users/profile?email=mohammednouman604@gmail.com')
   })
   .catch(error => {
     console.log('❌ Error searching for user:', error);
-    console.log('💡 Please log out and log in again with mohammednouman604@gmail.com');
+    console.log('💡 Please log out and log in again with your actual email');
   });

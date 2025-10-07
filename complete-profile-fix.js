@@ -108,8 +108,8 @@ async function createUserIfNeeded() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: localStorage.getItem('user_id'),
-        email: 'mohammednouman604@gmail.com', // Your real email
-        name: 'Mohammed Nouman'
+        email: 'user@example.com', // Replace with your real email
+        name: 'Default User'
       })
     });
     

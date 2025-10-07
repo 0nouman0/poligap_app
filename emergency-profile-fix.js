@@ -47,8 +47,8 @@ async function emergencyProfileFix() {
     const manualProfile = {
       _id: yourRealUserId,
       userId: yourRealUserId,
-      name: 'Mohammed Nouman',
-      email: 'mohammednouman604@gmail.com',
+      name: 'Default User',
+      email: 'user@example.com',
       designation: 'User',
       companyName: 'Company',
       source: 'Emergency Manual Fix - MongoDB Connection Failed',
