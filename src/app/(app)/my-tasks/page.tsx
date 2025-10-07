@@ -180,29 +180,31 @@ export default function MyTasksPage() {
   };
 
   return (
-    <div className="w-full max-w-none p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <CheckSquare className="h-6 w-6" />
-            My Tasks
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your compliance and contract review tasks
-          </p>
+    <div className="flex flex-col h-full w-full max-h-screen overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0 p-6 pb-2 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <CheckSquare className="h-6 w-6" />
+              My Tasks
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your compliance and contract review tasks
+            </p>
+          </div>
+          <Button 
+            className="flex items-center gap-2"
+            onClick={() => setShowNewTaskForm(true)}
+          >
+            <Plus className="h-4 w-4" />
+            New Task
+          </Button>
         </div>
-        <Button 
-          className="flex items-center gap-2"
-          onClick={() => setShowNewTaskForm(true)}
-        >
-          <Plus className="h-4 w-4" />
-          New Task
-        </Button>
-      </div>
 
-      {/* Search and Filters */}
-      <div className="flex items-center gap-4">
+        {/* Search and Filters */}
+        <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <Input
             placeholder="Search tasks..."
@@ -236,9 +238,9 @@ export default function MyTasksPage() {
           </SelectContent>
         </Select>
         <Button variant="outline" onClick={loadTasks}>Apply</Button>
-      </div>
+        </div>
 
-      {/* New Task Form */}
+        {/* New Task Form */}
       {showNewTaskForm && (
         <Card>
           <CardHeader>
@@ -296,9 +298,12 @@ export default function MyTasksPage() {
           </CardContent>
         </Card>
       )}
+      </div>
 
-      {/* Task Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      {/* Scrollable Content Section */}
+      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+        {/* Task Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all">All Tasks</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -306,7 +311,7 @@ export default function MyTasksPage() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4">
+        <TabsContent value={activeTab} className="flex-1 min-h-0 overflow-y-auto space-y-4">
           {loading && (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">Loading tasks…</CardContent>
@@ -389,7 +394,8 @@ export default function MyTasksPage() {
             </div>
           )}
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
 
       {/* Info Dialog */}
       <Dialog open={infoOpen} onOpenChange={setInfoOpen}>

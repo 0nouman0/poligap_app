@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 const signUpSchema = z.object({
@@ -35,6 +36,14 @@ export default function SignUpPage() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.push('/home');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
     setMounted(true);
@@ -112,6 +121,23 @@ export default function SignUpPage() {
   };
 
   const logoSrc = "/assets/poligap-high-resolution-logo.png";
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render signup form if already authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex bg-white text-gray-900">

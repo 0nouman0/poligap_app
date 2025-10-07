@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient, ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.DB_NAME || 'poligap';
@@ -13,7 +14,7 @@ interface TaskDoc {
   dueDate?: string;
   assignee?: string;
   category?: string; // e.g., section/category name
-  source: 'compliance' | 'contract';
+  source: 'compliance' | 'contract' | 'manual';
   sourceRef?: {
     resultId?: string;
     gapId?: string;
@@ -50,9 +51,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'invalid source' }, { status: 400 });
     }
 
-    const db = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
     const collection = db.collection<TaskDoc>('tasks');
     const result = await collection.updateOne({ _id: new ObjectId(id) }, { $set: set });
+    await client.close();
     return NextResponse.json({ success: true, modifiedCount: result.modifiedCount });
   } catch (error) {
     console.error('Error updating task:', error);
@@ -73,9 +75,10 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'id is required' }, { status: 400 });
     }
-    const db = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
     const collection = db.collection<TaskDoc>('tasks');
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
+    await client.close();
     return NextResponse.json({ success: true, deletedCount: result.deletedCount });
   } catch (error) {
     console.error('Error deleting task:', error);
@@ -84,9 +87,18 @@ export async function DELETE(request: NextRequest) {
 }
 
 async function connectToDatabase() {
+  // Ensure mongoose connection first
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await mongoose.connect(MONGODB_URI);
+    } catch (error) {
+      console.error('Mongoose connection failed:', error);
+    }
+  }
+  
   const client = new MongoClient(MONGODB_URI);
   await client.connect();
-  return client.db(DB_NAME);
+  return { db: client.db(DB_NAME), client };
 }
 
 export async function GET(request: NextRequest) {
@@ -97,7 +109,7 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority');
     const source = searchParams.get('source');
 
-    const db = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
     const collection = db.collection<TaskDoc>('tasks');
 
     const filter: any = {};
@@ -109,7 +121,7 @@ export async function GET(request: NextRequest) {
     }
     if (status && ['pending','in-progress','completed'].includes(status)) filter.status = status;
     if (priority && ['critical','high','medium','low'].includes(priority)) filter.priority = priority;
-    if (source && ['compliance','contract'].includes(source)) filter.source = source;
+    if (source && ['compliance','contract','manual'].includes(source)) filter.source = source;
 
     const tasks = await collection
       .find(filter)
@@ -117,9 +129,11 @@ export async function GET(request: NextRequest) {
       .limit(200)
       .toArray();
 
+    await client.close();
+    
     return NextResponse.json({
       success: true,
-      tasks: tasks.map(t => ({ ...t, _id: t._id?.toString() })),
+      tasks: tasks.map((t: any) => ({ ...t, _id: t._id?.toString() })),
     });
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -152,11 +166,11 @@ export async function POST(request: NextRequest) {
     if (!['critical','high','medium','low'].includes(priority)) {
       return NextResponse.json({ success: false, error: 'invalid priority' }, { status: 400 });
     }
-    if (!['compliance','contract'].includes(source)) {
+    if (!['compliance','contract','manual'].includes(source)) {
       return NextResponse.json({ success: false, error: 'invalid source' }, { status: 400 });
     }
 
-    const db = await connectToDatabase();
+    const { db, client } = await connectToDatabase();
     const collection = db.collection<TaskDoc>('tasks');
 
     const now = new Date();
@@ -175,6 +189,8 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await collection.insertOne(task);
+    await client.close();
+    
     return NextResponse.json({ success: true, id: result.insertedId.toString(), task: { ...task, _id: result.insertedId.toString() } });
   } catch (error) {
     console.error('Error creating task:', error);

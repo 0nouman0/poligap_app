@@ -1,9 +1,11 @@
 "use client";
+import React, { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-import { useEffect, useState } from "react";
-import { useUserStore } from "@/stores/user-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useAuth } from "@/hooks/use-auth";
+import { useUserStore } from "@/stores/user-store";
+import { useCompanyStore } from "@/stores/company-store";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,7 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { redirect, useRouter } from "next/navigation";
 import { LogOut, User, Clock, ChevronDown, ChevronUp } from "lucide-react";
-import { useCompanyStore } from "@/stores/company-store";
 import { useUserProfileDetails } from "@/lib/queries/useUserProfileDetails";
 import { getInitials } from "@/utils/user.util";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ export function Header() {
   const [storedId, setStoredId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const { setUserData, clearUserData } = useUserStore();
-  const { logout: authLogout } = useAuthStore();
+  const { logout } = useAuth();
   const { setCompanies, setSelectedCompany } = useCompanyStore();
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
 
@@ -77,22 +78,8 @@ export function Header() {
   // Theme is handled via <ThemeToggle /> component
 
   const handleSignOut = async () => {
-    // Call API to clear the cookie
-    await fetch("/api/users/signout", { method: "POST" });
-
-    // Clear all stores
-    clearUserData();
-    authLogout();
-    setCompanies([]);
-    setSelectedCompany({ companyId: "", name: "", role: "" });
-
-    // Clear localStorage items
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("__LOGIN_SESSION__");
-
-    // Redirect to signin page
-    redirect("/auth/signin");
+    // Use the new auth hook logout method which handles everything
+    await logout();
   };
 
   // Use Poligap PNG logo across themes (allow override via env)
@@ -111,7 +98,8 @@ export function Header() {
             alt="Poligap"
             width={56}
             height={56}
-            className="h-12 w-12 md:h-14 md:w-14 object-contain"
+            className="h-12 w-12 md:h-14 md:w-14 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => router.push('/home')}
           />
         </div>
 

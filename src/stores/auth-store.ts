@@ -45,7 +45,15 @@ export const useAuthStore = create<AuthState>()(
         setToken: (token: string) => set({ token }, false, "setToken"),
         setUserData: (userData: unknown) =>
           set({ userData: userData as User }, false, "setUserData"),
-        logout: () => set({ userData: null, token: null }, false, "logout"),
+        logout: () => {
+          // Clear localStorage
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('__LOGIN_SESSION__');
+            localStorage.removeItem('user_id');
+          }
+          set({ userData: null, token: null }, false, "logout");
+        },
       }),
       { name: "auth-store" }
     ),
