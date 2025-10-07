@@ -90,7 +90,7 @@ export function Header() {
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container grid grid-cols-[auto_1fr_auto] h-[56px] max-w-screen items-center px-6 gap-4">
+      <div className="container grid grid-cols-[auto_1fr_auto] h-[48px] max-w-screen items-center px-6 gap-4">
         {/* Logo Section */}
         <div className="flex items-center">
           <img
@@ -98,7 +98,7 @@ export function Header() {
             alt="Poligap"
             width={56}
             height={56}
-            className="h-12 w-12 md:h-14 md:w-14 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+            className="h-10 w-10 md:h-11 md:w-11 object-contain cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => router.push('/home')}
           />
         </div>

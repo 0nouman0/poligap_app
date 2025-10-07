@@ -41,7 +41,7 @@ const ChatArea = ({
         handleCreateProject={handleCreateProject}
         handleCreateDoc={handleCreateDoc}
       />
-      <div className="sticky px-4 pb-2">
+      <div className="fixed bottom-0 left-[200px] right-0 z-50 bg-background border-t px-4 pb-4 pt-2">
         {/* <Separator className="mx-2 mb-3 w-screen" /> */}
         <ChatInput
           agent_name={agent_name}

@@ -76,7 +76,7 @@ const navigationItems = [
   },
   {
     title: "Policy Generator",
-    icon: FileText,
+    icon: BookOpen,
     page: "/policy-generator" as PageType,
   },
   // {
@@ -162,13 +162,13 @@ export function AppSidebar() {
           isActive
             ? "bg-filter-menu text-accent-foreground"
             : ""
-        } cursor-pointer flex items-center gap-1.5 px-2 py-1 w-full rounded-md transition-colors`}
+        } cursor-pointer flex items-center gap-2 px-2 py-1.5 w-full rounded-md transition-colors`}
       >
         <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">
           <Icon className="h-5 w-5" />
         </div>
         <span
-          className={`font-medium text-13 transition-opacity duration-300 ${
+          className={`font-medium text-13 transition-opacity duration-300 whitespace-nowrap ${
             sidebarCollapsed
               ? "opacity-0 w-0 overflow-hidden"
               : "opacity-100"
@@ -205,14 +205,14 @@ export function AppSidebar() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-60px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-48px)] overflow-hidden">
       <TooltipProvider delayDuration={300}>
         <SidebarProvider>
           {/* Sidebar */}
           <div
             className={`border-r border-border ${
-              sidebarCollapsed ? "w-[60px]" : "w-[240px]"
-            } transition-all duration-300 flex flex-col h-[calc(100vh-60px)] overflow-hidden relative group`}
+              sidebarCollapsed ? "w-[60px]" : "w-[200px]"
+            } transition-all duration-300 flex flex-col h-[calc(100vh-48px)] overflow-hidden relative group`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -278,7 +278,7 @@ export function AppSidebar() {
             </div> */}
 
             {/* Navigation Items */}
-            <div className="flex-1 overflow-y-auto py-1">
+            <div className="flex-1 overflow-y-auto pt-0 pb-1">
               <div className="px-1 space-y-0.5">
                 {visibleNavigationItems.map((item) => (
                   <MenuItemWithTooltip

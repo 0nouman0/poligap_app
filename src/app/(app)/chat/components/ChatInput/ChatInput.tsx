@@ -256,7 +256,7 @@ const ChatInput = ({
   const mentionChips = useMemo(() => parseMentions(inputMessage || ""), [inputMessage]);
 
   return (
-    <div className="font-inter mx-auto flex w-full max-w-6xl flex-col rounded-xl border p-3">
+    <div className="font-inter mx-auto flex w-full max-w-6xl flex-col rounded-xl border p-3 bg-background">
       <div className="flex">
         {isLoadingUploadFile && <MediaCardSkeleton />}
         {selectedMedia.length > 0 && (

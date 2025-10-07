@@ -45,7 +45,7 @@ const Messages = ({
   const messagesArray = messages || [];
 
   if (messagesArray.length === 0) {
-    return <ChatBlankState isGlobalAgent={isGlobalAgent} />;
+    return <div></div>;
   }
 
   return (

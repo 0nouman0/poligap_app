@@ -36,7 +36,7 @@ const MessageArea = ({
       initial='smooth'>
       <StickToBottom.Content
         className={`flex min-h-full flex-col ${messagesArray.length === 0 ? "justify-center" : "justify-start"} `}>
-        <div className='mx-auto w-full space-y-2 pb-4'>
+        <div className='mx-auto w-full space-y-2 pb-32'>
           <Messages
             exportReactComponentAsPDF={exportReactComponentAsPDF}
             messages={messagesArray}

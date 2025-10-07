@@ -1,206 +1,155 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Search as SearchIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Shield, 
+  FileText, 
+  Bot, 
+  Upload, 
+  Search, 
+  CheckCircle, 
+  ArrowRight,
+  TrendingUp,
+  Users,
+  Clock,
+  Star,
+  Zap,
+  Target,
+  Award,
+  BookOpen,
+  Settings
+} from "lucide-react";
 import { useUserStore } from "@/stores/user-store";
-import { useCompanyStore } from "@/stores/company-store";
-import { useIntegrationStore } from "@/stores/integration-store";
-import { useAnalyticsUsage } from "@/lib/queries/analytics/useAnalyticsUsage";
-import { useSearchSeries } from "@/lib/queries/analytics/useSearchSeries";
-import { useTopSearches } from "@/lib/queries/analytics/useTopSearches";
-import { useComplianceSummary } from "@/lib/queries/analytics/useComplianceSummary";
+import Link from "next/link";
 
-// Simple inline charts without extra deps
-function LineChart({ data, height = 120 }: { data: { date: string; count: number }[]; height?: number }) {
-  const max = Math.max(1, ...data.map((d) => d.count));
-  const points = data.map((d, i) => {
-    const x = (i / Math.max(1, data.length - 1)) * 100;
-    const y = 100 - (d.count / max) * 100;
-    return `${x},${y}`;
-  });
-  return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full" style={{ height }}>
-      <polyline points={points.join(" ")} fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500" />
-    </svg>
-  );
-}
-
-function BarList({ items, maxItems = 5 }: { items: { label: string; value: number }[]; maxItems?: number }) {
-  const max = Math.max(1, ...items.map((i) => i.value));
-  return (
-    <div className="space-y-3">
-      {items.slice(0, maxItems).map((i) => (
-        <div key={i.label} className="flex items-center gap-3">
-          <div className="flex-1 h-2 rounded bg-muted overflow-hidden">
-            <div className="h-full bg-blue-500" style={{ width: `${(i.value / max) * 100}%` }} />
-          </div>
-          <div className="w-10 text-right text-xs text-muted-foreground">{i.value}</div>
-          <div className="flex-1 text-sm truncate" title={i.label}>{i.label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export default function HomeFeedPage() {
+export default function HomePage() {
   const { userData } = useUserStore();
-  const name = userData?.name;
-  const selectedCompany = useCompanyStore((s) => s.selectedCompany);
-  const connectedAccountIds = useIntegrationStore((s) => s.connectedAccountIds);
+  
+  // Get current time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
-  const userId = userData?._id;
-  const companyId = selectedCompany?.companyId;
+  // Get current date
+  const getCurrentDate = () => {
+    const today = new Date();
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: "long", 
+      year: "numeric", 
+      month: "long", 
+      day: "numeric" 
+    };
+    return today.toLocaleDateString("en-US", options);
+  };
 
-  const { data: usage, isLoading: usageLoading } = useAnalyticsUsage(userId, companyId);
-  const { data: series = [], isLoading: seriesLoading } = useSearchSeries(userId, companyId, 30);
-  const { data: topSearches = [], isLoading: topLoading } = useTopSearches(userId, companyId, 5);
-  const { data: compliance, isLoading: complianceLoading } = useComplianceSummary(userId, companyId, 5);
+  const features = [
+    {
+      title: "Compliance Check",
+      description: "Upload documents for comprehensive compliance analysis against HIPAA, GDPR, ISO standards",
+      icon: Shield,
+      href: "/compliance-check",
+      color: "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
+      badge: "AI-Powered"
+    },
+    {
+      title: "Contract Review",
+      description: "AI-powered document analysis with gap identification and improvement suggestions",
+      icon: FileText,
+      href: "/contract-review",
+      color: "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400",
+      badge: "Smart Analysis"
+    },
+    {
+      title: "Policy Generator",
+      description: "Generate comprehensive policies tailored to your organization's needs",
+      icon: BookOpen,
+      href: "/policy-generator",
+      color: "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
+      badge: "Auto-Generate"
+    },
+    {
+      title: "AI Agents",
+      description: "Deploy specialized AI agents for automated legal and compliance tasks",
+      icon: Bot,
+      href: "/ai-agents",
+      color: "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
+      badge: "Coming Soon"
+    }
+  ];
+
+  const quickActions = [
+    { title: "Check Compliance", icon: Shield, href: "/compliance-check", color: "bg-blue-600" },
+    { title: "Review Contracts", icon: FileText, href: "/contract-review", color: "bg-green-600" },
+    { title: "Generate Policy", icon: BookOpen, href: "/policy-generator", color: "bg-purple-600" },
+    { title: "Learn Modules", icon: Users, href: "/learn-modules", color: "bg-orange-600" }
+  ];
+
+  const benefits = [
+    {
+      icon: Zap,
+      title: "Lightning Fast",
+      description: "Get compliance results in seconds, not hours"
+    },
+    {
+      icon: Target,
+      title: "Highly Accurate",
+      description: "AI-powered analysis with 99%+ accuracy rates"
+    },
+    {
+      icon: Award,
+      title: "Industry Standards",
+      description: "Supports GDPR, HIPAA, ISO 27001, SOC 2, and more"
+    },
+    {
+      icon: Users,
+      title: "Team Collaboration",
+      description: "Share results and collaborate with your team"
+    }
+  ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4">
-      <header className={`flex flex-col mb-8 ${!connectedAccountIds || connectedAccountIds.length === 0 ? "mt-[12vh]" : ""}`}>
-        <h2 className="text-sm mr-4 font-medium text-center mt-2">
-          {(() => {
-            const today = new Date();
-            const options: Intl.DateTimeFormatOptions = { weekday: "long", month: "long", day: "numeric" };
-            return today.toLocaleDateString("en-US", options);
-          })()}
-        </h2>
-        <div className="flex items-center w-full relative mt-3">
-          <div className="flex-1 flex justify-center">
-            <h1 className="text-2xl font-medium text-center">
-              {(() => {
-                const hour = new Date().getHours();
-                let greeting = "Good morning";
-                if (hour >= 12 && hour < 18) greeting = "Good afternoon";
-                else if (hour >= 18 || hour < 4) greeting = "Good evening";
-                return (
-                  <>
-                    {greeting}{name ? `, ${name}` : ""}
-                  </>
-                );
-              })()}
-            </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Hero Section with Greeting */}
+        <div className="text-center mb-12">
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground font-medium">
+              {getCurrentDate()}
+            </p>
           </div>
-        </div>
-      </header>
-
-      {(!connectedAccountIds || connectedAccountIds.length === 0) && (
-        <div className="mt-8 flex flex-col items-center justify-center text-center bg-muted/60 dark:bg-neutral-800 rounded-lg p-6 border border-muted-foreground/10 max-w-xl mx-auto">
-          <SearchIcon className="w-10 h-10 text-gray-500 dark:text-gray-400 mb-3" />
-          <h3 className="text-lg font-semibold mb-1">Connect a source to personalize your feed</h3>
-          <p className="text-sm text-muted-foreground">
-            Once your accounts are connected, you'll see suggested documents and trending items here for {selectedCompany?.name || "your org"}.
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            {getGreeting()}{userData?.name ? `, ${userData.name}` : ""}
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Welcome to Poligap - Your AI-powered legal compliance and contract analysis platform
           </p>
         </div>
-      )}
 
-      <main className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-[13px]">
-        <div className="md:col-span-2 space-y-6">
-          {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="p-4">
-              <CardTitle className="text-sm mb-2">Searches (MTD)</CardTitle>
-              {usageLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-semibold">{usage?.searchCountMonth ?? 0}</div>}
-            </Card>
-            <Card className="p-4">
-              <CardTitle className="text-sm mb-2">Audit Logs (MTD)</CardTitle>
-              {usageLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-semibold">{usage?.auditCountMonth ?? 0}</div>}
-            </Card>
-            <Card className="p-4">
-              <CardTitle className="text-sm mb-2">Flagged (all)</CardTitle>
-              {usageLoading ? (
-                <Skeleton className="h-8 w-24" />
-              ) : (
-                <div className="space-x-3 text-sm">
-                  <span className="font-medium">New: {usage?.flagged?.new ?? 0}</span>
-                  <span className="font-medium">Resolved: {usage?.flagged?.resolved ?? 0}</span>
-                </div>
-              )}
-            </Card>
+        {/* Quick Actions */}
+        <div className="mb-16">
+          <h2 className="text-2xl font-semibold text-center mb-8">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {quickActions.map((action, index) => (
+              <Link key={index} href={action.href}>
+                <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
+                  <CardContent className="p-6 text-center">
+                    <div className={`w-12 h-12 ${action.color} rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
+                      <action.icon className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="font-medium text-sm">{action.title}</h3>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
-
-          {/* Searches over time */}
-          <Card className="p-4">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold">Searches last 30 days</CardTitle>
-            </div>
-            <div className="mt-2">
-              {seriesLoading ? (
-                <Skeleton className="h-[120px] w-full" />
-              ) : series.length > 0 ? (
-                <LineChart data={series} />
-              ) : (
-                <div className="text-sm text-muted-foreground py-6">No search activity found.</div>
-              )}
-            </div>
-          </Card>
-
-          {/* Compliance summary */}
-          <Card className="p-4">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold">Compliance summary</CardTitle>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Average score</div>
-                {complianceLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-semibold">{compliance?.averageScore != null ? Math.round(compliance.averageScore) : "—"}</div>}
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Analyzed docs</div>
-                {complianceLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-semibold">{compliance?.totalAnalyzed ?? 0}</div>}
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Top metric keys</div>
-                {complianceLoading ? (
-                  <Skeleton className="h-16 w-full" />
-                ) : (
-                  <ul className="text-sm list-disc pl-5 space-y-1">
-                    {(compliance?.topMetricKeys || []).map((m) => (
-                      <li key={m.key} className="truncate" title={`${m.key} (${m.count})`}>
-                        {m.key} <span className="text-muted-foreground">({m.count})</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-            <div className="mt-6">
-              <div className="text-sm font-medium mb-2">Top compliances</div>
-              {complianceLoading ? (
-                <Skeleton className="h-24 w-full" />
-              ) : (
-                <BarList items={(compliance?.topCompliances || []).map((c) => ({ label: c.name, value: c.count }))} />
-              )}
-            </div>
-          </Card>
         </div>
-
-        {/* Right column: Top searches */}
-        <div className="md:col-span-1">
-          <Card className="p-4">
-            <CardHeader className="px-0 pt-0">
-              <CardTitle className="text-lg font-semibold">Top searches</CardTitle>
-            </CardHeader>
-            <CardContent className="px-0">
-              {topLoading ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-5 w-full" />
-                  ))}
-                </div>
-              ) : topSearches.length > 0 ? (
-                <BarList items={topSearches.map((t) => ({ label: t.title, value: t.count }))} />
-              ) : (
-                <div className="text-sm text-muted-foreground">No top searches to show.</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
