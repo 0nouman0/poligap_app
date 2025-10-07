@@ -12,14 +12,20 @@ export async function GET(req: NextRequest) {
     console.log('userId:', userId);
     console.log('email:', email);
 
-    // Check connection
+    // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
-      console.error('❌ Mongoose not connected. State:', mongoose.connection.readyState);
-      return createApiResponse({
-        success: false,
-        error: 'Database not connected',
-        status: 503,
-      });
+      try {
+        console.log('🔄 Establishing database connection...');
+        await mongoose.connect(process.env.MONGODB_URI as string);
+        console.log('✅ Database connection established');
+      } catch (dbError) {
+        console.error("❌ Database connection failed:", dbError);
+        return createApiResponse({
+          success: false,
+          error: "Database connection failed - MongoDB connection required",
+          status: 503,
+        });
+      }
     }
 
     if (!userId && !email) {

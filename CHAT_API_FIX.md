@@ -1,10 +1,15 @@
-# 🚀 Chat API 500 Error Fix - Production Deployment
+# 🚀 API Errors Fixed - Production Deployment
 
-## 🔍 **Problem Solved**
+## 🔍 **Problems Solved**
 
-Fixed the 500 Internal Server Error in the deployed chat API endpoint:
-- `GET /api/ai-chat/get-conversation-list` was failing with 500 error
-- Root cause: Internal HTTP fetch to `/api/ensure-user` failing in production
+Fixed multiple API endpoints failing in production:
+- `GET /api/ai-chat/get-conversation-list` - 500 Internal Server Error
+- `GET /api/users/profile` - 503 Service Unavailable  
+- `GET /api/users/profile-simple` - 503 Service Unavailable
+
+**Root Causes:**
+1. Internal HTTP fetch to `/api/ensure-user` failing in production
+2. Database connection not being established properly in API routes
 
 ## ✅ **Solution Implemented**
 
@@ -13,14 +18,19 @@ Fixed the 500 Internal Server Error in the deployed chat API endpoint:
 - Eliminated dependency on `NEXTAUTH_URL` environment variable
 - Made the API more robust and faster
 
-### **2. Enhanced Error Handling**
-- Added explicit database connection checks
+### **2. Enhanced Database Connection Handling**
+- Added explicit database connection establishment in all API routes
 - Improved error messages and logging
 - Added proper TypeScript type safety
 
 ### **3. Key Changes Made**
 
-#### **Modified File: `/src/app/api/ai-chat/get-conversation-list/route.ts`**
+#### **Modified Files:**
+- `/src/app/api/ai-chat/get-conversation-list/route.ts`
+- `/src/app/api/users/profile/route.ts`  
+- `/src/app/api/users/profile-simple/route.ts`
+
+#### **Example Fix in `/src/app/api/ai-chat/get-conversation-list/route.ts`**
 
 **Before (Problematic):**
 ```typescript
@@ -34,12 +44,23 @@ const ensureUserResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/ensure-u
 
 **After (Fixed):**
 ```typescript
-// Direct database call - no HTTP dependency
+// 1. Ensure database connection first
+if (mongoose.connection.readyState !== 1) {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI as string);
+  } catch (dbError) {
+    return createApiResponse({
+      success: false,
+      error: "Database connection failed",
+      status: 500,
+    });
+  }
+}
+
+// 2. Direct database call - no HTTP dependency
 async function ensureUserExists(userId: string) {
-  // Check if user exists, create if not found
   let existingUser = await User.findById(userId);
   if (existingUser) return { success: true, data: existingUser };
-  
   // Create new user logic...
 }
 ```
@@ -57,8 +78,7 @@ async function ensureUserExists(userId: string) {
 ### **Required Environment Variables in Vercel:**
 
 ```bash
-# Essential - MongoDB Connection
-MONGODB_URI=mongodb+srv://mohammednouman:nouman@poligap.ejtdob1.mongodb.net/poligap?retryWrites=true&w=majority&appName=Poligap
+
 
 # Optional - AI Features (if using AI chat)
 PORTKEY_API_KEY=your_portkey_api_key_here
@@ -108,14 +128,19 @@ Visit: `https://poligap-app.vercel.app/api/health/mongodb`
 }
 ```
 
-### **3. Test Fixed Chat API**
+### **3. Test Fixed APIs**
+
+**Chat API:**
 Visit: `https://poligap-app.vercel.app/api/ai-chat/get-conversation-list?companyId=60f1b2b3c4d5e6f7a8b9c0d1&userId=68e4a14b5239da52748bb10b`
 
-**Expected Response:**
+**User Profile API:**
+Visit: `https://poligap-app.vercel.app/api/users/profile?userId=68e4a14b5239da52748bb10b`
+
+**Expected Response (for both):**
 ```json
 {
   "success": true,
-  "data": []
+  "data": { /* user/conversation data */ }
 }
 ```
 
@@ -124,7 +149,7 @@ Visit: `https://poligap-app.vercel.app/api/ai-chat/get-conversation-list?company
 1. **Commit and Push Changes:**
    ```bash
    git add .
-   git commit -m "Fix: Resolve chat API 500 error by removing internal HTTP calls"
+   git commit -m "Fix: Resolve API 500/503 errors - add database connection handling"
    git push origin main
    ```
 
@@ -138,10 +163,11 @@ Visit: `https://poligap-app.vercel.app/api/ai-chat/get-conversation-list?company
 ## 🎉 **Success Indicators**
 
 When everything is working correctly, you should see:
-- ✅ **200 OK** responses instead of 500 errors
-- ✅ **Chat feature working** in your deployed app
+- ✅ **200 OK** responses instead of 500/503 errors
+- ✅ **Chat feature working** in your deployed app  
+- ✅ **User profiles loading** properly
 - ✅ **User conversations loading** properly
-- ✅ **No more internal API call failures**
+- ✅ **No more database connection failures**
 
 ## 💡 **Technical Details**
 

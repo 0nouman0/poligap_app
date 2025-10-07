@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import User from '@/models/users.model';
 import { createApiResponse } from '@/lib/apiResponse';
+import mongoose from 'mongoose';
 
 // Retry wrapper for database operations
 async function retryOperation<T>(
@@ -32,6 +33,22 @@ async function retryOperation<T>(
 // GET - Fetch user profile
 export async function GET(req: NextRequest) {
   try {
+    // Ensure database connection
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        console.log('🔄 Establishing database connection...');
+        await mongoose.connect(process.env.MONGODB_URI as string);
+        console.log('✅ Database connection established');
+      } catch (dbError) {
+        console.error("❌ Database connection failed:", dbError);
+        return createApiResponse({
+          success: false,
+          error: "Database connection failed - MongoDB connection required",
+          status: 503,
+        });
+      }
+    }
+
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     const email = searchParams.get('email');
@@ -39,16 +56,7 @@ export async function GET(req: NextRequest) {
     console.log('=== Profile API Request ===');
     console.log('userId:', userId);
     console.log('email:', email);
-
-    // Check if database connection is available
-    if (!User.db || User.db.readyState !== 1) {
-      console.error('❌ Database connection not ready. State:', User.db?.readyState);
-      return createApiResponse({
-        success: false,
-        error: 'Database connection not available - MongoDB connection required',
-        status: 503,
-      });
-    }
+    console.log('Database state:', mongoose.connection.readyState);
 
     if (!userId && !email) {
       return createApiResponse({
@@ -63,7 +71,7 @@ export async function GET(req: NextRequest) {
     if (userId) {
       // Handle both string and ObjectId formats
       try {
-        const objectId = new User.base.Types.ObjectId(userId);
+        const objectId = new mongoose.Types.ObjectId(userId);
         query._id = objectId;
       } catch {
         // If ObjectId creation fails, try direct string match
