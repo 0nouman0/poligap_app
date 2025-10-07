@@ -90,7 +90,7 @@ const RecentChats = ({
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    await deleteConversationAPI(chatdata_id); // wait for delete to complete
+    await deleteConversationAPI({ conversationId: chatdata_id }); // pass as object with conversationId property
     getConversationListsAPI(actualCompanyId, actualUserId);
   };
 

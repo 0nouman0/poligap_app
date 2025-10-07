@@ -445,19 +445,21 @@ export const useGlobalChatStore = create((set: any) => ({
     // setMessages?: (msgs: any[]) => void
   ): Promise<void> => {
     try {
-      // debugger;
+      console.log("🗑️ Deleting conversation:", requestData);
+      
+      // Validate input
+      if (!requestData?.conversationId) {
+        console.error("❌ No conversation ID provided for deletion");
+        throw new Error("Conversation ID is required for deletion");
+      }
+
       set({
         isDeletingConversation: true,
         deletingConversationId: requestData?.conversationId,
       });
 
-      // const { data: resp } = await krooloHttpClient.post(
-      //   "/kroolo-ai/delete-conversation",
-      //   requestData
-      // );
-
       const res = await fetch(
-        `/api/ai-chat/delete-conversation?conversationId=${requestData?.conversationId}`,
+        `/api/ai-chat/delete-conversation?conversationId=${requestData.conversationId}`,
         {
           method: "DELETE",
         }
