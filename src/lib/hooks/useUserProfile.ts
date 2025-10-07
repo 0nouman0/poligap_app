@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUserStore } from '@/stores/user-store';
 import { useCompanyStore } from '@/stores/company-store';
 import { toastSuccess, toastError } from '@/components/toast-varients';
+import { apiCache, CACHE_KEYS } from '@/lib/cache';
 
 export interface UserProfile {
   _id: string;
@@ -79,6 +80,15 @@ export function useUserProfile(): UseUserProfileReturn {
         throw new Error('User ID is required to fetch profile');
       }
 
+      // Check cache first
+      const cacheKey = CACHE_KEYS.USER_PROFILE(targetUserId);
+      const cachedProfile = apiCache.get(cacheKey);
+      if (cachedProfile) {
+        console.log('⚡ Using cached profile data');
+        setProfile(cachedProfile);
+        return cachedProfile;
+      }
+
       const params = new URLSearchParams({
         userId: targetUserId,
       });
@@ -87,7 +97,7 @@ export function useUserProfile(): UseUserProfileReturn {
         params.append('companyId', targetCompanyId);
       }
 
-      console.log('🌐 Fetching REAL MongoDB profile with params:', params.toString());
+      console.log('🌐 Fetching fresh MongoDB profile with params:', params.toString());
 
       const response = await fetch(`/api/users/profile?${params}`);
       const result = await response.json();
@@ -114,6 +124,9 @@ export function useUserProfile(): UseUserProfileReturn {
       });
       
       setProfile(profileData);
+      
+      // Cache the profile data
+      apiCache.set(cacheKey, profileData, 300); // Cache for 5 minutes
       
       // Update the user store with fresh data
       if (setUserData && profileData) {
@@ -191,6 +204,10 @@ export function useUserProfile(): UseUserProfileReturn {
       const updatedProfile = result.data as UserProfile;
       setProfile(updatedProfile);
       
+      // Invalidate and update cache
+      const cacheKey = CACHE_KEYS.USER_PROFILE(userId);
+      apiCache.set(cacheKey, updatedProfile, 300);
+      
       // Update the user store with fresh data
       if (setUserData && updatedProfile) {
         setUserData({
@@ -236,15 +253,14 @@ export function useUserProfile(): UseUserProfileReturn {
     await fetchProfile();
   }, [fetchProfile]);
 
-  // Auto-fetch profile on mount - ALWAYS FETCH FRESH MONGODB DATA
+  // Auto-fetch profile on mount with caching optimization
   useEffect(() => {
     const userId = userData?.userId || localStorage.getItem('user_id');
-    if (userId) {
-      console.log('🔄 useUserProfile: Auto-fetching fresh MongoDB data for userId:', userId);
-      // Always fetch fresh data, don't check if profile exists
+    if (userId && !profile) {
+      console.log('🔄 useUserProfile: Auto-fetching MongoDB data for userId:', userId);
       fetchProfile(userId);
     }
-  }, [userData?.userId, fetchProfile]); // Removed profile dependency to always fetch
+  }, [userData?.userId, fetchProfile, profile]); // Only fetch if no profile exists
 
   return {
     profile,

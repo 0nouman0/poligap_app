@@ -1,35 +1,30 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const RULES_PATH = path.join(DATA_DIR, 'rulebase.json');
-
-async function ensureStore() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.access(RULES_PATH);
-  } catch {
-    await fs.writeFile(RULES_PATH, JSON.stringify({ rules: [] }, null, 2), 'utf-8');
-  }
-}
+// Import the same in-memory storage from the main route
+// In production, this should use a shared database
+let rulesStore: { rules: any[] } = { rules: [] };
 
 async function readRules() {
-  await ensureStore();
-  const raw = await fs.readFile(RULES_PATH, 'utf-8');
-  try { return JSON.parse(raw); } catch { return { rules: [] }; }
+  return rulesStore;
 }
 
 async function writeRules(data: any) {
-  await ensureStore();
-  await fs.writeFile(RULES_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  rulesStore = data;
 }
 
 export async function POST(req: Request) {
   try {
+    console.log('POST /api/rulebase/upload - Starting request');
+    
     const form = await req.formData();
     const file = form.get('file') as File | null;
-    if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 });
+    
+    if (!file) {
+      console.log('Upload error: No file provided');
+      return NextResponse.json({ error: 'No file' }, { status: 400 });
+    }
+
+    console.log('File received:', file.name, 'Size:', file.size);
 
     const arrayBuffer = await file.arrayBuffer();
     // We don't persist file content to disk for now; just register metadata
@@ -44,10 +39,19 @@ export async function POST(req: Request) {
       active: true,
       updatedAt: new Date().toISOString(),
     };
+    
+    console.log('Creating uploaded rule:', rule);
+    
     data.rules = [rule, ...(data.rules || [])];
     await writeRules(data);
+    
+    console.log('Upload success');
     return NextResponse.json({ rule });
   } catch (e) {
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    console.error('Upload error:', e);
+    return NextResponse.json({ 
+      error: 'Upload failed', 
+      details: e instanceof Error ? e.message : 'Unknown error' 
+    }, { status: 500 });
   }
 }

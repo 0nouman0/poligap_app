@@ -33,6 +33,9 @@ async function retryOperation<T>(
 // GET - Fetch user profile
 export async function GET(req: NextRequest) {
   try {
+    const startTime = Date.now();
+    console.log('🚀 Profile API GET starting...');
+    
     // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
       try {
@@ -53,11 +56,6 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId');
     const email = searchParams.get('email');
 
-    console.log('=== Profile API Request ===');
-    console.log('userId:', userId);
-    console.log('email:', email);
-    console.log('Database state:', mongoose.connection.readyState);
-
     if (!userId && !email) {
       return createApiResponse({
         success: false,
@@ -66,48 +64,39 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Simple user lookup by userId or email
+    // Optimized user lookup by userId or email
     let query: any = {};
     if (userId) {
-      // Handle both string and ObjectId formats
       try {
         const objectId = new mongoose.Types.ObjectId(userId);
         query._id = objectId;
       } catch {
-        // If ObjectId creation fails, try direct string match
         query._id = userId;
       }
     } else if (email) {
       query.email = email;
     }
 
-    console.log('=== MongoDB User Search ===');
-    console.log('Search query:', JSON.stringify(query, null, 2));
+    console.log('🔍 Searching for user...');
     
-    // Use retry mechanism for database query
+    // Optimized database query with specific field selection
     const user = await retryOperation(async () => {
       return await User.findOne(query)
-        .select('-__v') // Exclude version field
-        .lean()
-        .maxTimeMS(10000); // Set 10 second timeout for this query
+        .select('name email mobile dob country designation about profileImage banner companyName status createdAt updatedAt -_id') // Select only needed fields
+        .lean() // Use lean for better performance
+        .maxTimeMS(5000); // Reduced timeout for faster response
     });
 
-    console.log('User found:', user ? 'YES' : 'NO');
-    if (user) {
-      console.log('Found user data:', {
-        _id: user._id?.toString(),
-        email: user.email,
-        name: user.name
-      });
-    }
-
     if (!user) {
+      console.log('❌ User not found');
       return createApiResponse({
         success: false,
         error: 'User not found',
         status: 404,
       });
     }
+
+    console.log('✅ User found, preparing response...');
 
     // Transform user data for response
     const profileData = {
@@ -129,12 +118,18 @@ export async function GET(req: NextRequest) {
       source: 'MongoDB Atlas'
     };
 
-    console.log('✅ Returning user profile:', profileData.email);
+    const totalTime = Date.now() - startTime;
+    console.log(`⚡ Profile GET completed in ${totalTime}ms`);
     
-    return createApiResponse({
+    const response = createApiResponse({
       success: true,
       data: profileData
     });
+
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600'); // 5 min cache, 10 min stale
+    
+    return response;
 
   } catch (error) {
     console.error('❌ Profile API error:', error);

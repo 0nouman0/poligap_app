@@ -1,28 +1,15 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const RULES_PATH = path.join(DATA_DIR, 'rulebase.json');
-
-async function ensureStore() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.access(RULES_PATH);
-  } catch {
-    await fs.writeFile(RULES_PATH, JSON.stringify({ rules: [] }, null, 2), 'utf-8');
-  }
-}
+// In-memory storage for rules (will reset on deployment)
+// In production, this should use a database like MongoDB
+let rulesStore: { rules: any[] } = { rules: [] };
 
 async function readRules() {
-  await ensureStore();
-  const raw = await fs.readFile(RULES_PATH, 'utf-8');
-  try { return JSON.parse(raw); } catch { return { rules: [] }; }
+  return rulesStore;
 }
 
 async function writeRules(data: any) {
-  await ensureStore();
-  await fs.writeFile(RULES_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  rulesStore = data;
 }
 
 export async function GET() {
@@ -32,11 +19,18 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    console.log('POST /api/rulebase - Starting request');
+    
     const body = await req.json();
+    console.log('POST body:', body);
+    
     const { name, description = '', tags = [], sourceType = 'text', active = true } = body || {};
+    
     if (!name || typeof name !== 'string') {
+      console.log('POST error: Invalid name');
       return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
     }
+    
     const data = await readRules();
     const rule = {
       _id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
@@ -47,27 +41,49 @@ export async function POST(req: Request) {
       active: active !== false,
       updatedAt: new Date().toISOString(),
     };
+    
+    console.log('Creating rule:', rule);
+    
     data.rules = [rule, ...(data.rules || [])];
     await writeRules(data);
+    
+    console.log('POST success');
     return NextResponse.json({ rule });
   } catch (e) {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+    console.error('POST error:', e);
+    return NextResponse.json({ 
+      error: 'Bad request', 
+      details: e instanceof Error ? e.message : 'Unknown error' 
+    }, { status: 400 });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
+    console.log('PATCH /api/rulebase - Starting request');
+    
     const body = await req.json();
+    console.log('PATCH body:', body);
+    
     const { id, active, name, description, tags } = body || {};
+    
     if (!id) {
+      console.log('PATCH error: id is required');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
+    
     const data = await readRules();
     const list = Array.isArray(data.rules) ? data.rules : [];
+    console.log('Current rules count:', list.length);
+    
     const idx = list.findIndex((r: any) => r._id === id);
+    console.log('Rule index found:', idx);
+    
     if (idx === -1) {
+      console.log('PATCH error: Rule not found for id:', id);
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
+    
     const current = list[idx] || {};
     const updated = {
       ...current,
@@ -77,33 +93,62 @@ export async function PATCH(req: Request) {
       ...(Array.isArray(tags) ? { tags } : {}),
       updatedAt: new Date().toISOString(),
     };
+    
+    console.log('Updated rule:', updated);
+    
     list[idx] = updated;
     data.rules = list;
     await writeRules(data);
+    
+    console.log('PATCH success');
     return NextResponse.json({ rule: updated });
   } catch (e) {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+    console.error('PATCH error:', e);
+    return NextResponse.json({ 
+      error: 'Bad request', 
+      details: e instanceof Error ? e.message : 'Unknown error' 
+    }, { status: 400 });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
+    console.log('DELETE /api/rulebase - Starting request');
+    
     const body = await req.json().catch(() => ({}));
+    console.log('DELETE body:', body);
+    
     const { id } = body || {};
+    
     if (!id) {
+      console.log('DELETE error: id is required');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
+    
     const data = await readRules();
     const list = Array.isArray(data.rules) ? data.rules : [];
+    console.log('Current rules count before delete:', list.length);
+    
     const next = list.filter((r: any) => r._id !== id);
+    
     if (next.length === list.length) {
+      console.log('DELETE error: Rule not found for id:', id);
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
+    
+    console.log('Rules count after delete:', next.length);
+    
     data.rules = next;
     await writeRules(data);
+    
+    console.log('DELETE success');
     return NextResponse.json({ success: true });
   } catch (e) {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+    console.error('DELETE error:', e);
+    return NextResponse.json({ 
+      error: 'Bad request', 
+      details: e instanceof Error ? e.message : 'Unknown error' 
+    }, { status: 400 });
   }
 }
 

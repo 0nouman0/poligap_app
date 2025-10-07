@@ -205,13 +205,35 @@ export default function UserProfilePage() {
           );
           if (updateBanner.success) {
             toastSuccess("Banner updated successfully");
-            if (userData) {
-              setUserData({
-                ...userData,
-                banner: {
-                  image: updateBanner.data?.fileUrl || bannerImage,
-                },
-              });
+            
+            // Update both user store and profile data
+            const newBannerUrl = updateBanner.data?.fileUrl;
+            if (newBannerUrl) {
+              // Update user store
+              if (userData) {
+                setUserData({
+                  ...userData,
+                  banner: {
+                    image: newBannerUrl,
+                  },
+                });
+              }
+              
+              // Update profile data state
+              if (profileData) {
+                setProfileData({
+                  ...profileData,
+                  banner: {
+                    ...profileData.banner,
+                    image: newBannerUrl,
+                  },
+                });
+              }
+              
+              // Refresh profile from database to ensure persistence
+              setTimeout(() => {
+                refreshProfile();
+              }, 1000);
             }
           } else {
             toastError("Failed to update banner");
@@ -248,12 +270,30 @@ export default function UserProfilePage() {
           );
           if (updateProfilePic.success) {
             toastSuccess("Profile picture updated successfully");
-            if (userData) {
-              setUserData({
-                ...userData,
-                profileImage:
-                  updateProfilePic.data?.fileUrl || userData.profileImage,
-              });
+            
+            // Update both user store and profile data
+            const newImageUrl = updateProfilePic.data?.fileUrl;
+            if (newImageUrl) {
+              // Update user store
+              if (userData) {
+                setUserData({
+                  ...userData,
+                  profileImage: newImageUrl,
+                });
+              }
+              
+              // Update profile data state
+              if (profileData) {
+                setProfileData({
+                  ...profileData,
+                  profileImage: newImageUrl,
+                });
+              }
+              
+              // Refresh profile from database to ensure persistence
+              setTimeout(() => {
+                refreshProfile();
+              }, 1000);
             }
           } else {
             toastError("Failed to update profile picture");
