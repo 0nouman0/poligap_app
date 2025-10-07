@@ -97,7 +97,6 @@ export function useUserProfile(): UseUserProfileReturn {
         params.append('companyId', targetCompanyId);
       }
 
-      console.log('🌐 Fetching fresh MongoDB profile with params:', params.toString());
 
       const response = await fetch(`/api/users/profile?${params}`);
       const result = await response.json();
@@ -111,17 +110,6 @@ export function useUserProfile(): UseUserProfileReturn {
       }
 
       const profileData = result.data as UserProfile;
-      console.log('✅ REAL MongoDB Profile Data Received:', {
-        name: profileData.name,
-        email: profileData.email,
-        userId: profileData.userId,
-        _id: profileData._id,
-        designation: profileData.designation,
-        companyName: profileData.companyName,
-        status: profileData.status,
-        source: 'MongoDB Atlas Database',
-        timestamp: new Date().toISOString()
-      });
       
       setProfile(profileData);
       
@@ -257,7 +245,6 @@ export function useUserProfile(): UseUserProfileReturn {
   useEffect(() => {
     const userId = userData?.userId || localStorage.getItem('user_id');
     if (userId && !profile) {
-      console.log('🔄 useUserProfile: Auto-fetching MongoDB data for userId:', userId);
       fetchProfile(userId);
     }
   }, [userData?.userId, fetchProfile, profile]); // Only fetch if no profile exists

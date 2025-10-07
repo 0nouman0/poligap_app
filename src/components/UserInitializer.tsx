@@ -37,7 +37,6 @@ export function UserInitializer() {
         if (result.success && result.data) {
           // Set the real user data in the store
           setUserData(result.data);
-          console.log('Real user data loaded from MongoDB:', result.data.name || result.data.email);
         } else {
           console.error('Failed to load user profile from MongoDB:', result.error);
         }

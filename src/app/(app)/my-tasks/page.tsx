@@ -15,7 +15,7 @@ interface Task {
   id?: string; // client convenience
   title: string;
   description?: string;
-  status: "pending" | "in-progress" | "completed";
+  status: "pending" | "completed";
   priority: "low" | "medium" | "high" | "critical";
   dueDate?: string;
   assignee?: string;
@@ -77,7 +77,12 @@ export default function MyTasksPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to load tasks");
       }
-      const incoming: Task[] = (data.tasks || []).map((t: any) => ({ ...t, id: t._id || t.id }));
+      const incoming: Task[] = (data.tasks || []).map((t: any) => ({ 
+        ...t, 
+        id: t._id || t.id,
+        // Convert any existing "in-progress" tasks to "pending"
+        status: t.status === "in-progress" ? "pending" : t.status
+      }));
       // Deduplicate using a stable composite key
       const byKey = new Map<string, Task>();
       for (const t of incoming) {
@@ -117,7 +122,6 @@ export default function MyTasksPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "in-progress": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "pending": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
@@ -304,10 +308,9 @@ export default function MyTasksPage() {
       <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
         {/* Task Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all">All Tasks</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="in-progress">In Progress</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 

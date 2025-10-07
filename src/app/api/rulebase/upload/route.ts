@@ -1,54 +1,68 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import RulebaseModel from '@/models/rulebase.model';
 
-// Import the same in-memory storage from the main route
-// In production, this should use a shared database
-let rulesStore: { rules: any[] } = { rules: [] };
-
-async function readRules() {
-  return rulesStore;
-}
-
-async function writeRules(data: any) {
-  rulesStore = data;
+// Ensure database connection
+async function ensureDbConnection() {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      console.log('🔄 Connecting to MongoDB...');
+      await mongoose.connect(process.env.MONGODB_URI as string);
+      console.log('✅ MongoDB connected');
+    } catch (error) {
+      console.error('❌ MongoDB connection failed:', error);
+      throw new Error('Database connection failed');
+    }
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    console.log('POST /api/rulebase/upload - Starting request');
+    console.log('🚀 POST /api/rulebase/upload - Starting request');
+    await ensureDbConnection();
     
     const form = await req.formData();
     const file = form.get('file') as File | null;
     
     if (!file) {
-      console.log('Upload error: No file provided');
+      console.log('❌ Upload error: No file provided');
       return NextResponse.json({ error: 'No file' }, { status: 400 });
     }
 
-    console.log('File received:', file.name, 'Size:', file.size);
+    console.log('📁 File received:', file.name, 'Size:', file.size);
 
     const arrayBuffer = await file.arrayBuffer();
-    // We don't persist file content to disk for now; just register metadata
-    const data = await readRules();
-    const rule = {
-      _id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    const fileContent = Buffer.from(arrayBuffer).toString('utf-8');
+    
+    // Create new rule in MongoDB with file content
+    const newRule = new RulebaseModel({
       name: file.name,
       description: `Uploaded rule file (${(arrayBuffer.byteLength/1024).toFixed(1)} KB)`,
       tags: ['uploaded'],
-      sourceType: 'file' as const,
+      sourceType: 'file',
       fileName: file.name,
+      fileContent: fileContent.substring(0, 10000), // Limit content size
       active: true,
-      updatedAt: new Date().toISOString(),
+    });
+    
+    const savedRule = await newRule.save();
+    console.log('✅ Uploaded rule created:', savedRule._id);
+    
+    // Transform for frontend
+    const rule = {
+      _id: savedRule._id.toString(),
+      name: savedRule.name,
+      description: savedRule.description || '',
+      tags: savedRule.tags || [],
+      sourceType: savedRule.sourceType,
+      fileName: savedRule.fileName,
+      active: savedRule.active,
+      updatedAt: savedRule.updatedAt.toISOString(),
     };
     
-    console.log('Creating uploaded rule:', rule);
-    
-    data.rules = [rule, ...(data.rules || [])];
-    await writeRules(data);
-    
-    console.log('Upload success');
     return NextResponse.json({ rule });
   } catch (e) {
-    console.error('Upload error:', e);
+    console.error('❌ Upload error:', e);
     return NextResponse.json({ 
       error: 'Upload failed', 
       details: e instanceof Error ? e.message : 'Unknown error' 

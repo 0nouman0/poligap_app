@@ -68,46 +68,28 @@ export default function UserProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement | null>(null);
 
-  let bannerImage =
-    "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  // Banner image logic
+  let bannerImage = "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
   if (profileData?.banner?.image) {
     bannerImage = profileData.banner.image;
   }
 
-  // Fetch profile data on component mount - FORCE REAL MONGODB DATA
+  // Fetch profile data on component mount
   useEffect(() => {
     const userId = userData?.userId || localStorage.getItem('user_id');
-    console.log('🔍 Profile Page: Attempting to fetch real MongoDB data for userId:', userId);
     
     if (userId) {
-      // Always fetch fresh data from MongoDB, don't rely on cached profile
-      console.log('📡 Fetching fresh profile data from MongoDB...');
       fetchProfile(userId);
-    } else {
-      console.warn('⚠️ No userId found - cannot fetch profile from MongoDB');
-      toastError('User ID not found', 'Please log in again to load your profile');
     }
   }, [userData?.userId, fetchProfile]);
 
-  // Update profile data when profile from hook changes - PRIORITIZE MONGODB DATA
+  // Update profile data when profile from hook changes
   useEffect(() => {
     if (profile) {
-      console.log('✅ MongoDB Profile Data Loaded:', {
-        email: profile.email,
-        source: 'MongoDB Atlas',
-        hasRealData: true
-      });
       setProfileData(profile);
     } else if (userData) {
-      console.log('⚠️ Using fallback userData (not from MongoDB):', {
-        name: userData.name,
-        email: userData.email,
-        source: 'User Store/Cache',
-        hasRealData: false
-      });
       setProfileData(userData);
     } else {
-      console.log('❌ No MongoDB profile data available - showing login prompt');
       setProfileData(null);
     }
   }, [profile, userData]);

@@ -1,25 +1,59 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import RulebaseModel from '@/models/rulebase.model';
 
-// In-memory storage for rules (will reset on deployment)
-// In production, this should use a database like MongoDB
-let rulesStore: { rules: any[] } = { rules: [] };
-
-async function readRules() {
-  return rulesStore;
-}
-
-async function writeRules(data: any) {
-  rulesStore = data;
+// Ensure database connection
+async function ensureDbConnection() {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      console.log('🔄 Connecting to MongoDB...');
+      await mongoose.connect(process.env.MONGODB_URI as string);
+      console.log('✅ MongoDB connected');
+    } catch (error) {
+      console.error('❌ MongoDB connection failed:', error);
+      throw new Error('Database connection failed');
+    }
+  }
 }
 
 export async function GET() {
-  const data = await readRules();
-  return NextResponse.json({ rules: data.rules || [] });
+  try {
+    console.log('🚀 GET /api/rulebase - Starting request');
+    await ensureDbConnection();
+    
+    // Fetch all rules from MongoDB
+    const rules = await RulebaseModel.find({ active: true })
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    console.log(`✅ Found ${rules.length} rules`);
+    
+    // Transform rules to match frontend interface
+    const transformedRules = rules.map((rule: any) => ({
+      _id: rule._id.toString(),
+      name: rule.name,
+      description: rule.description || '',
+      tags: rule.tags || [],
+      sourceType: rule.sourceType,
+      fileName: rule.fileName,
+      active: rule.active,
+      updatedAt: rule.updatedAt.toISOString(),
+    }));
+    
+    return NextResponse.json({ rules: transformedRules });
+  } catch (error) {
+    console.error('❌ GET /api/rulebase error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to fetch rules',
+      rules: [] 
+    }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    console.log('POST /api/rulebase - Starting request');
+    console.log('🚀 POST /api/rulebase - Starting request');
+    await ensureDbConnection();
     
     const body = await req.json();
     console.log('POST body:', body);
@@ -27,30 +61,36 @@ export async function POST(req: Request) {
     const { name, description = '', tags = [], sourceType = 'text', active = true } = body || {};
     
     if (!name || typeof name !== 'string') {
-      console.log('POST error: Invalid name');
+      console.log('❌ POST error: Invalid name');
       return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
     }
     
-    const data = await readRules();
-    const rule = {
-      _id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    // Create new rule in MongoDB
+    const newRule = new RulebaseModel({
       name,
       description,
       tags: Array.isArray(tags) ? tags : [],
       sourceType,
       active: active !== false,
-      updatedAt: new Date().toISOString(),
+    });
+    
+    const savedRule = await newRule.save();
+    console.log('✅ Rule created:', savedRule._id);
+    
+    // Transform for frontend
+    const rule = {
+      _id: savedRule._id.toString(),
+      name: savedRule.name,
+      description: savedRule.description || '',
+      tags: savedRule.tags || [],
+      sourceType: savedRule.sourceType,
+      active: savedRule.active,
+      updatedAt: savedRule.updatedAt.toISOString(),
     };
     
-    console.log('Creating rule:', rule);
-    
-    data.rules = [rule, ...(data.rules || [])];
-    await writeRules(data);
-    
-    console.log('POST success');
     return NextResponse.json({ rule });
   } catch (e) {
-    console.error('POST error:', e);
+    console.error('❌ POST error:', e);
     return NextResponse.json({ 
       error: 'Bad request', 
       details: e instanceof Error ? e.message : 'Unknown error' 
@@ -60,7 +100,8 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    console.log('PATCH /api/rulebase - Starting request');
+    console.log('🚀 PATCH /api/rulebase - Starting request');
+    await ensureDbConnection();
     
     const body = await req.json();
     console.log('PATCH body:', body);
@@ -68,42 +109,46 @@ export async function PATCH(req: Request) {
     const { id, active, name, description, tags } = body || {};
     
     if (!id) {
-      console.log('PATCH error: id is required');
+      console.log('❌ PATCH error: id is required');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
     
-    const data = await readRules();
-    const list = Array.isArray(data.rules) ? data.rules : [];
-    console.log('Current rules count:', list.length);
+    // Prepare update object
+    const updateData: any = { updatedAt: new Date() };
+    if (typeof active === 'boolean') updateData.active = active;
+    if (typeof name === 'string') updateData.name = name;
+    if (typeof description === 'string') updateData.description = description;
+    if (Array.isArray(tags)) updateData.tags = tags;
     
-    const idx = list.findIndex((r: any) => r._id === id);
-    console.log('Rule index found:', idx);
+    // Update rule in MongoDB
+    const updatedRule = await RulebaseModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, lean: true }
+    );
     
-    if (idx === -1) {
-      console.log('PATCH error: Rule not found for id:', id);
+    if (!updatedRule) {
+      console.log('❌ PATCH error: Rule not found for id:', id);
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
     
-    const current = list[idx] || {};
-    const updated = {
-      ...current,
-      ...(typeof active === 'boolean' ? { active } : {}),
-      ...(typeof name === 'string' ? { name } : {}),
-      ...(typeof description === 'string' ? { description } : {}),
-      ...(Array.isArray(tags) ? { tags } : {}),
-      updatedAt: new Date().toISOString(),
+    console.log('✅ Rule updated:', (updatedRule as any)._id);
+    
+    // Transform for frontend
+    const rule = {
+      _id: (updatedRule as any)._id.toString(),
+      name: (updatedRule as any).name,
+      description: (updatedRule as any).description || '',
+      tags: (updatedRule as any).tags || [],
+      sourceType: (updatedRule as any).sourceType,
+      fileName: (updatedRule as any).fileName,
+      active: (updatedRule as any).active,
+      updatedAt: (updatedRule as any).updatedAt.toISOString(),
     };
     
-    console.log('Updated rule:', updated);
-    
-    list[idx] = updated;
-    data.rules = list;
-    await writeRules(data);
-    
-    console.log('PATCH success');
-    return NextResponse.json({ rule: updated });
+    return NextResponse.json({ rule });
   } catch (e) {
-    console.error('PATCH error:', e);
+    console.error('❌ PATCH error:', e);
     return NextResponse.json({ 
       error: 'Bad request', 
       details: e instanceof Error ? e.message : 'Unknown error' 
@@ -113,7 +158,8 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    console.log('DELETE /api/rulebase - Starting request');
+    console.log('🚀 DELETE /api/rulebase - Starting request');
+    await ensureDbConnection();
     
     const body = await req.json().catch(() => ({}));
     console.log('DELETE body:', body);
@@ -121,30 +167,26 @@ export async function DELETE(req: Request) {
     const { id } = body || {};
     
     if (!id) {
-      console.log('DELETE error: id is required');
+      console.log('❌ DELETE error: id is required');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
     
-    const data = await readRules();
-    const list = Array.isArray(data.rules) ? data.rules : [];
-    console.log('Current rules count before delete:', list.length);
+    // Soft delete by setting active to false
+    const deletedRule = await RulebaseModel.findByIdAndUpdate(
+      id,
+      { $set: { active: false, updatedAt: new Date() } },
+      { new: true }
+    );
     
-    const next = list.filter((r: any) => r._id !== id);
-    
-    if (next.length === list.length) {
-      console.log('DELETE error: Rule not found for id:', id);
+    if (!deletedRule) {
+      console.log('❌ DELETE error: Rule not found for id:', id);
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
     
-    console.log('Rules count after delete:', next.length);
-    
-    data.rules = next;
-    await writeRules(data);
-    
-    console.log('DELETE success');
+    console.log('✅ Rule soft deleted:', deletedRule._id);
     return NextResponse.json({ success: true });
   } catch (e) {
-    console.error('DELETE error:', e);
+    console.error('❌ DELETE error:', e);
     return NextResponse.json({ 
       error: 'Bad request', 
       details: e instanceof Error ? e.message : 'Unknown error' 
