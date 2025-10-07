@@ -18,11 +18,13 @@ import {
   Camera,
   Edit3,
   Check,
-  Loader2
+  Loader2,
+  ChevronDown
 } from "lucide-react";
 import { useUserStore, UserData } from "@/stores/user-store";
 import { useCompanyStore } from "@/stores/company-store";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState, useRef } from "react";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { uploadToS3 } from "@/app/api/s3/upload/uploadtos3";
@@ -282,6 +284,192 @@ export default function UserProfilePage() {
     return colors[index];
   };
 
+  // Custom DOB component with better UI
+  const DOBFieldComponent = () => {
+    const isEditing = editableFields['dob']?.isEditing;
+    const currentDOB = profileData?.dob || '';
+    
+    // Parse current date or set defaults
+    const parseDate = (dateStr: string) => {
+      if (!dateStr) return { day: '', month: '', year: '' };
+      
+      // Handle different date formats
+      let day = '', month = '', year = '';
+      
+      if (dateStr.includes('-')) {
+        // Format: YYYY-MM-DD or DD-MM-YYYY
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            // YYYY-MM-DD
+            year = parts[0];
+            month = parseInt(parts[1]).toString(); // Remove leading zeros
+            day = parseInt(parts[2]).toString(); // Remove leading zeros
+          } else {
+            // DD-MM-YYYY
+            day = parseInt(parts[0]).toString();
+            month = parseInt(parts[1]).toString();
+            year = parts[2];
+          }
+        }
+      } else if (dateStr.includes('/')) {
+        // Format: MM/DD/YYYY or DD/MM/YYYY
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          day = parseInt(parts[1]).toString();
+          month = parseInt(parts[0]).toString();
+          year = parts[2];
+        }
+      }
+      
+      return { day, month, year };
+    };
+
+    const { day, month, year } = parseDate(isEditing ? editableFields['dob']?.value || currentDOB : currentDOB);
+
+    const updateDOBField = (newDay: string, newMonth: string, newYear: string) => {
+      // Ensure we have valid values before formatting
+      const validDay = newDay || day || '1';
+      const validMonth = newMonth || month || '1';
+      const validYear = newYear || year || new Date().getFullYear().toString();
+      
+      const formattedDate = `${validYear}-${validMonth.padStart(2, '0')}-${validDay.padStart(2, '0')}`;
+      updateFieldValue('dob', formattedDate);
+    };
+
+    const formatDisplayDate = (dateStr: string) => {
+      if (!dateStr) return 'Not provided';
+      const { day, month, year } = parseDate(dateStr);
+      if (!day || !month || !year) return 'Not provided';
+      
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      
+      const monthName = monthNames[parseInt(month) - 1] || month;
+      return `${monthName} ${day}, ${year}`;
+    };
+
+    // Generate options
+    const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+    const months = [
+      { value: '1', label: 'January' },
+      { value: '2', label: 'February' },
+      { value: '3', label: 'March' },
+      { value: '4', label: 'April' },
+      { value: '5', label: 'May' },
+      { value: '6', label: 'June' },
+      { value: '7', label: 'July' },
+      { value: '8', label: 'August' },
+      { value: '9', label: 'September' },
+      { value: '10', label: 'October' },
+      { value: '11', label: 'November' },
+      { value: '12', label: 'December' },
+    ];
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 100 }, (_, i) => (currentYear - i).toString());
+
+    return (
+      <div className="flex items-center justify-between p-3 rounded-lg border">
+        <div className="flex items-center gap-3">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="flex-1">
+            <Label className="text-sm font-medium">Date of Birth</Label>
+            {isEditing ? (
+              <div className="flex gap-2 mt-1">
+                <Select 
+                  value={month || ''} 
+                  onValueChange={(value) => updateDOBField(day, value, year)}
+                >
+                  <SelectTrigger className="w-[120px] h-8">
+                    <SelectValue placeholder="Select Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={day || ''} 
+                  onValueChange={(value) => updateDOBField(value, month, year)}
+                >
+                  <SelectTrigger className="w-[80px] h-8">
+                    <SelectValue placeholder="Day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {days.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={year || ''} 
+                  onValueChange={(value) => updateDOBField(day, month, value)}
+                >
+                  <SelectTrigger className="w-[100px] h-8">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">
+                {formatDisplayDate(currentDOB)}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => cancelEditing('dob')}
+                disabled={isSaving}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => saveField('dob')}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Check className="h-3 w-3" />
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => startEditing('dob', currentDOB)}
+            >
+              <Edit3 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Editable field component
   const EditableFieldComponent = ({ 
     fieldName, 
@@ -446,30 +634,6 @@ export default function UserProfilePage() {
                 <Badge variant="outline" className="text-xs">
                   {profileData?.status || 'Active'}
                 </Badge>
-                {profile && (
-                  <Badge variant="default" className="text-xs bg-green-600">
-                    MongoDB Data
-                  </Badge>
-                )}
-                {!profile && profileData && (
-                  <Badge variant="secondary" className="text-xs">
-                    Cached Data
-                  </Badge>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshProfile}
-                  disabled={isLoading}
-                  className="ml-auto"
-                  title="Refresh profile data from MongoDB Atlas"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Refresh MongoDB"
-                  )}
-                </Button>
               </div>
               <p className="text-muted-foreground">
                 {profileData?.email || "No email provided"}
@@ -478,15 +642,6 @@ export default function UserProfilePage() {
                 <p className="text-sm text-red-600 mt-1">
                   Error: {error}
                 </p>
-              )}
-              
-              {/* Debug Info - Shows data source */}
-              {(profile || profileData) && (
-                <div className="text-xs text-muted-foreground mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                  <strong>Data Source:</strong> {profile ? 'MongoDB Atlas Database' : 'Cached/Store Data'} | 
-                  <strong> User ID:</strong> {profileData?.userId || 'Not available'} | 
-                  <strong> Last Updated:</strong> {profileData?.updatedAt ? new Date(profileData.updatedAt).toLocaleString() : 'Unknown'}
-                </div>
               )}
             </div>
           </div>
@@ -502,16 +657,6 @@ export default function UserProfilePage() {
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Personal Information
-                    {profile && (
-                      <Badge variant="default" className="text-xs bg-green-600 ml-auto">
-                        Live MongoDB Data
-                      </Badge>
-                    )}
-                    {!profile && profileData && (
-                      <Badge variant="secondary" className="text-xs ml-auto">
-                        Cached/Fallback Data
-                      </Badge>
-                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -535,13 +680,7 @@ export default function UserProfilePage() {
                     icon={Phone}
                     type="tel"
                   />
-                  <EditableFieldComponent
-                    fieldName="dob"
-                    label="Date of Birth"
-                    value={profileData?.dob || ''}
-                    icon={Calendar}
-                    type="date"
-                  />
+                  <DOBFieldComponent />
                   <EditableFieldComponent
                     fieldName="country"
                     label="Country"
@@ -556,16 +695,6 @@ export default function UserProfilePage() {
                   <CardTitle className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />
                     Professional Information
-                    {profile && (
-                      <Badge variant="default" className="text-xs bg-green-600 ml-auto">
-                        Live MongoDB Data
-                      </Badge>
-                    )}
-                    {!profile && profileData && (
-                      <Badge variant="secondary" className="text-xs ml-auto">
-                        Cached/Fallback Data
-                      </Badge>
-                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
