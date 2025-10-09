@@ -1,4 +1,5 @@
 import { createApiResponse } from "@/lib/apiResponse";
+import { requireAuth } from '@/lib/rbac';
 
 /**
  * Request body interface for company member details
@@ -13,6 +14,9 @@ interface MemberDetailsRequest {
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const body = (await req.json()) as MemberDetailsRequest;
     const authHeader = req.headers.get("authorization");
 

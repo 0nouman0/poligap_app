@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import RulebaseModel from '@/models/rulebase.model';
+import { requireAuth } from '@/lib/rbac';
 
 // Sample rules to populate the database
 const sampleRules = [
@@ -65,6 +66,9 @@ const sampleRules = [
 
 export async function POST() {
   try {
+    // Require authentication
+    await requireAuth();
+    
     console.log('🌱 Seeding rulebase with sample data...');
     
     // Ensure database connection

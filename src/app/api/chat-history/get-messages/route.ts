@@ -3,9 +3,13 @@ import ChatMessage from '@/models/chatMessage.model';
 import AgentConversation from '@/models/agentConversation.model';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication for viewing chat history
+    await requireAuth();
+    
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
     const userId = searchParams.get('userId');
@@ -115,6 +119,9 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Require DELETE permission - CRITICAL SECURITY
+    const userContext = await requirePermission(Permission.CONVERSATION_DELETE);
+    
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
     const messageId = searchParams.get('messageId');

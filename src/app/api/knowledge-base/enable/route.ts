@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Company from "@/models/companies.model";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 /**
  * Toggle the enableKnowledgeBase flag for a company.
@@ -54,6 +55,9 @@ async function toggleKnowledgeBase(companyId: string) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { companyId } = await request.json();
 
     if (!companyId) {
@@ -88,6 +92,9 @@ export async function PUT(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const companyId = request.nextUrl.searchParams.get("companyId");
 
     if (!companyId) {

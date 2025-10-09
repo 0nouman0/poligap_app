@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 // Simple email template mapping matching the frontend options
 const TEMPLATE_MAP: Record<string, { subject: string; body: string }> = {
@@ -30,6 +31,9 @@ function isEmail(str: string) {
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { recipients, actionType } = (await req.json()) as {
       recipients?: string[];
       actionType?: string;

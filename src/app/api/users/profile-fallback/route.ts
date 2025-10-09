@@ -1,9 +1,13 @@
 import { NextRequest } from 'next/server';
 import { createApiResponse } from '@/lib/apiResponse';
+import { requireAuth } from '@/lib/rbac';
 
 // Fallback profile endpoint that doesn't rely on MongoDB
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     const email = searchParams.get('email');

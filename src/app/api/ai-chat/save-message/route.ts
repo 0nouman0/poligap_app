@@ -3,10 +3,14 @@ import ChatMessage from '@/models/chatMessage.model';
 import AgentConversation from '@/models/agentConversation.model';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requirePermission, Permission } from '@/lib/rbac';
 
 // POST - Save a chat message to MongoDB
 export async function POST(request: NextRequest) {
   try {
+    // Require permission to create messages
+    await requirePermission(Permission.CONVERSATION_CREATE);
+    
     const messageData = await request.json();
     console.log('💾 Saving chat message:', messageData);
 

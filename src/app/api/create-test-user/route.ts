@@ -3,10 +3,14 @@ import User from '@/models/users.model';
 import Member from '@/models/members.model';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requireAuth } from '@/lib/rbac';
 
 // POST - Create a user with the exact ID that's failing
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { userId } = await req.json();
     
     if (!userId) {

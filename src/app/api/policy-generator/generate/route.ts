@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 function toMarkdownSafe(text?: string): string {
   if (!text) return "";
@@ -130,6 +131,9 @@ Return a clear, sectioned document with headings (1., 1.1 etc.), a short preambl
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { inputs } = await req.json();
     const raw = await generateWithAI(inputs);
     const content = formatPolicyMarkdown(inputs, raw);

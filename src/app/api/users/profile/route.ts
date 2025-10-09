@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import User from '@/models/users.model';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requireAuth } from '@/lib/rbac';
 
 // Retry wrapper for database operations
 async function retryOperation<T>(
@@ -33,6 +34,9 @@ async function retryOperation<T>(
 // GET - Fetch user profile
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication to view profile
+    await requireAuth();
+    
     const startTime = Date.now();
     console.log('🚀 Profile API GET starting...');
     
@@ -144,6 +148,9 @@ export async function GET(req: NextRequest) {
 // PUT - Update user profile
 export async function PUT(req: NextRequest) {
   try {
+    // Require authentication to update profile
+    await requireAuth();
+    
     // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
       try {

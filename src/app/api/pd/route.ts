@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAccountInfo, serverConnectTokenCreate } from "@/app/api/pd/pd";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: Request) {
   const body = await req.json();

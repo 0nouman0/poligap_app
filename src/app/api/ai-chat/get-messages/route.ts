@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ChatMessage from '@/models/chatMessage.model';
 import { createApiResponse } from '@/lib/apiResponse';
+import { requireAuth } from '@/lib/rbac';
 
 // GET - Retrieve chat messages for a conversation
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication to view messages
+    await requireAuth();
+    
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
     const limit = parseInt(searchParams.get('limit') || '50');

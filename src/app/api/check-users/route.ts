@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/users.model';
 import { createApiResponse } from '@/lib/apiResponse';
+import { requireAuth } from '@/lib/rbac';
 
 // GET - Check what users exist in the database
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     console.log('🔍 Checking users in MongoDB Atlas...');
     
     // Get all users to see what's actually in the database

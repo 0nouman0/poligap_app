@@ -59,6 +59,7 @@ import { getSourceIcon } from "@/utils/search.util";
 import { getIntegrationDisplayName } from "@/utils/integration.util";
 import FlagModal from "@/components/search/flag-modal";
 import { formatDate } from "@/utils/date.util";
+import DOMPurify from 'isomorphic-dompurify';
 
 // --- Helper functions (getItemIcon, getFilterIcon) remain the same ---
 const getItemIcon = (type: SearchItem["type"], sizeClass = "w-5 h-5") => {
@@ -614,9 +615,15 @@ const SearchResultsContent: React.FC<{
               >
                 <span
                   dangerouslySetInnerHTML={{
-                    __html: item.title.replace(
-                      /\*\*(.*?)\*\*/g,
-                      "<strong>$1</strong>"
+                    __html: DOMPurify.sanitize(
+                      item.title.replace(
+                        /\*\*(.*?)\*\*/g,
+                        "<strong>$1</strong>"
+                      ),
+                      {
+                        ALLOWED_TAGS: ['strong', 'em', 'b', 'i'],
+                        ALLOWED_ATTR: []
+                      }
                     ),
                   }}
                 />
@@ -704,9 +711,15 @@ const SearchResultsContent: React.FC<{
               <p
                 className="text-sm mt-1 text-neutral-700 dark:text-neutral-300"
                 dangerouslySetInnerHTML={{
-                  __html: item.content_preview.replace(
-                    /\*\*(.*?)\*\*/g,
-                    "<strong>$1</strong>"
+                  __html: DOMPurify.sanitize(
+                    item.content_preview.replace(
+                      /\*\*(.*?)\*\*/g,
+                      "<strong>$1</strong>"
+                    ),
+                    {
+                      ALLOWED_TAGS: ['strong', 'em', 'b', 'i'],
+                      ALLOWED_ATTR: []
+                    }
                   ),
                 }}
               />

@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getUserRulebases, createRulebase, updateRulebase, deleteRulebase } from '@/lib/supabase/queries';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 export async function GET(req: Request) {
   try {
     console.log('🚀 GET /api/rulebase - Starting request');
     
+    // Require authentication
+    const userContext = await requireAuth();
+    
     // Get userId from query params or headers
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const userId = searchParams.get('userId') || userContext.userId;
     
     if (!userId) {
       return NextResponse.json({ 
@@ -46,6 +50,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     console.log('🚀 POST /api/rulebase - Starting request');
+    
+    // Require CREATE permission
+    const userContext = await requirePermission(Permission.RULEBASE_CREATE);
     
     const body = await req.json();
     console.log('POST body:', body);
@@ -98,6 +105,9 @@ export async function PATCH(req: Request) {
   try {
     console.log('🚀 PATCH /api/rulebase - Starting request');
     
+    // Require UPDATE permission
+    const userContext = await requirePermission(Permission.RULEBASE_UPDATE);
+    
     const body = await req.json();
     console.log('PATCH body:', body);
     
@@ -145,6 +155,9 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     console.log('🚀 DELETE /api/rulebase - Starting request');
+    
+    // Require DELETE permission - CRITICAL SECURITY
+    const userContext = await requirePermission(Permission.RULEBASE_DELETE);
     
     const body = await req.json().catch(() => ({}));
     console.log('DELETE body:', body);

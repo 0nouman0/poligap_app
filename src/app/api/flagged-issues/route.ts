@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import FlaggedIssueModel from "@/models/flaggedIssue.model";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const data = await req.json();
     // Validate required fields
     const required = [
@@ -39,6 +43,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { searchParams } = new URL(req.url);
     const companyId = searchParams.get("companyId");
     const userId = searchParams.get("userId");
@@ -58,6 +65,9 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const data = await req.json();
     if (data.companyId) {
       // Mark all issues for this company as viewed

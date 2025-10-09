@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST() {
   const response = NextResponse.json({ success: true });

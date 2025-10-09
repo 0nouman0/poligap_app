@@ -166,8 +166,66 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="w-full max-w-none p-6 space-y-8">
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        {/* Header Skeleton */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-8 w-64 bg-muted animate-pulse rounded-md" />
+              <div className="h-4 w-96 bg-muted animate-pulse rounded-md" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-10 w-16 bg-muted animate-pulse rounded-md" />
+              <div className="h-10 w-16 bg-muted animate-pulse rounded-md" />
+              <div className="h-10 w-16 bg-muted animate-pulse rounded-md" />
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border bg-card p-6 shadow-sm">
+              <div className="flex items-center justify-between space-x-4">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded-md" />
+                  <div className="h-8 w-20 bg-muted animate-pulse rounded-md" />
+                  <div className="h-3 w-32 bg-muted animate-pulse rounded-md" />
+                </div>
+                <div className="h-12 w-12 bg-muted animate-pulse rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="rounded-lg border bg-card p-6 shadow-sm">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-5 w-32 bg-muted animate-pulse rounded-md" />
+                  <div className="h-4 w-20 bg-muted animate-pulse rounded-md" />
+                </div>
+                <div className="h-64 w-full bg-muted animate-pulse rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Activity List Skeleton */}
+        <div className="rounded-lg border bg-card p-6">
+          <div className="h-5 w-32 bg-muted animate-pulse rounded-md mb-4" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-muted animate-pulse rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 bg-muted animate-pulse rounded-md" />
+                  <div className="h-3 w-1/2 bg-muted animate-pulse rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

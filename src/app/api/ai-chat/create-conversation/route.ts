@@ -1,9 +1,13 @@
 import { createConversation, getUser, createUser } from '@/lib/supabase/queries';
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { requirePermission, Permission } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require permission to create conversations
+    await requirePermission(Permission.CONVERSATION_CREATE);
+    
     const { userId, companyId } = await request.json();
     console.log("userId and companyId =>", userId, companyId);
 

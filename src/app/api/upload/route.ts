@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { createMedia } from '@/lib/supabase/queries';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 // Initialize clients
 const supabase = createClient(
@@ -117,6 +118,9 @@ async function uploadToSupabaseStorage(
  */
 export async function POST(request: NextRequest) {
   try {
+    // Require permission to upload media
+    await requirePermission(Permission.MEDIA_CREATE);
+    
     console.log('🚀 Unified Upload API started');
     const startTime = Date.now();
 
@@ -208,6 +212,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication to view uploads
+    await requireAuth();
+    
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -255,6 +262,9 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Require DELETE permission - CRITICAL SECURITY
+    await requirePermission(Permission.MEDIA_DELETE);
+    
     const body = await request.json();
     const { mediaId, userId } = body;
 

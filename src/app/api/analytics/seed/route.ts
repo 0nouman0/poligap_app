@@ -4,9 +4,13 @@ import DocumentAnalysisModel from '@/models/documentAnalysis.model';
 import SearchHistorysModel from '@/models/searchHistory.model';
 import AuditLogModel from '@/models/auditLog.model';
 import FlaggedIssueModel from '@/models/flaggedIssue.model';
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { userId, companyId } = await req.json();
 
     if (!userId) {

@@ -1,7 +1,11 @@
 import { createApiResponse } from "@/lib/apiResponse";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET() {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET } = process.env;
 
     const response = await fetch(`https://api.pipedream.com/v1/oauth/token`, {

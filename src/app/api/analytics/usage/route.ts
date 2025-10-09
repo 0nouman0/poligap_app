@@ -3,9 +3,13 @@ import AuditLogModel from "@/models/auditLog.model";
 import FlaggedIssueModel from "@/models/flaggedIssue.model";
 import SearchHistoryModel from "@/models/searchHistory.model";
 import mongoose from "mongoose";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(req: Request) {
   try {
+    // Require authentication to view analytics
+    await requireAuth();
+    
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
     const companyId = searchParams.get("companyId");

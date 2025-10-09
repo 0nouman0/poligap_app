@@ -2,9 +2,13 @@ import { createApiResponse } from "@/lib/apiResponse";
 import Media from "@/models/media.model";
 import mongoose from "mongoose";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const companyId = request.nextUrl.searchParams.get("companyId");
 
     if (!companyId) {

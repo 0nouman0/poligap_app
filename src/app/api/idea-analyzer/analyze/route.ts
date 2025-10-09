@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 async function summarizeWithGemini(prompt: string) {
   const key = process.env.GEMINI_API_KEY;
@@ -72,6 +73,9 @@ async function fetchNewsFallback(query: string) {
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { inputs } = await req.json();
     const q = [inputs.domain, inputs.idea, inputs.keywords].filter(Boolean).join(' ');
     let findings: any[] = [];

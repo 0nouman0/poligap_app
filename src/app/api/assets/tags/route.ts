@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 interface AssetDoc {
   _id: ObjectId;
@@ -11,6 +12,9 @@ interface AssetDoc {
 // POST - Add tags to multiple assets
 export async function POST(request: NextRequest) {
   try {
+    // Require permission to update assets
+    await requirePermission(Permission.MEDIA_UPDATE);
+    
     const { db } = await connectToDatabase();
     const { assetIds, tags } = await request.json();
     
@@ -53,6 +57,9 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove tags from multiple assets
 export async function DELETE(request: NextRequest) {
   try {
+    // Require DELETE permission - CRITICAL SECURITY
+    await requirePermission(Permission.MEDIA_DELETE);
+    
     const { db } = await connectToDatabase();
     const { assetIds, tags } = await request.json();
     

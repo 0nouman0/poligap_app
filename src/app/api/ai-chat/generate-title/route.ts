@@ -1,6 +1,7 @@
 import PortkeyClient from "@/lib/portkey";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 async function agentTitleGenerator(userPrompt: string) {
   try {
@@ -37,6 +38,9 @@ async function agentTitleGenerator(userPrompt: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { userPrompt } = await request.json();
     console.log("generate-title userPrompt =>", userPrompt);
 

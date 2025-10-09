@@ -5,9 +5,13 @@ import { createApiResponse } from "@/lib/apiResponse";
 import User from "@/models/users.model";
 import mongoose from "mongoose";
 import sharp from "sharp";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     console.log('🚀 S3 Upload starting...');
     const startTime = Date.now();
     

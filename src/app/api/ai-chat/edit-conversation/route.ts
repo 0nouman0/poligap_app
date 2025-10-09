@@ -1,9 +1,13 @@
 import { createApiResponse } from "@/lib/apiResponse";
 import AgentConversation from "@/models/agentConversation.model";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const {
       conversationId,
       chatName,

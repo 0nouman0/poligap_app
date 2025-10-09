@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import DocumentAnalysisModel from "@/models/documentAnalysis.model";
 import mongoose from "mongoose";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(req: Request) {
   try {
+    // Require authentication to view analytics
+    await requireAuth();
+    
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
     const companyId = searchParams.get("companyId");

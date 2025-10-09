@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
+import { requireAuth } from '@/lib/rbac';
 
 // Utility: normalize mention token to a search value
 function normalizeMention(m: string) {
@@ -49,6 +50,9 @@ function isReadable(text: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { mentions } = await request.json();
     if (!Array.isArray(mentions) || mentions.length === 0) {
       return NextResponse.json({ success: false, error: 'No mentions provided' }, { status: 400 });

@@ -27,9 +27,13 @@ import mongoose from "mongoose";
 import { createApiResponse } from "@/lib/apiResponse";
 import Media from "@/models/media.model";
 import Company from "@/models/companies.model";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const url = request.nextUrl;
     const companyId = url.searchParams.get("companyId");
     const limit = parseInt(url.searchParams.get("limit") || "10", 10);

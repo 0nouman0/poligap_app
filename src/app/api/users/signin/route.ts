@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { requireAuth } from '@/lib/rbac';
 
 /**
  * Request body interface for user signin
@@ -19,6 +20,9 @@ import jwt from "jsonwebtoken";
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { email, password } = await req.json();
 
     if (!email || !password) {

@@ -3,9 +3,13 @@ import ChatMessage from '@/models/chatMessage.model';
 import AgentConversation from '@/models/agentConversation.model';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const body = await request.json();
     const { conversationId, messages } = body;
 

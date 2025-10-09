@@ -3,6 +3,7 @@ import User from "@/models/users.model";
 import mongoose from "mongoose";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 // Helper function to ensure user exists without making HTTP calls
 async function ensureUserExists(userId: string) {
@@ -50,6 +51,9 @@ async function ensureUserExists(userId: string) {
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication to view conversations
+    await requireAuth();
+    
     // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
       try {

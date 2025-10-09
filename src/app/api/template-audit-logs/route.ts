@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient, ObjectId } from 'mongodb';
+import { requireAuth } from '@/lib/rbac';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.DB_NAME || 'poligap';
@@ -29,6 +30,9 @@ async function connectToDatabase() {
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { searchParams } = new URL(request.url);
     const templateId = searchParams.get('templateId');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -61,6 +65,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const body = await request.json();
     const {
       templateId,

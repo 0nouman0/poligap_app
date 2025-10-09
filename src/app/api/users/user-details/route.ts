@@ -1,7 +1,11 @@
 import { createApiResponse } from "@/lib/apiResponse";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const authHeader = req.headers.get("authorization");
 
     if (!authHeader) {

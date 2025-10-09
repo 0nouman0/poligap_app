@@ -6,10 +6,14 @@ import AuditLogModel from '@/models/auditLog.model';
 import FlaggedIssueModel from '@/models/flaggedIssue.model';
 import UserModel from '@/models/users.model';
 import mongoose from 'mongoose';
+import { requireAuth } from '@/lib/rbac';
 
 // POST - Seed dashboard with sample data
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { userId, companyId } = await req.json();
     
     console.log('🌱 Seeding dashboard data for userId:', userId);

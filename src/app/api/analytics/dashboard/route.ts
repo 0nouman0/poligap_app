@@ -5,9 +5,13 @@ import SearchHistorysModel from '@/models/searchHistory.model';
 import AuditLogModel from '@/models/auditLog.model';
 import FlaggedIssueModel from '@/models/flaggedIssue.model';
 import UserModel from '@/models/users.model';
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     const companyId = searchParams.get('companyId');

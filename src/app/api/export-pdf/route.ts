@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export const runtime = "nodejs";
 
@@ -82,6 +83,9 @@ function inlineMdToLatex(text: string): string {
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { markdown, fileName, logo } = await req.json();
     if (!markdown || !fileName) {
       return NextResponse.json({ error: "markdown and fileName are required" }, { status: 400 });

@@ -3,9 +3,13 @@ import AgentConversationChat from "@/models/agentConversationChat.model";
 import AgentConversation from "@/models/agentConversation.model";
 import mongoose from "mongoose";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication to view conversation
+    await requireAuth();
+    
     // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
       try {

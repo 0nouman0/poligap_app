@@ -1,9 +1,13 @@
 import { NextRequest } from "next/server";
 import FeedbackModel from "@/models/feedback.model";
 import { createApiResponse } from "@/lib/apiResponse";
+import { requirePermission, Permission } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require permission to create feedback
+    await requirePermission(Permission.FEEDBACK_CREATE);
+    
     const { satisfaction, text, userId, companyId } = await request.json();
     if (!satisfaction || !userId || !companyId) {
       return createApiResponse({

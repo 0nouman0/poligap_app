@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "@/models/users.model";
 import mongoose from "mongoose";
+import { requireAuth } from '@/lib/rbac';
 
 function buildResponse({ token, user }: { token: string; user: any }) {
   return NextResponse.json({
@@ -25,6 +26,9 @@ function buildResponse({ token, user }: { token: string; user: any }) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { email, password, name } = await req.json();
 
     console.log('=== User Signup ===');

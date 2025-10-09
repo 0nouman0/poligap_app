@@ -1,9 +1,13 @@
 import User from "@/models/users.model";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { userId } = await req.json();
 
     const user = await User.findOne({

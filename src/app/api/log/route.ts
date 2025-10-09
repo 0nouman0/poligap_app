@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     // Consume body to avoid warnings; ignore content for now
     const _ = await req.json().catch(() => ({}));
     return NextResponse.json({ success: true }, { status: 200 });

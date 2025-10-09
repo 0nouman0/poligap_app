@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCompliancePrompt } from '@/lib/compliance-prompt';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { requireAuth } from '@/lib/rbac';
 
 // Gemini AI with direct file upload (Primary)
 async function analyzeWithGemini(file: File, selectedStandards: string[]): Promise<any> {
@@ -312,6 +313,9 @@ function applyRulebaseToAnalysis(analysis: any, rules: any[], selectedStandards:
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const selectedStandards = JSON.parse(formData.get('selectedStandards') as string);

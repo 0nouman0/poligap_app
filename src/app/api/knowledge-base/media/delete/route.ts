@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { createApiResponse } from "@/lib/apiResponse";
 import Media from "@/models/media.model";
 import Company from "@/models/companies.model";
+import { requirePermission, Permission } from '@/lib/rbac';
 
 /**
  * DELETE /api/media/delete
@@ -13,6 +14,9 @@ import Company from "@/models/companies.model";
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Require DELETE permission - CRITICAL SECURITY
+    const userContext = await requirePermission(Permission.MEDIA_DELETE);
+    
     const { companyId, mediaId } = await request.json();
 
     // Validate required fields

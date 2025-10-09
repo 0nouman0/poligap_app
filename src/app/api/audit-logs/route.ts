@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient, ObjectId } from 'mongodb';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.DB_NAME || 'poligap';
@@ -40,6 +41,9 @@ async function connectToDatabase() {
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication and permission to view audit logs
+    const userContext = await requirePermission(Permission.AUDIT_VIEW_OWN);
+    
     const { searchParams } = new URL(request.url);
     const standards = searchParams.get('standards')?.split(',') || [];
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -85,6 +89,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication to create audit logs
+    await requireAuth();
+    
     const body = await request.json();
     const {
       fileName,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient, ObjectId } from 'mongodb';
 import mongoose from 'mongoose';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.DB_NAME || 'poligap';
@@ -28,6 +29,9 @@ interface TaskDoc {
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Require authentication for updating tasks
+    await requireAuth();
+    
     const body = await request.json().catch(() => ({}));
     const { id, updates } = body as { id?: string; updates?: Partial<TaskDoc> };
     if (!id || !updates) {
@@ -64,6 +68,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Require authentication for deleting tasks - CRITICAL SECURITY
+    await requireAuth();
+    
     let id: string | null = null;
     // accept id from query or body
     const { searchParams } = new URL(request.url);
@@ -103,6 +110,9 @@ async function connectToDatabase() {
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication for viewing tasks
+    await requireAuth();
+    
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get('q') || '').trim();
     const status = searchParams.get('status');
@@ -143,6 +153,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication for creating tasks
+    await requireAuth();
+    
     const body = await request.json();
     const {
       title,

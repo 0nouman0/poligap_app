@@ -2,6 +2,7 @@
 import Member from "@/models/members.model";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: NextRequest) {
   const { userId, companyId } = await req.json();

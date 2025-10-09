@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 // Basic Elasticsearch proxy for server-side search.
 // Env vars:
@@ -12,6 +13,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { query, user_email, external_user_id, account_ids, apps } = await req.json();
 
     // Resolve ES endpoint: prefer explicit ELASTICSEARCH_URL, otherwise compose

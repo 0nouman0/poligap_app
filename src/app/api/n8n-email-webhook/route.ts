@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/rbac';
 
 // N8N Webhook URLs - try production first, fallback to test
 const N8N_PRODUCTION_URL = 'https://akashkamat10.app.n8n.cloud/webhook/f5a61878-f50d-4d3c-a589-c24a22b4a4db';
@@ -7,6 +8,9 @@ const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || N8N_PRODUCTION_URL;
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     console.log('N8N Webhook API called');
     
     // Parse the request body to get any data to send to n8n
@@ -139,6 +143,9 @@ export async function POST(request: NextRequest) {
 // Optional: Add GET method for testing
 export async function GET() {
   try {
+    // Require authentication
+    await requireAuth();
+    
     // Test if the n8n webhook is accessible
     const testResponse = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',

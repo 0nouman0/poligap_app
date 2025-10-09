@@ -2,6 +2,7 @@ import { memo } from 'react'
 
 import type {ImageData} from './../../../../types/agent';
 import { cn } from './../../../../utils/utils'
+import DOMPurify from 'isomorphic-dompurify'
 
 const Images = ({ images }: { images: ImageData[] }) => (
   <div
@@ -19,14 +20,18 @@ const Images = ({ images }: { images: ImageData[] }) => (
           onError={(e) => {
             const parent = e.currentTarget.parentElement
             if (parent) {
-              parent.innerHTML = `
+              const sanitizedUrl = DOMPurify.sanitize(image.url, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+              parent.innerHTML = DOMPurify.sanitize(`
                     <div class="flex h-40 flex-col items-center justify-center gap-2 rounded-md bg-secondary/50 text-muted" >
                       <p class="text-primary">Image unavailable</p>
-                      <a href="${image.url}" target="_blank" class="max-w-md truncate underline text-primary text-xs w-full text-center p-2">
-                        ${image.url}
+                      <a href="${sanitizedUrl}" target="_blank" class="max-w-md truncate underline text-primary text-xs w-full text-center p-2">
+                        ${sanitizedUrl}
                       </a>
                     </div>
-                  `
+                  `, {
+                ALLOWED_TAGS: ['div', 'p', 'a'],
+                ALLOWED_ATTR: ['class', 'href', 'target']
+              });
             }
           }}
         />

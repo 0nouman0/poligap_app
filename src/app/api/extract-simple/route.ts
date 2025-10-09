@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function POST(req: NextRequest) {
   let file: File | null = null;

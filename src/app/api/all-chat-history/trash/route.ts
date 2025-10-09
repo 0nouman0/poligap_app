@@ -3,9 +3,13 @@ import AgentConversation from "@/models/agentConversation.model";
 import User from "@/models/users.model";
 import mongoose from "mongoose";
 import { NextRequest } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const companyId = request.nextUrl.searchParams.get("companyId");
 
     if (!companyId) {

@@ -1,9 +1,13 @@
 import { NextRequest } from 'next/server';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     const email = searchParams.get('email');

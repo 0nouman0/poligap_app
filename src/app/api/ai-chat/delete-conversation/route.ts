@@ -2,9 +2,13 @@ import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
 import AgentConversation from "@/models/agentConversation.model";
 import mongoose from "mongoose";
+import { requirePermission, Permission } from '@/lib/rbac';
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Require DELETE permission - CRITICAL SECURITY
+    const userContext = await requirePermission(Permission.CONVERSATION_DELETE);
+    
     // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
       try {

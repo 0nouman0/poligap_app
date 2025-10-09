@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { requirePermission, requireAuth, Permission } from '@/lib/rbac';
 
 // GET - Fetch all assets
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication for viewing assets
+    await requireAuth();
+    
     const { db } = await connectToDatabase();
     const { searchParams } = new URL(request.url);
     
@@ -57,6 +61,9 @@ export async function GET(request: NextRequest) {
 // DELETE - Delete multiple assets
 export async function DELETE(request: NextRequest) {
   try {
+    // Require DELETE permission - CRITICAL SECURITY
+    const userContext = await requirePermission(Permission.MEDIA_DELETE);
+    
     const { db } = await connectToDatabase();
     const { assetIds } = await request.json();
     

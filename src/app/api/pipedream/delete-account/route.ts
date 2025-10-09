@@ -1,7 +1,11 @@
 import { createApiResponse } from "@/lib/apiResponse";
+import { requireAuth } from '@/lib/rbac';
 
 export async function DELETE(req: Request) {
   try {
+    // Require authentication - CRITICAL SECURITY
+    await requireAuth();
+    
     const { access_token, account_id } = await req.json();
     const { PIPEDREAM_PROJECT_ID, PIPEDREAM_ENVIRONMENT } = process.env;
 

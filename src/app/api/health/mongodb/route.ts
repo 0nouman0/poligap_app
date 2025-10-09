@@ -1,9 +1,13 @@
 import { NextRequest } from 'next/server';
 import { createApiResponse } from '@/lib/apiResponse';
 import User from '@/models/users.model';
+import { requireAuth } from '@/lib/rbac';
 
 export async function GET(req: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     console.log('🔍 Testing MongoDB connection health...');
     
     const startTime = Date.now();

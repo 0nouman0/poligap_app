@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/users.model';
 import { createApiResponse } from '@/lib/apiResponse';
 import mongoose from 'mongoose';
+import { requireAuth } from '@/lib/rbac';
 
 // POST - Ensure user exists with proper ID format
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { userId } = await request.json();
     
     console.log('🔧 Ensuring user exists with ID:', userId);

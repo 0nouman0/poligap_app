@@ -2,9 +2,13 @@ import AgentConversationChat from "@/models/agentConversationChat.model";
 import AgentConversation from "@/models/agentConversation.model";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { requirePermission, Permission } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
+    // Require permission to create conversations
+    await requirePermission(Permission.CONVERSATION_CREATE);
+    
     const {
       conversation_id,
       user_query,

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useContractReviewStore, AISuggestion } from '@/store/contractReview';
 import { geminiService } from '@/services/gemini';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface InlineDiffEditorProps {
   className?: string;
@@ -220,21 +221,33 @@ export const InlineDiffEditor: React.FC<InlineDiffEditorProps> = ({ className = 
         /Introduction/i.test(trimmedSentence) ||
         trimmedSentence.length < 100 && /^[A-Z][A-Za-z\s]{10,}/.test(trimmedSentence)
       )) {
+        const sanitizedContent = DOMPurify.sanitize(processTextContent(trimmedSentence), {
+          ALLOWED_TAGS: ['strong', 'em', 'span', 'br'],
+          ALLOWED_ATTR: ['class']
+        });
         return (
-          <h1 key={`title-${index}`} className="text-2xl font-bold text-blue-900 mb-4 mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-l-4 border-blue-500 shadow-sm" dangerouslySetInnerHTML={{ __html: processTextContent(trimmedSentence) }} />
+          <h1 key={`title-${index}`} className="text-2xl font-bold text-blue-900 mb-4 mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-l-4 border-blue-500 shadow-sm" dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
         );
       }
       
       // Check for section headers
       if (/^(What is a Service Level Agreement|Main Components of an SLA|Defining and Describing Service Level Agreements)/i.test(trimmedSentence)) {
+        const sanitizedContent = DOMPurify.sanitize(processTextContent(trimmedSentence), {
+          ALLOWED_TAGS: ['strong', 'em', 'span', 'br'],
+          ALLOWED_ATTR: ['class']
+        });
         return (
-          <h2 key={`section-${index}`} className="text-xl font-bold text-blue-800 mb-3 mt-5 bg-blue-50 p-3 rounded border-l-4 border-blue-400" dangerouslySetInnerHTML={{ __html: processTextContent(trimmedSentence) }} />
+          <h2 key={`section-${index}`} className="text-xl font-bold text-blue-800 mb-3 mt-5 bg-blue-50 p-3 rounded border-l-4 border-blue-400" dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
         );
       }
       
       // Regular sentences with enhanced formatting
+      const sanitizedContent = DOMPurify.sanitize(processTextContent(trimmedSentence), {
+        ALLOWED_TAGS: ['strong', 'em', 'span', 'br'],
+        ALLOWED_ATTR: ['class']
+      });
       return (
-        <div key={`sentence-${index}`} className="mb-3 text-gray-800 leading-relaxed text-justify" dangerouslySetInnerHTML={{ __html: processTextContent(trimmedSentence) }} />
+        <div key={`sentence-${index}`} className="mb-3 text-gray-800 leading-relaxed text-justify" dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
       );
     }).filter(Boolean);
     

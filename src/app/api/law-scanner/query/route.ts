@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from '@/lib/rbac';
 
 // Utility: naive RSS XML parsing for title/link/date/summary
 function parseRss(xml: string) {
@@ -57,6 +58,9 @@ async function fetchFederalRegister(query: string, monthsBack = 3) {
 
 export async function POST(req: Request) {
   try {
+    // Require authentication
+    await requireAuth();
+    
     const { industry = "", region = "", orgType = "", monthsBack = 3, keywords = "" } = await req.json().catch(() => ({}));
 
     // Build a combined query
