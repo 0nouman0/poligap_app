@@ -186,7 +186,7 @@ export function AppSidebar() {
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link href={href} className="block">
+            <Link href={href} className="block" prefetch={true}>
               {buttonContent}
             </Link>
           </TooltipTrigger>
@@ -198,7 +198,7 @@ export function AppSidebar() {
     }
     
     return (
-      <Link href={href} className="block">
+      <Link href={href} className="block" prefetch={true}>
         {buttonContent}
       </Link>
     );
@@ -270,7 +270,7 @@ export function AppSidebar() {
                   </div>
                   {!sidebarCollapsed && (
                     <span className="text-13 transition-opacity duration-300">
-                      <Link href={"/chat"}>New Chat</Link>
+                      <Link href={"/chat"} prefetch={true}>New Chat</Link>
                     </span>
                   )}
                 </Button>

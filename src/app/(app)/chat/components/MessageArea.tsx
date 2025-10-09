@@ -30,13 +30,14 @@ const MessageArea = ({
   const messagesArray = messages || [];
   
   return (
-    <StickToBottom
-      className='relative mb-4 flex max-h-[calc(100vh-64px)] min-h-0 flex-grow flex-col'
-      resize='smooth'
-      initial='smooth'>
-      <StickToBottom.Content
-        className={`flex min-h-full flex-col ${messagesArray.length === 0 ? "justify-center" : "justify-start"} `}>
-        <div className='mx-auto w-full space-y-2 pb-32'>
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <StickToBottom
+        className='flex flex-1 flex-col min-h-0'
+        resize='smooth'
+        initial='smooth'>
+        <StickToBottom.Content
+          className={`flex flex-1 flex-col overflow-y-auto ${messagesArray.length === 0 ? "justify-center" : "justify-start"} `}>
+          <div className='mx-auto w-full max-w-4xl space-y-4 p-4 pb-4'>
           <Messages
             exportReactComponentAsPDF={exportReactComponentAsPDF}
             messages={messagesArray}
@@ -47,7 +48,8 @@ const MessageArea = ({
         </div>
       </StickToBottom.Content>
       <ScrollToBottom />
-    </StickToBottom>
+      </StickToBottom>
+    </div>
   );
 };
 

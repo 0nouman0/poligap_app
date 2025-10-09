@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useUserStore } from "@/stores/user-store";
 import Link from "next/link";
+import { DashboardSkeleton } from "@/components/ui/page-loader";
 
 export default function HomePage() {
   const { userData } = useUserStore();
@@ -136,7 +137,7 @@ export default function HomePage() {
           <h2 className="text-2xl font-semibold text-center mb-8">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
-              <Link key={index} href={action.href}>
+              <Link key={index} href={action.href} prefetch={true}>
                 <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
                   <CardContent className="p-6 text-center">
                     <div className={`w-12 h-12 ${action.color} rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>

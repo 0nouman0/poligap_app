@@ -36,17 +36,31 @@ export async function GET(req: NextRequest) {
     const startTime = Date.now();
     console.log('🚀 Profile API GET starting...');
     
+    // Check if MongoDB URI is configured
+    if (!process.env.MONGODB_URI) {
+      console.error("❌ MONGODB_URI environment variable not set");
+      return createApiResponse({
+        success: false,
+        error: "Database configuration missing - MONGODB_URI required",
+        status: 503,
+      });
+    }
+
     // Ensure database connection
     if (mongoose.connection.readyState !== 1) {
       try {
         console.log('🔄 Establishing database connection...');
-        await mongoose.connect(process.env.MONGODB_URI as string);
+        console.log('MongoDB URI format:', process.env.MONGODB_URI.substring(0, 20) + '...');
+        await mongoose.connect(process.env.MONGODB_URI as string, {
+          serverSelectionTimeoutMS: 5000, // 5 second timeout
+          connectTimeoutMS: 10000, // 10 second timeout
+        });
         console.log('✅ Database connection established');
       } catch (dbError) {
         console.error("❌ Database connection failed:", dbError);
         return createApiResponse({
           success: false,
-          error: "Database connection failed - MongoDB connection required",
+          error: `Database connection failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
           status: 503,
         });
       }

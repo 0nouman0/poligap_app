@@ -2243,54 +2243,6 @@ Report ID: ${Date.now()}
                         )}
                       </div>
 
-                      {/* Action buttons section */}
-                      <div className="mt-6 p-4 border-2 border-green-200 rounded-lg bg-green-50 dark:bg-green-950/20">
-                        <h3 className="text-lg font-bold text-green-600 mb-3">Analysis Complete - Take Action</h3>
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          <Button 
-                            variant="outline" 
-                            className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                            onClick={viewContractDetails}
-                            disabled={!extractedDocument}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            className="border-green-300 text-green-600 hover:bg-green-50"
-                            onClick={() => exportContractReport('text')}
-                            disabled={!extractedDocument || !uploadedFile}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export Report (Text)
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            className="border-red-300 text-red-600 hover:bg-red-50"
-                            onClick={() => exportContractReport('pdf')}
-                            disabled={!extractedDocument || !uploadedFile}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export Report (PDF)
-                          </Button>
-                          <Button 
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            onClick={downloadContract}
-                            disabled={!uploadedFile}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Contract
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={analyzeNewContract}
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Analyze New Contract
-                          </Button>
-                        </div>
-                      </div>
                     </div>
                 </div>
               )}

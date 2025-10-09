@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 import { useAuthStore } from "@/stores/auth-store";
@@ -22,7 +22,97 @@ import { useUserProfileDetails } from "@/lib/queries/useUserProfileDetails";
 import { getInitials } from "@/utils/user.util";
 import { Input } from "@/components/ui/input";
 
-export function Header() {
+
+// Memoized CompanyDropdown component for better performance
+const CompanyDropdown = memo(() => {
+  const companies = useCompanyStore((s) => s.companies);
+  const selectedCompany = useCompanyStore((s) => s.selectedCompany);
+  const setSelectedCompany = useCompanyStore((s) => s.setSelectedCompany);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleCompanySelect = useCallback((company: any) => {
+    setSelectedCompany(company);
+  }, [setSelectedCompany]);
+
+  const companiesList = useMemo(() => companies, [companies]);
+
+  if (!companiesList.length) return null;
+
+  return (
+    <DropdownMenu onOpenChange={setIsOpen} modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button className="px-3 py-1 h-[26px] rounded border bg-filter-menu dark:hover:bg-accent flex items-center gap-2 border-gray-200 dark:border-gray-600 cursor-pointer">
+          <div className="flex flex-col items-start">
+            <span className="text-13 font-medium text-gray-900 dark:text-gray-100">
+              {selectedCompany ? selectedCompany.name : "Select Company"}
+            </span>
+          </div>
+          {isOpen ? (
+            <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="min-w-[200px] p-0 popover-shadow bg-white dark:bg-background border border-gray-200 dark:border-gray-600"
+      >
+        {/* Header */}
+        <div className="pl-2 pr-4 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+          Switch account
+        </div>
+
+        {/* Company List */}
+        <div className="py-1">
+          {companiesList.map((company) => (
+            <DropdownMenuItem
+              key={company.companyId}
+              onClick={() => handleCompanySelect(company)}
+              className="px-0 py-2 text-13 hover:bg-[var(--url-color)] focus:bg-gray-50 dark:focus:bg-accent focus:text-gray-900 dark:focus:text-gray-100 cursor-pointer flex items-center rounded-none justify-between w-full"
+            >
+              <div className="px-4 w-full flex items-center justify-between">
+                <span
+                  className={`text-gray-900 dark:text-gray-100 ${
+                    selectedCompany &&
+                    selectedCompany.companyId === company.companyId
+                      ? "font-medium"
+                      : ""
+                  }`}
+                >
+                  {company.name}
+                </span>
+                {selectedCompany &&
+                  selectedCompany.companyId === company.companyId && (
+                    <svg
+                      className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+              </div>
+            </DropdownMenuItem>
+          ))}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+});
+
+CompanyDropdown.displayName = 'CompanyDropdown';
+
+// Export memoized Header component for better performance
+export const Header = memo(function Header() {
   const router = useRouter();
   const [storedId, setStoredId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -77,16 +167,35 @@ export function Header() {
 
   // Theme is handled via <ThemeToggle /> component
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     // Use the new auth hook logout method which handles everything
     await logout();
-  };
+  }, [logout]);
 
-  // Use Poligap PNG logo across themes (allow override via env)
-  const headerImageSrc =
-    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-high-resolution-logo.png";
-  // Search bar is hidden by default
-  const searchEnabled = false;
+  // Memoized values for performance
+  const headerImageSrc = useMemo(() => 
+    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-high-resolution-logo.png",
+    []
+  );
+  
+  const searchEnabled = useMemo(() => false, []);
+  
+  const userInitials = useMemo(() => 
+    getInitials(userData?.name) || "",
+    [userData?.name]
+  );
+
+  const handleLogoClick = useCallback(() => {
+    router.push('/home');
+  }, [router]);
+
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchText.trim();
+    if (!q) return;
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+    setSearchText("");
+  }, [searchText, router]);
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -99,7 +208,7 @@ export function Header() {
             width={56}
             height={56}
             className="h-10 w-10 md:h-11 md:w-11 object-contain cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => router.push('/home')}
+            onClick={handleLogoClick}
           />
         </div>
 
@@ -107,13 +216,7 @@ export function Header() {
         <div className="flex items-center justify-center">
           {searchEnabled ? (
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const q = searchText.trim();
-                if (!q) return;
-                router.push(`/search?q=${encodeURIComponent(q)}`);
-                setSearchText("");
-              }}
+              onSubmit={handleSearchSubmit}
               className="w-full max-w-xl"
             >
               <Input
@@ -136,7 +239,7 @@ export function Header() {
           <ThemeToggle />
 
           {/* Profile Picture */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -145,7 +248,7 @@ export function Header() {
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={profilePictureUrl} alt="Profile" />
                   <AvatarFallback>
-                    {getInitials(userData?.name) || ""}
+                    {userInitials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -161,7 +264,7 @@ export function Header() {
                   <Avatar className="h-7 w-7">
                     <AvatarImage src={profilePictureUrl} alt="Profile" />
                     <AvatarFallback>
-                      {getInitials(userData?.name) || ""}
+                      {userInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -173,31 +276,6 @@ export function Header() {
                     </div>
                   </div>
                 </div>
-                {/* Status */}
-                {/* <div className="flex items-center gap-2 mt-2">
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className="h-2 w-2 rounded-full bg-yellow-400 inline-block" />
-                    Here Only
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-2 px-2 py-0 text-xs"
-                    onClick={() => alert("Set a status handler not provided")}
-                  >
-                    Set a status
-                  </Button>
-                </div> */}
-
-                {/* Local Time */}
-                {/* <div className="flex items-center gap-2 text-13 text-muted-foreground mt-1"></div> */}
-                {/* Account & Plan */}
-                {/* <div className="mt-2 text-xs w-full">
-                  <div className="bg-gray-100 dark:bg-neutral-800 px-2 py-1 rounded mt-1">
-                    <span className="font-medium">Current Plan:</span>{" "}
-                    {userData?.plan || "Business"}
-                  </div>
-                </div> */}
               </div>
 
               {/* Full width separator */}
@@ -235,24 +313,6 @@ export function Header() {
                   <User className="mr-2 h-4 w-4" /> My Profile
                 </div>
               </DropdownMenuItem>
-              {/* <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => alert("Change password handler not provided")}
-              >
-                <Lock className="mr-2 h-4 w-4" /> Change Password
-              </DropdownMenuItem> */}
-              {/* <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => alert("Switch account handler not provided")}
-              >
-                <Repeat className="mr-2 h-4 w-4" /> Switch Account
-              </DropdownMenuItem> */}
-              {/* <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => alert("Settings handler not provided")}
-              >
-                <Settings className="mr-2 h-4 w-4" /> Settings
-              </DropdownMenuItem> */}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer px-0 rounded-none hover:bg-gray-50 focus:bg-gray-50 focus:text-gray-900"
@@ -268,84 +328,4 @@ export function Header() {
       </div>
     </header>
   );
-}
-
-// CompanyDropdown component
-function CompanyDropdown() {
-  const companies = useCompanyStore((s) => s.companies);
-  const selectedCompany = useCompanyStore((s) => s.selectedCompany);
-  const setSelectedCompany = useCompanyStore((s) => s.setSelectedCompany);
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (!companies.length) return null;
-
-  return (
-    <DropdownMenu onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <button className="px-3 py-1 h-[26px] rounded border bg-filter-menu dark:hover:bg-accent flex items-center gap-2 border-gray-200 dark:border-gray-600 cursor-pointer">
-          <div className="flex flex-col items-start">
-            <span className="text-13 font-medium text-gray-900 dark:text-gray-100">
-              {selectedCompany ? selectedCompany.name : "Select Company"}
-            </span>
-          </div>
-          {isOpen ? (
-            <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-          )}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        sideOffset={8}
-        className="min-w-[200px] p-0 popover-shadow bg-white dark:bg-background border border-gray-200 dark:border-gray-600"
-      >
-        {/* Header */}
-        <div className="pl-2 pr-4 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-          Switch account
-        </div>
-
-        {/* Company List */}
-        <div className="py-1">
-          {companies.map((company) => (
-            <DropdownMenuItem
-              key={company.companyId}
-              onClick={() => setSelectedCompany(company)}
-              className="px-0 py-2 text-13 hover:bg-[var(--url-color)] focus:bg-gray-50 dark:focus:bg-accent focus:text-gray-900 dark:focus:text-gray-100 cursor-pointer flex items-center rounded-none justify-between w-full"
-            >
-              <div className="px-4 w-full flex items-center justify-between">
-                <span
-                  className={`text-gray-900 dark:text-gray-100 ${
-                    selectedCompany &&
-                    selectedCompany.companyId === company.companyId
-                      ? "font-medium"
-                      : ""
-                  }`}
-                >
-                  {company.name}
-                </span>
-                {selectedCompany &&
-                  selectedCompany.companyId === company.companyId && (
-                    <svg
-                      className="w-4 h-4 text-purple-600 dark:text-purple-400"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  )}
-              </div>
-            </DropdownMenuItem>
-          ))}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+});

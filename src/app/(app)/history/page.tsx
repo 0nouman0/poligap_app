@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,9 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { auditApi } from "@/lib/api-client";
+import { ListSkeleton } from "@/components/ui/page-loader";
+import { useDebounce } from "@/hooks/use-performance";
 
 type ComplianceStatus = 'compliant' | 'non-compliant' | 'partial';
 
@@ -108,7 +111,7 @@ export default function HistoryPage() {
   }, [selected, priorityFilter, query]);
 
   return (
-    <div className="container mx-auto p-8 max-w-5xl">
+    <div className="container mx-auto p-6 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <HistoryIcon className="h-7 w-7" />
@@ -137,31 +140,35 @@ export default function HistoryPage() {
           <p>No history yet. Run a compliance analysis to see it here.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {logs.map((log) => (
-            <Card key={log._id} className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => { setSelected(log); setOpen(true); }}>
+            <Card key={log._id} className="hover:shadow-sm transition-shadow cursor-pointer h-fit" onClick={() => { setSelected(log); setOpen(true); }}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base truncate" title={log.fileName}>{log.fileName}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  {new Date(log.analysisDate).toLocaleString()}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+                  <Calendar className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{new Date(log.analysisDate).toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={statusColor(log.status)} variant="secondary">{log.status}</Badge>
-                  <Badge variant="outline">{log.score}%</Badge>
-                  {log.standards.slice(0, 3).map((s) => (
-                    <Badge key={s} variant="outline" className="text-xs">{s.toUpperCase()}</Badge>
+                <div className="flex items-center gap-1 flex-wrap min-h-[1.5rem]">
+                  <Badge className={`${statusColor(log.status)} text-xs`} variant="secondary">{log.status}</Badge>
+                  <Badge variant="outline" className="text-xs">{log.score}%</Badge>
+                  {log.standards.slice(0, 2).map((s) => (
+                    <Badge key={s} variant="outline" className="text-xs truncate max-w-[4rem]" title={s.toUpperCase()}>{s.toUpperCase()}</Badge>
                   ))}
-                  {log.standards.length > 3 && (
-                    <Badge variant="outline" className="text-xs">+{log.standards.length - 3}</Badge>
+                  {log.standards.length > 2 && (
+                    <Badge variant="outline" className="text-xs">+{log.standards.length - 2}</Badge>
                   )}
                 </div>
-                <div className="text-sm text-muted-foreground">Issues: {log.gapsCount}</div>
-                <div className="flex gap-2">
-                  <Link href={`/history?logId=${log._id}&tab=issues`}><Button size="sm" variant="ghost">Open Full Issues</Button></Link>
-                  <Link href={`/history?logId=${log._id}&tab=suggestions`}><Button size="sm" variant="ghost">Open Full Suggestions</Button></Link>
+                <div className="text-sm text-muted-foreground truncate">Issues: {log.gapsCount}</div>
+                <div className="flex gap-1 flex-col sm:flex-row">
+                  <Link href={`/history?logId=${log._id}&tab=issues`} className="flex-1">
+                    <Button size="sm" variant="ghost" className="w-full text-xs">Open Full Issues</Button>
+                  </Link>
+                  <Link href={`/history?logId=${log._id}&tab=suggestions`} className="flex-1">
+                    <Button size="sm" variant="ghost" className="w-full text-xs">Open Full Suggestions</Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

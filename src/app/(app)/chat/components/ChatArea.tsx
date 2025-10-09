@@ -33,7 +33,7 @@ const ChatArea = ({
   setInputMessage,
 }: AgentType) => {
   return (
-    <main className="relative flex h-full flex-grow flex-col bg-transparent">
+    <div className="flex flex-col h-full bg-transparent">
       <MessageArea
         messages={messages}
         exportReactComponentAsPDF={exportReactComponentAsPDF}
@@ -41,7 +41,7 @@ const ChatArea = ({
         handleCreateProject={handleCreateProject}
         handleCreateDoc={handleCreateDoc}
       />
-      <div className="fixed bottom-0 left-[200px] right-0 z-50 bg-background border-t px-4 pb-4 pt-2">
+      <div className="flex-shrink-0 bg-background border-t px-4 pb-4 pt-2">
         {/* <Separator className="mx-2 mb-3 w-screen" /> */}
         <ChatInput
           agent_name={agent_name}
@@ -69,7 +69,7 @@ const ChatArea = ({
           setSelectedModel={setSelectedModel}
         />
       </div>
-    </main>
+    </div>
   );
 };
 

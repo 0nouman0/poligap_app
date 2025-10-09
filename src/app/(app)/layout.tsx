@@ -4,6 +4,7 @@ import type React from "react";
 import { Header } from "@/components/header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserInitializer } from "@/components/UserInitializer";
+import { NavigationProgress } from "@/components/ui/navigation-progress";
 
 export default async function AppPagesLayout({
   children,
@@ -20,6 +21,7 @@ export default async function AppPagesLayout({
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <UserInitializer />
+      <NavigationProgress />
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar />
