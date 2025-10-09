@@ -1,6 +1,4 @@
-import AgentConversation from "@/models/agentConversation.model";
-import mongoose from "mongoose";
-import User from "@/models/users.model";
+import { createConversation, getUser, createUser } from '@/lib/supabase/queries';
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
 
@@ -9,56 +7,29 @@ export async function POST(request: NextRequest) {
     const { userId, companyId } = await request.json();
     console.log("userId and companyId =>", userId, companyId);
 
-    // Get user data from localStorage if not provided
-    let actualUserId = userId;
-    let actualCompanyId = companyId;
-
-    if (!actualUserId) {
-      // Try to get from request headers or create a fallback
-      console.log("⚠️ No userId provided, using fallback");
-      actualUserId = "68d6b1725d67a98149c47532"; // Use the current user ID from localStorage
+    if (!userId) {
+      return createApiResponse({
+        success: false,
+        error: "userId is required",
+        status: 400,
+      });
     }
 
-    if (!actualCompanyId) {
-      console.log("⚠️ No companyId provided, using fallback");
-      actualCompanyId = "60f1b2b3c4d5e6f7a8b9c0d1"; // Default company ID
+    if (!companyId) {
+      return createApiResponse({
+        success: false,
+        error: "companyId is required",
+        status: 400,
+      });
     }
 
-    console.log("Using userId and companyId =>", actualUserId, actualCompanyId);
-
-    // Try to find user by different methods
+    // Try to find user in Supabase
     let user = null;
     
     try {
-      // First try with actualUserId as ObjectId
-      user = await User.findOne({
-        userId: mongoose.Types.ObjectId.createFromHexString(actualUserId),
-      });
+      user = await getUser(userId);
     } catch (error) {
-      console.log("Failed to find user by userId ObjectId, trying _id");
-    }
-
-    if (!user) {
-      try {
-        // Try finding by _id
-        user = await User.findById(actualUserId);
-      } catch (error) {
-        console.log("Failed to find user by _id");
-      }
-    }
-
-    if (!user) {
-      // Create a temporary user for chat functionality
-      console.log("🔧 Creating temporary user for chat");
-      user = await User.create({
-        _id: new mongoose.Types.ObjectId(actualUserId),
-        userId: new mongoose.Types.ObjectId(actualUserId),
-        uniqueId: `user_${Date.now()}`,
-        email: 'chat-user@poligap.com',
-        name: 'Chat User',
-        status: 'ACTIVE',
-        profileCreatedOn: new Date().toISOString(),
-      });
+      console.log("User not found, will use provided userId");
     }
 
     const conversationName = new Date().toLocaleTimeString("en-IN", {
@@ -68,19 +39,17 @@ export async function POST(request: NextRequest) {
       timeZone: "Asia/Kolkata",
     });
 
-    const newConversation = await AgentConversation.create({
-      enterpriseUserId: user._id,
-      companyId: mongoose.Types.ObjectId.createFromHexString(actualCompanyId),
-      chatName: conversationName,
-      status: "active",
+    const newConversation = await createConversation({
+      enterprise_user_id: userId,
+      company_id: companyId,
+      chat_name: conversationName,
     });
 
-    const saveConversation = await newConversation.save();
     return createApiResponse({
       success: true,
       error: "Conversation created successfully",
       status: 200,
-      data: saveConversation,
+      data: newConversation,
     });
   } catch (error) {
     console.error("Error in createChat:", error);

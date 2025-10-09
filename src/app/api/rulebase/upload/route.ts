@@ -1,32 +1,22 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import RulebaseModel from '@/models/rulebase.model';
-
-// Ensure database connection
-async function ensureDbConnection() {
-  if (mongoose.connection.readyState !== 1) {
-    try {
-      console.log('🔄 Connecting to MongoDB...');
-      await mongoose.connect(process.env.MONGODB_URI as string);
-      console.log('✅ MongoDB connected');
-    } catch (error) {
-      console.error('❌ MongoDB connection failed:', error);
-      throw new Error('Database connection failed');
-    }
-  }
-}
+import { createRulebase } from '@/lib/supabase/queries';
 
 export async function POST(req: Request) {
   try {
     console.log('🚀 POST /api/rulebase/upload - Starting request');
-    await ensureDbConnection();
     
     const form = await req.formData();
     const file = form.get('file') as File | null;
+    const userId = form.get('userId') as string | null;
+    const companyId = form.get('companyId') as string | null;
     
     if (!file) {
       console.log('❌ Upload error: No file provided');
       return NextResponse.json({ error: 'No file' }, { status: 400 });
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
     console.log('📁 File received:', file.name, 'Size:', file.size);
@@ -34,30 +24,30 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const fileContent = Buffer.from(arrayBuffer).toString('utf-8');
     
-    // Create new rule in MongoDB with file content
-    const newRule = new RulebaseModel({
+    // Create new rule in Supabase with file content
+    const savedRule = await createRulebase({
       name: file.name,
       description: `Uploaded rule file (${(arrayBuffer.byteLength/1024).toFixed(1)} KB)`,
       tags: ['uploaded'],
-      sourceType: 'file',
-      fileName: file.name,
-      fileContent: fileContent.substring(0, 10000), // Limit content size
-      active: true,
+      source_type: 'file',
+      file_name: file.name,
+      file_content: fileContent.substring(0, 10000), // Limit content size
+      user_id: userId,
+      company_id: companyId || undefined,
     });
     
-    const savedRule = await newRule.save();
-    console.log('✅ Uploaded rule created:', savedRule._id);
+    console.log('✅ Uploaded rule created:', savedRule.id);
     
     // Transform for frontend
     const rule = {
-      _id: savedRule._id.toString(),
+      _id: savedRule.id,
       name: savedRule.name,
       description: savedRule.description || '',
       tags: savedRule.tags || [],
-      sourceType: savedRule.sourceType,
-      fileName: savedRule.fileName,
+      sourceType: savedRule.source_type,
+      fileName: savedRule.file_name,
       active: savedRule.active,
-      updatedAt: savedRule.updatedAt.toISOString(),
+      updatedAt: savedRule.updated_at,
     };
     
     return NextResponse.json({ rule });

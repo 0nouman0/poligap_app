@@ -1,43 +1,36 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import RulebaseModel from '@/models/rulebase.model';
+import { getUserRulebases, createRulebase, updateRulebase, deleteRulebase } from '@/lib/supabase/queries';
 
-// Ensure database connection
-async function ensureDbConnection() {
-  if (mongoose.connection.readyState !== 1) {
-    try {
-      console.log('🔄 Connecting to MongoDB...');
-      await mongoose.connect(process.env.MONGODB_URI as string);
-      console.log('✅ MongoDB connected');
-    } catch (error) {
-      console.error('❌ MongoDB connection failed:', error);
-      throw new Error('Database connection failed');
-    }
-  }
-}
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
     console.log('🚀 GET /api/rulebase - Starting request');
-    await ensureDbConnection();
     
-    // Fetch all rules from MongoDB
-    const rules = await RulebaseModel.find({ active: true })
-      .sort({ createdAt: -1 })
-      .lean();
+    // Get userId from query params or headers
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        error: 'userId is required',
+        rules: [] 
+      }, { status: 400 });
+    }
+    
+    // Fetch all rules from Supabase
+    const rules = await getUserRulebases(userId);
     
     console.log(`✅ Found ${rules.length} rules`);
     
     // Transform rules to match frontend interface
     const transformedRules = rules.map((rule: any) => ({
-      _id: rule._id.toString(),
+      _id: rule.id,
       name: rule.name,
       description: rule.description || '',
       tags: rule.tags || [],
-      sourceType: rule.sourceType,
-      fileName: rule.fileName,
+      sourceType: rule.source_type,
+      fileName: rule.file_name,
       active: rule.active,
-      updatedAt: rule.updatedAt.toISOString(),
+      updatedAt: rule.updated_at,
     }));
     
     return NextResponse.json({ rules: transformedRules });
@@ -53,39 +46,42 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     console.log('🚀 POST /api/rulebase - Starting request');
-    await ensureDbConnection();
     
     const body = await req.json();
     console.log('POST body:', body);
     
-    const { name, description = '', tags = [], sourceType = 'text', active = true } = body || {};
+    const { name, description = '', tags = [], sourceType = 'text', userId, companyId } = body || {};
     
     if (!name || typeof name !== 'string') {
       console.log('❌ POST error: Invalid name');
       return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
     }
     
-    // Create new rule in MongoDB
-    const newRule = new RulebaseModel({
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+    
+    // Create new rule in Supabase
+    const savedRule = await createRulebase({
       name,
       description,
       tags: Array.isArray(tags) ? tags : [],
-      sourceType,
-      active: active !== false,
+      source_type: sourceType,
+      user_id: userId,
+      company_id: companyId,
     });
     
-    const savedRule = await newRule.save();
-    console.log('✅ Rule created:', savedRule._id);
+    console.log('✅ Rule created:', savedRule.id);
     
     // Transform for frontend
     const rule = {
-      _id: savedRule._id.toString(),
+      _id: savedRule.id,
       name: savedRule.name,
       description: savedRule.description || '',
       tags: savedRule.tags || [],
-      sourceType: savedRule.sourceType,
+      sourceType: savedRule.source_type,
       active: savedRule.active,
-      updatedAt: savedRule.updatedAt.toISOString(),
+      updatedAt: savedRule.updated_at,
     };
     
     return NextResponse.json({ rule });
@@ -101,7 +97,6 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     console.log('🚀 PATCH /api/rulebase - Starting request');
-    await ensureDbConnection();
     
     const body = await req.json();
     console.log('PATCH body:', body);
@@ -114,36 +109,27 @@ export async function PATCH(req: Request) {
     }
     
     // Prepare update object
-    const updateData: any = { updatedAt: new Date() };
+    const updateData: any = {};
     if (typeof active === 'boolean') updateData.active = active;
     if (typeof name === 'string') updateData.name = name;
     if (typeof description === 'string') updateData.description = description;
     if (Array.isArray(tags)) updateData.tags = tags;
     
-    // Update rule in MongoDB
-    const updatedRule = await RulebaseModel.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, lean: true }
-    );
+    // Update rule in Supabase
+    const updatedRule = await updateRulebase(id, updateData);
     
-    if (!updatedRule) {
-      console.log('❌ PATCH error: Rule not found for id:', id);
-      return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
-    }
-    
-    console.log('✅ Rule updated:', (updatedRule as any)._id);
+    console.log('✅ Rule updated:', updatedRule.id);
     
     // Transform for frontend
     const rule = {
-      _id: (updatedRule as any)._id.toString(),
-      name: (updatedRule as any).name,
-      description: (updatedRule as any).description || '',
-      tags: (updatedRule as any).tags || [],
-      sourceType: (updatedRule as any).sourceType,
-      fileName: (updatedRule as any).fileName,
-      active: (updatedRule as any).active,
-      updatedAt: (updatedRule as any).updatedAt.toISOString(),
+      _id: updatedRule.id,
+      name: updatedRule.name,
+      description: updatedRule.description || '',
+      tags: updatedRule.tags || [],
+      sourceType: updatedRule.source_type,
+      fileName: updatedRule.file_name,
+      active: updatedRule.active,
+      updatedAt: updatedRule.updated_at,
     };
     
     return NextResponse.json({ rule });
@@ -159,7 +145,6 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     console.log('🚀 DELETE /api/rulebase - Starting request');
-    await ensureDbConnection();
     
     const body = await req.json().catch(() => ({}));
     console.log('DELETE body:', body);
@@ -171,19 +156,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
     
-    // Soft delete by setting active to false
-    const deletedRule = await RulebaseModel.findByIdAndUpdate(
-      id,
-      { $set: { active: false, updatedAt: new Date() } },
-      { new: true }
-    );
+    // Soft delete by setting active to false in Supabase
+    const deletedRule = await deleteRulebase(id);
     
-    if (!deletedRule) {
-      console.log('❌ DELETE error: Rule not found for id:', id);
-      return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
-    }
-    
-    console.log('✅ Rule soft deleted:', deletedRule._id);
+    console.log('✅ Rule soft deleted:', deletedRule.id);
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error('❌ DELETE error:', e);
