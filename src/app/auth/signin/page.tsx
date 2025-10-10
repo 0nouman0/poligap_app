@@ -12,15 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useAuthStore } from "@/stores/auth-store";
-import { useAuth } from "@/hooks/use-auth";
-import { toastError, toastInfo } from "@/components/toast-varients";
+import { toastError } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-// Enterprise search removed - using mock function
-const validateUser = async (token: string) => ({ code: 200, success: true, data: { userId: 'mock' } });
-import LoginSidePanel from "@/components/common/sso-login-side-panel";
+import { createClient } from "@/lib/supabase/client";
 
 // Validation schema
 const signInSchema = z.object({
@@ -39,20 +35,11 @@ type SignInFormData = z.infer<typeof signInSchema>;
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/home');
-    }
-  }, [authLoading, isAuthenticated, router]);
+  const supabase = createClient();
 
   useEffect(() => {
     setMounted(true);
@@ -81,75 +68,32 @@ export default function SignInPage() {
 
   const onSubmit = async (data: SignInFormData) => {
     setIsLoading(true);
-    setApiError(null);
 
     try {
-      const response = await fetch("/api/users/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       });
 
-      // const response = await fetch(
-      //   process.env.NEXT_PUBLIC_BACKEND_URL + "/api/v1/users/signin",
-      //   {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify(data),
-      //   }
-      // );
-
-      const result = await response.json();
-      console.log("result =>", result);
-      if (result.data.status === "ERROR") {
-        if (result.data.message === "Email not exist!, try to signup") {
-          setError("email", {
-            type: "manual",
-            message: "Enter registered email.",
-          });
-        } else if (result.data.message === "Incorrect username or password.") {
+      if (error) {
+        if (error.message.toLowerCase().includes('invalid')) {
           setError("password", {
             type: "manual",
-            message: "Incorrect username or password.",
+            message: "Incorrect email or password.",
           });
         } else {
-          setApiError(result.data.message || "Sign in failed");
+          toastError("Sign in failed", error.message);
         }
         return;
       }
 
-      if (!response.ok) {
-        if (response.status === 500) {
-          setError("password", {
-            type: "manual",
-            message: "Incorrect username or password.",
-          });
-        } else {
-          setApiError("Server error. Please try again.");
-        }
-        return;
-      }
-
-      if (result) {
-        const accessToken = result.data.data.userToken.AccessToken;
-        // Store token and user data in localStorage
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("__LOGIN_SESSION__", accessToken);
-
-        const userId = result.data.data.userData.userId;
-        localStorage.setItem("user_id", userId);
-
+      if (authData?.user) {
         router.push("/home");
-      } else {
-        toastError("Facing Some problem in signin.", "Please try again.");
+        router.refresh();
       }
     } catch (error) {
-      console.log(" signin error => ", error);
-      setApiError("Network error. Please check your connection.");
+      console.log("signin error =>", error);
+      toastError("Network error", "Please check your connection.");
     } finally {
       setIsLoading(false);
     }
@@ -157,29 +101,12 @@ export default function SignInPage() {
 
   const krooloLogoSrc = "/assets/poligap-high-resolution-logo.png";
 
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render signin form if already authenticated
-  if (isAuthenticated) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen flex bg-white text-gray-900">
       {/* Left Side - Sign In Form */}
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md space-y-8">
-          {/* Logo only */}
+          {/* Logo */}
           <div className="text-center">
             <div className="flex items-center justify-center">
               <Image
@@ -189,6 +116,7 @@ export default function SignInPage() {
                 height={200}
                 priority
                 className="object-contain"
+                style={{ width: 'auto', height: 'auto', maxWidth: '200px' }}
               />
             </div>
           </div>
@@ -211,7 +139,7 @@ export default function SignInPage() {
                     "w-full px-3 py-2 rounded-md border border-transparent outline-none bg-transparent shadow-none transition-colors",
                     "hover:border-base-purple",
                     "focus:border-base-purple",
-                    "focus-visible:border-base-purple", // explicitly define what border you want
+                    "focus-visible:border-base-purple",
                     errors.email &&
                       "border border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-red-500/20 focus-visible:border-red-500"
                   )}
@@ -260,14 +188,6 @@ export default function SignInPage() {
                     {errors.password.message}
                   </p>
                 )}
-                {/* <div className="text-right">
-                  <Link
-                    href="/auth/forgot-password"
-                    className="text-sm bg-base-purple hover:bg-base-purple-hover"
-                  >
-                    Forgot password?
-                  </Link>
-                </div> */}
               </div>
 
               <Button
@@ -294,13 +214,9 @@ export default function SignInPage() {
                 Sign up
               </Link>
             </div>
-
-            {/* SSO login temporarily removed */}
-            {/* Terms and Privacy links temporarily removed */}
           </div>
         </div>
       </div>
-      <LoginSidePanel />
     </div>
   );
 }

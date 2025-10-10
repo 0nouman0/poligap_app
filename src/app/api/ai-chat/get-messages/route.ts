@@ -1,14 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import ChatMessage from '@/models/chatMessage.model';
+import { NextRequest } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { queries } from '@/lib/supabase/graphql';
 import { createApiResponse } from '@/lib/apiResponse';
+import { GraphQLClient } from 'graphql-request';
 
 // GET - Retrieve chat messages for a conversation
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createApiResponse({
+        success: false,
+        error: 'Unauthorized',
+        status: 401,
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
 
     console.log('📖 Getting chat messages for conversation:', conversationId);
 
@@ -20,30 +31,46 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get messages for the conversation, sorted by creation time
-    const messages = await ChatMessage.find({ conversationId })
-      .sort({ createdAt: 1 }) // Oldest first
-      .skip(offset)
-      .limit(limit)
-      .lean();
+    // Get access token for GraphQL
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return createApiResponse({
+        success: false,
+        error: 'No session found',
+        status: 401,
+      });
+    }
+
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
+    );
+
+    const result = await graphQLClient.request<any>(queries.getMessages, {
+      conversationId,
+    });
+
+    const messages = result.chat_messagesCollection.edges.map((edge: any) => edge.node);
 
     console.log(`📨 Found ${messages.length} messages for conversation ${conversationId}`);
 
     // Transform messages to match frontend format
-    const transformedMessages = messages.map(message => ({
-      id: message.messageId,
-      user_query: message.userQuery,
-      content: message.aiResponse,
-      conversation_id: message.conversationId.toString(),
-      tool_calls: message.toolCalls || [],
-      extra_data: message.extraData || {},
+    const transformedMessages = messages.map((message: any) => ({
+      id: message.message_id,
+      user_query: message.user_query,
+      content: message.ai_response,
+      conversation_id: conversationId,
+      tool_calls: message.tool_calls || [],
+      extra_data: message.extra_data || {},
       images: message.images || [],
       videos: message.videos || [],
-      audio: message.audio,
-      response_audio: message.responseAudio,
-      streamingError: message.streamingError || false,
-      created_at: Math.floor(message.createdAt.getTime() / 1000),
-      messageType: message.messageType,
+      created_at: Math.floor(new Date(message.created_at).getTime() / 1000),
+      messageType: message.message_type,
     }));
 
     return createApiResponse({

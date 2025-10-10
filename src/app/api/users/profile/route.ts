@@ -1,279 +1,171 @@
-import { NextRequest } from 'next/server';
-import User from '@/models/users.model';
-import { createApiResponse } from '@/lib/apiResponse';
-import mongoose from 'mongoose';
-
-// Retry wrapper for database operations
-async function retryOperation<T>(
-  operation: () => Promise<T>,
-  maxRetries: number = 3,
-  delay: number = 1000
-): Promise<T> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`🔄 Database operation attempt ${attempt}/${maxRetries}`);
-      return await operation();
-    } catch (error) {
-      lastError = error as Error;
-      console.log(`❌ Attempt ${attempt} failed:`, lastError.message);
-      
-      if (attempt < maxRetries) {
-        console.log(`⏳ Waiting ${delay}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2; // Exponential backoff
-      }
-    }
-  }
-  
-  throw lastError;
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { createGraphQLClient, queries } from '@/lib/supabase/graphql';
 
 // GET - Fetch user profile
 export async function GET(req: NextRequest) {
   try {
-    const startTime = Date.now();
-    console.log('🚀 Profile API GET starting...');
-    
-    // Check if MongoDB URI is configured
-    if (!process.env.MONGODB_URI) {
-      console.error("❌ MONGODB_URI environment variable not set");
-      return createApiResponse({
-        success: false,
-        error: "Database configuration missing - MONGODB_URI required",
-        status: 503,
-      });
-    }
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    // Ensure database connection
-    if (mongoose.connection.readyState !== 1) {
-      try {
-        console.log('🔄 Establishing database connection...');
-        console.log('MongoDB URI format:', process.env.MONGODB_URI.substring(0, 20) + '...');
-        await mongoose.connect(process.env.MONGODB_URI as string, {
-          serverSelectionTimeoutMS: 5000, // 5 second timeout
-          connectTimeoutMS: 10000, // 10 second timeout
-        });
-        console.log('✅ Database connection established');
-      } catch (dbError) {
-        console.error("❌ Database connection failed:", dbError);
-        return createApiResponse({
-          success: false,
-          error: `Database connection failed: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-          status: 503,
-        });
-      }
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-    const email = searchParams.get('email');
+    const userId = searchParams.get('userId') || user.id;
 
-    if (!userId && !email) {
-      return createApiResponse({
-        success: false,
-        error: 'User ID or email is required',
-        status: 400,
-      });
-    }
-
-    // Optimized user lookup by userId or email
-    let query: any = {};
-    if (userId) {
-      try {
-        const objectId = new mongoose.Types.ObjectId(userId);
-        query._id = objectId;
-      } catch {
-        query._id = userId;
-      }
-    } else if (email) {
-      query.email = email;
-    }
-
-    console.log('🔍 Searching for user...');
+    // Get session for access token
+    const { data: { session } } = await supabase.auth.getSession();
     
-    // Optimized database query with specific field selection
-    const user = await retryOperation(async () => {
-      return await User.findOne(query)
-        .select('name email mobile dob country designation about profileImage banner companyName status createdAt updatedAt -_id') // Select only needed fields
-        .lean() // Use lean for better performance
-        .maxTimeMS(5000); // Reduced timeout for faster response
+    if (!session?.access_token) {
+      return NextResponse.json(
+        { success: false, error: 'No session found' },
+        { status: 401 }
+      );
+    }
+
+    // Fetch profile using GraphQL
+    const graphqlClient = createGraphQLClient(session.access_token);
+    const data: any = await graphqlClient.request(queries.getProfile, {
+      id: userId,
     });
 
-    if (!user) {
-      console.log('❌ User not found');
-      return createApiResponse({
-        success: false,
-        error: 'User not found',
-        status: 404,
-      });
+    const profile = data?.profilesCollection?.edges?.[0]?.node;
+
+    if (!profile) {
+      return NextResponse.json(
+        { success: false, error: 'Profile not found' },
+        { status: 404 }
+      );
     }
 
-    console.log('✅ User found, preparing response...');
-
-    // Transform user data for response
+    // Transform to match expected format
     const profileData = {
-      _id: user._id?.toString(),
-      userId: user._id?.toString(),
-      name: user.name,
-      email: user.email,
-      mobile: user.mobile || '',
-      dob: user.dob || '',
-      country: user.country || '',
-      designation: user.designation || '',
-      about: user.about || '',
-      profileImage: user.profileImage || '',
-      banner: user.banner || { image: '', color: '', type: '', yOffset: 0 },
-      companyName: user.companyName || '',
-      status: user.status || 'ACTIVE',
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      source: 'MongoDB Atlas'
+      _id: profile.id,
+      userId: profile.id,
+      name: profile.name,
+      email: profile.email,
+      mobile: profile.mobile || '',
+      dob: profile.dob || '',
+      country: profile.country || '',
+      designation: profile.designation || '',
+      about: profile.about || '',
+      profile_image: profile.profile_image || '',
+      profileImage: profile.profile_image || '',
+      banner: profile.banner || { image: '', color: '', type: '', yOffset: 0 },
+      company_name: profile.company_name || '',
+      companyName: profile.company_name || '',
+      status: profile.status || 'ACTIVE',
+      role: profile.role || 'USER',
+      member_status: profile.member_status || 'ACTIVE',
+      memberStatus: profile.member_status || 'ACTIVE',
+      reporting_manager: profile.reporting_manager || null,
+      reportingManager: profile.reporting_manager || null,
+      created_by: profile.created_by || null,
+      createdBy: profile.created_by || null,
+      created_at: profile.created_at,
+      createdAt: profile.created_at,
+      updated_at: profile.updated_at,
+      updatedAt: profile.updated_at,
+      profile_created_on: profile.profile_created_on,
+      profileCreatedOn: profile.profile_created_on,
     };
 
-    const totalTime = Date.now() - startTime;
-    console.log(`⚡ Profile GET completed in ${totalTime}ms`);
-    
-    const response = createApiResponse({
+    const response = NextResponse.json({
       success: true,
-      data: profileData
+      data: profileData,
     });
 
-    // Add caching headers for better performance
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600'); // 5 min cache, 10 min stale
+    // Add caching headers
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     
     return response;
 
-  } catch (error) {
-    console.error('❌ Profile API error:', error);
-    return createApiResponse({
-      success: false,
-      error: `Profile fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      status: 500,
-    });
+  } catch (error: any) {
+    console.error('Profile GET error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch profile' },
+      { status: 500 }
+    );
   }
 }
 
 // PUT - Update user profile
 export async function PUT(req: NextRequest) {
   try {
-    // Ensure database connection
-    if (mongoose.connection.readyState !== 1) {
-      try {
-        console.log('🔄 Establishing database connection...');
-        await mongoose.connect(process.env.MONGODB_URI as string);
-        console.log('✅ Database connection established');
-      } catch (dbError) {
-        console.error("❌ Database connection failed:", dbError);
-        return createApiResponse({
-          success: false,
-          error: "Database connection failed - MongoDB connection required",
-          status: 503,
-        });
-      }
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const body = await req.json();
     const { userId, ...updates } = body;
 
-    console.log('=== Profile Update Request ===');
-    console.log('userId:', userId);
-    console.log('updates:', updates);
+    const targetUserId = userId || user.id;
 
-    if (!userId) {
-      return createApiResponse({
-        success: false,
-        error: 'User ID is required for profile update',
-        status: 400,
-      });
-    }
-
-    // Prepare query for user lookup
-    let query: any = {};
-    try {
-      const objectId = new mongoose.Types.ObjectId(userId);
-      query._id = objectId;
-    } catch {
-      query._id = userId;
-    }
-
-    // Filter allowed fields for update
-    const allowedFields = [
-      'name', 'email', 'mobile', 'dob', 'country', 'designation', 
-      'about', 'profileImage', 'banner', 'companyName', 'status'
-    ];
+    // Get session for access token
+    const { data: { session } } = await supabase.auth.getSession();
     
-    const filteredUpdates: any = {};
-    Object.keys(updates).forEach(key => {
-      if (allowedFields.includes(key)) {
-        filteredUpdates[key] = updates[key];
-      }
+    if (!session?.access_token) {
+      return NextResponse.json(
+        { success: false, error: 'No session found' },
+        { status: 401 }
+      );
+    }
+
+    // Prepare updates (map camelCase to snake_case)
+    const profileUpdates: any = {};
+    
+    if (updates.name) profileUpdates.name = updates.name;
+    if (updates.mobile) profileUpdates.mobile = updates.mobile;
+    if (updates.dob) profileUpdates.dob = updates.dob;
+    if (updates.country) profileUpdates.country = updates.country;
+    if (updates.designation) profileUpdates.designation = updates.designation;
+    if (updates.about) profileUpdates.about = updates.about;
+    if (updates.profileImage || updates.profile_image) {
+      profileUpdates.profile_image = updates.profileImage || updates.profile_image;
+    }
+    if (updates.banner) profileUpdates.banner = updates.banner;
+    if (updates.companyName || updates.company_name) {
+      profileUpdates.company_name = updates.companyName || updates.company_name;
+    }
+    if (updates.status) profileUpdates.status = updates.status;
+    if (updates.role) profileUpdates.role = updates.role;
+
+    const graphqlClient = createGraphQLClient(session.access_token);
+    const data: any = await graphqlClient.request(queries.updateProfile, {
+      id: targetUserId,
+      ...profileUpdates,
     });
 
-    // Add updatedAt timestamp
-    filteredUpdates.updatedAt = new Date();
+    const updatedProfile = data?.updateprofilesCollection?.records?.[0];
 
-    console.log('=== MongoDB User Update ===');
-    console.log('Query:', JSON.stringify(query, null, 2));
-    console.log('Updates:', JSON.stringify(filteredUpdates, null, 2));
-
-    // Use retry mechanism for database update
-    const updatedUser = await retryOperation(async () => {
-      return await User.findOneAndUpdate(
-        query,
-        { $set: filteredUpdates },
-        { 
-          new: true, // Return updated document
-          runValidators: true, // Run schema validators
-          maxTimeMS: 10000 // Set 10 second timeout
-        }
-      )
-      .select('-__v')
-      .lean();
-    });
-
-    if (!updatedUser) {
-      return createApiResponse({
-        success: false,
-        error: 'User not found or update failed',
-        status: 404,
-      });
+    if (!updatedProfile) {
+      return NextResponse.json(
+        { success: false, error: 'Profile update failed' },
+        { status: 500 }
+      );
     }
 
-    // Transform updated user data for response
-    const profileData = {
-      _id: updatedUser._id?.toString(),
-      userId: updatedUser._id?.toString(),
-      name: updatedUser.name,
-      email: updatedUser.email,
-      mobile: updatedUser.mobile,
-      dob: updatedUser.dob,
-      country: updatedUser.country,
-      designation: updatedUser.designation,
-      about: updatedUser.about,
-      profileImage: updatedUser.profileImage,
-      banner: updatedUser.banner,
-      companyName: updatedUser.companyName,
-      status: updatedUser.status,
-      createdAt: updatedUser.createdAt,
-      updatedAt: updatedUser.updatedAt,
-      source: 'MongoDB Atlas'
-    };
-
-    console.log('✅ Profile updated successfully:', profileData.email);
-    
-    return createApiResponse({
+    return NextResponse.json({
       success: true,
-      data: profileData
+      data: updatedProfile,
     });
 
-  } catch (error) {
-    console.error('❌ Profile update error:', error);
-    return createApiResponse({
-      success: false,
-      error: `Profile update failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      status: 500,
-    });
+  } catch (error: any) {
+    console.error('Profile UPDATE error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update profile' },
+      { status: 500 }
+    );
   }
 }

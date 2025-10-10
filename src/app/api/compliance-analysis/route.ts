@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompliancePrompt } from '@/lib/compliance-prompt';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { createClient } from '@/lib/supabase/server';
+import { queries } from '@/lib/supabase/graphql';
+import { GraphQLClient } from 'graphql-request';
 
-// Gemini AI with direct file upload (Primary)
+// Gemini AI with direct file upload
 async function analyzeWithGemini(file: File, selectedStandards: string[]): Promise<any> {
   try {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
@@ -83,26 +84,7 @@ async function analyzeWithGemini(file: File, selectedStandards: string[]): Promi
   }
 }
 
-// OpenAI (fallback, text-based)
-async function analyzeWithOpenAI(file: File, selectedStandards: string[]): Promise<any> {
-  try {
-    const documentContent = await extractTextFromFile(file);
-    // Proceed even if text appears low-quality; include hint in the prompt
-    const readable = isReadable(documentContent);
-    const baseContent = readable && documentContent ? documentContent : (documentContent || '');
-    const decorated = readable ? baseContent : `The extracted text may be low-quality or partial. Still analyze for compliance and produce your best-effort findings.\n\n${baseContent}`;
-    const prompt = getCompliancePrompt(selectedStandards, decorated);
-    const { createOpenAIAnalyzer } = await import('@/lib/openai-api');
-    const analyzer = createOpenAIAnalyzer();
-    const analysis = await analyzer.analyzeCompliance(prompt);
-    return analysis;
-  } catch (error) {
-    console.error('OpenAI analysis failed:', error);
-    throw new Error(`OpenAI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-// Simple text extraction for Kroolo AI fallback
+// Simple text extraction helper
 async function extractTextFromFile(file: File): Promise<string> {
   try {
     if (file.type.includes('text') || file.name.endsWith('.txt')) {
@@ -241,20 +223,6 @@ function extractListFromText(text: string, keywords: string[]): string[] {
   return relevantSentences.slice(0, 5);
 }
 
-async function readRulebaseRules(): Promise<any[]> {
-  try {
-    const dataDir = path.join(process.cwd(), 'data');
-    await fs.mkdir(dataDir, { recursive: true });
-    const filePath = path.join(dataDir, 'rulebase.json');
-    try { await fs.access(filePath); } catch { await fs.writeFile(filePath, JSON.stringify({ rules: [] }, null, 2), 'utf-8'); }
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(fileContent);
-    return Array.isArray(parsed?.rules) ? parsed.rules : [];
-  } catch {
-    return [];
-  }
-}
-
 function applyRulebaseToAnalysis(analysis: any, rules: any[], selectedStandards: string[]): { analysis: any, applied: boolean, ruleCount: number } {
   if (!analysis) return { analysis, applied: false, ruleCount: 0 };
   // Only apply active rules. Treat missing 'active' as true for backwards compatibility
@@ -312,6 +280,14 @@ function applyRulebaseToAnalysis(analysis: any, rules: any[], selectedStandards:
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const selectedStandards = JSON.parse(formData.get('selectedStandards') as string);
@@ -343,43 +319,82 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Try Gemini first (primary), then fall back to OpenAI
+    // Try Gemini AI analysis
     let analysisResult;
-    let method = 'unknown';
+    let method = 'gemini';
 
     try {
-      console.log('Attempting Gemini AI analysis with direct file upload (primary)...');
+      console.log('Attempting Gemini AI analysis with direct file upload...');
       analysisResult = await analyzeWithGemini(file, selectedStandards);
-      method = 'gemini-primary';
       console.log('Gemini AI analysis completed successfully');
 
     } catch (geminiError) {
-      console.error('Gemini AI analysis failed, falling back to OpenAI:', geminiError);
-
-      try {
-        console.log('Attempting OpenAI analysis (fallback, text-based)...');
-        analysisResult = await analyzeWithOpenAI(file, selectedStandards);
-        method = 'openai-fallback';
-        console.log('OpenAI analysis completed successfully');
-
-      } catch (openaiError) {
-        console.error('Both Gemini and OpenAI failed:', openaiError);
-        return NextResponse.json({
-          error: `Analysis failed with both AI services. Gemini: ${geminiError instanceof Error ? geminiError.message : 'Unknown error'}. OpenAI: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`
-        }, { status: 500 });
-      }
+      console.error('Gemini AI analysis failed:', geminiError);
+      return NextResponse.json({
+        error: `Analysis failed: ${geminiError instanceof Error ? geminiError.message : 'Unknown error'}`
+      }, { status: 500 });
     }
 
-    // Optionally apply RuleBase
+    // Optionally apply RuleBase from Supabase
     let appliedRuleBase = false;
     let ruleCount = 0;
     if (applyRuleBase) {
-      const rules = await readRulebaseRules();
-      const applied = applyRulebaseToAnalysis(analysisResult, rules, selectedStandards);
-      analysisResult = applied.analysis;
-      appliedRuleBase = applied.applied;
-      ruleCount = applied.ruleCount;
-      method = `${method}+rulebase`;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const graphQLClient = new GraphQLClient(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+            {
+              headers: {
+                apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }
+          );
+
+          const rulesResult = await graphQLClient.request<any>(queries.getRules, {
+            userId: user.id,
+          });
+
+          const rules = rulesResult.rulebaseCollection.edges.map((edge: any) => edge.node);
+          const applied = applyRulebaseToAnalysis(analysisResult, rules, selectedStandards);
+          analysisResult = applied.analysis;
+          appliedRuleBase = applied.applied;
+          ruleCount = applied.ruleCount;
+          method = `${method}+rulebase`;
+        }
+      } catch (error) {
+        console.error('Failed to apply rulebase:', error);
+        // Continue without rulebase
+      }
+    }
+
+    // Save analysis to Supabase
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const graphQLClient = new GraphQLClient(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+          {
+            headers: {
+              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        await graphQLClient.request<any>(queries.createDocumentAnalysis, {
+          user_id: user.id,
+          document_id: `doc_${Date.now()}`,
+          title: file.name,
+          compliance_standard: selectedStandards.join(', '),
+          score: analysisResult.overallScore || 0,
+          metrics: analysisResult,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save analysis to Supabase:', error);
+      // Continue even if saving fails
     }
 
     return NextResponse.json({

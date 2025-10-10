@@ -1,20 +1,20 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 import { Header } from "@/components/header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { UserInitializer } from "@/components/UserInitializer";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AppPagesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("token");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!token) {
+  if (!user) {
     redirect("/auth/signin");
   }
 

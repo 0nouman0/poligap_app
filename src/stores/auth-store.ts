@@ -1,59 +1,25 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
-type UserDetails = {
-  _id: string;
-  name: string;
-  email: string;
-  companyId: string;
-  defaultCompany: string;
-  picture: string;
-  banner: {
-    image: string;
-  };
-};
-
-type CompanyDetails = {
-  _id: string;
-  companyName: string;
-};
-
-type memberDetails = {
-  role: "Admin" | "Owner" | "User";
-};
-
 type User = {
-  userDetails: UserDetails;
-  companyDetails: CompanyDetails;
-  memberDetails: memberDetails[];
+  id: string;
+  email: string;
+  name?: string;
 };
 
 type AuthState = {
-  token: string | null;
-  userData: User | null;
-  setToken: (token: string) => void;
-  setUserData: (userData: unknown) => void;
-  logout: () => void;
+  user: User | null;
+  setUser: (user: User | null) => void;
+  clearUser: () => void;
 };
 
 export const useAuthStore = create<AuthState>()(
   devtools(
     persist(
       (set) => ({
-        token: null,
-        userData: null,
-        setToken: (token: string) => set({ token }, false, "setToken"),
-        setUserData: (userData: unknown) =>
-          set({ userData: userData as User }, false, "setUserData"),
-        logout: () => {
-          // Clear localStorage
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('__LOGIN_SESSION__');
-            localStorage.removeItem('user_id');
-          }
-          set({ userData: null, token: null }, false, "logout");
-        },
+        user: null,
+        setUser: (user: User | null) => set({ user }, false, "setUser"),
+        clearUser: () => set({ user: null }, false, "clearUser"),
       }),
       { name: "auth-store" }
     ),

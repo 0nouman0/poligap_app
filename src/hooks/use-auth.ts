@@ -1,78 +1,42 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth-store';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { token, userData, setToken, setUserData } = useAuthStore();
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    const checkAuth = () => {
-      // Check for token in localStorage
-      const storedToken = localStorage.getItem('accessToken') || localStorage.getItem('__LOGIN_SESSION__');
-      const storedUserId = localStorage.getItem('user_id');
-
-      if (storedToken && storedUserId) {
-        // Update auth store if token exists but store is empty
-        if (!token) {
-          setToken(storedToken);
-        }
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-      }
-      
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setIsLoading(false);
-    };
+    });
 
-    checkAuth();
-  }, [token, setToken]);
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
 
-  const login = (authToken: string, userId: string) => {
-    // Store in localStorage
-    localStorage.setItem('accessToken', authToken);
-    localStorage.setItem('__LOGIN_SESSION__', authToken);
-    localStorage.setItem('user_id', userId);
-    
-    // Update auth store
-    setToken(authToken);
-    setIsAuthenticated(true);
-    
-    // Redirect to home
-    router.push('/home');
-  };
+    return () => subscription.unsubscribe();
+  }, []);
 
   const logout = async () => {
-    try {
-      // Call logout API
-      await fetch('/api/users/signout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout API error:', error);
-    }
-
-    // Clear localStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('__LOGIN_SESSION__');
-    localStorage.removeItem('user_id');
-    
-    // Clear auth store
-    useAuthStore.getState().logout();
-    
-    // Update local state
-    setIsAuthenticated(false);
-    
-    // Redirect to signin
+    await supabase.auth.signOut();
     router.push('/auth/signin');
+    router.refresh();
   };
 
   return {
     isLoading,
-    isAuthenticated,
-    token,
-    userData,
-    login,
+    isAuthenticated: !!user,
+    user,
     logout,
   };
 }

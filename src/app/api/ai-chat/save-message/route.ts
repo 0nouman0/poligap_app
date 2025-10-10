@@ -1,12 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import ChatMessage from '@/models/chatMessage.model';
-import AgentConversation from '@/models/agentConversation.model';
+import { NextRequest } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { queries } from '@/lib/supabase/graphql';
 import { createApiResponse } from '@/lib/apiResponse';
-import mongoose from 'mongoose';
+import { GraphQLClient } from 'graphql-request';
 
-// POST - Save a chat message to MongoDB
+// POST - Save a chat message to Supabase
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createApiResponse({
+        success: false,
+        error: 'Unauthorized',
+        status: 401,
+      });
+    }
+
     const messageData = await request.json();
     console.log('💾 Saving chat message:', messageData);
 
@@ -20,10 +31,6 @@ export async function POST(request: NextRequest) {
       extra_data = {},
       images = [],
       videos = [],
-      audio,
-      response_audio,
-      streamingError = false,
-      created_at
     } = messageData;
 
     if (!conversationId || !messageId) {
@@ -34,66 +41,78 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Verify conversation exists
-    const conversation = await AgentConversation.findById(conversationId);
-    if (!conversation) {
-      console.log('⚠️ Conversation not found, creating new one');
-      // Don't fail - the conversation might be created separately
+    // Get access token for GraphQL
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return createApiResponse({
+        success: false,
+        error: 'No session found',
+        status: 401,
+      });
     }
 
-    // Check if message already exists (prevent duplicates)
-    const existingMessage = await ChatMessage.findOne({ messageId });
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
+    );
+
+    // Check if message already exists
+    const checkQuery = `
+      query CheckMessage($message_id: String!) {
+        chat_messagesCollection(filter: { message_id: { eq: $message_id } }) {
+          edges {
+            node {
+              id
+              message_id
+            }
+          }
+        }
+      }
+    `;
+
+    const checkResult = await graphQLClient.request<any>(checkQuery, { message_id: messageId });
+    const existingMessage = checkResult.chat_messagesCollection.edges[0];
+
     if (existingMessage) {
       console.log('📝 Updating existing message:', messageId);
       
       // Update existing message
-      const updatedMessage = await ChatMessage.findOneAndUpdate(
-        { messageId },
-        {
-          aiResponse: content || existingMessage.aiResponse,
-          toolCalls: tool_calls.length > 0 ? tool_calls : existingMessage.toolCalls,
-          extraData: Object.keys(extra_data).length > 0 ? extra_data : existingMessage.extraData,
-          images: images.length > 0 ? images : existingMessage.images,
-          videos: videos.length > 0 ? videos : existingMessage.videos,
-          audio: audio || existingMessage.audio,
-          responseAudio: response_audio || existingMessage.responseAudio,
-          streamingError,
-          updatedAt: new Date(),
-        },
-        { new: true }
-      );
+      const updateResult = await graphQLClient.request<any>(queries.updateMessage, {
+        message_id: messageId,
+        ai_response: content,
+        tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
+        extra_data: Object.keys(extra_data).length > 0 ? extra_data : undefined,
+        images: images.length > 0 ? images : undefined,
+        videos: videos.length > 0 ? videos : undefined,
+      });
 
       return createApiResponse({
         success: true,
-        data: updatedMessage,
+        data: updateResult.updatechat_messagesCollection.records[0],
       });
     }
 
     // Create new message
-    const newMessage = await ChatMessage.create({
-      conversationId: new mongoose.Types.ObjectId(conversationId),
-      messageId,
-      userQuery: user_query || '',
-      aiResponse: content || '',
-      messageType,
-      toolCalls: tool_calls,
-      extraData: extra_data,
+    const createResult = await graphQLClient.request<any>(queries.createMessage, {
+      conversation_id: conversationId,
+      message_id: messageId,
+      user_query: user_query || '',
+      ai_response: content || '',
+      message_type: messageType,
+      tool_calls,
+      extra_data,
       images,
       videos,
-      audio,
-      responseAudio: response_audio,
-      streamingError,
-      createdAt: created_at ? new Date(created_at * 1000) : new Date(),
     });
 
-    console.log('✅ Chat message saved successfully:', newMessage._id);
+    const newMessage = createResult.insertIntochat_messagesCollection.records[0];
 
-    // Update conversation's updatedAt timestamp
-    if (conversation) {
-      await AgentConversation.findByIdAndUpdate(conversationId, {
-        updatedAt: new Date(),
-      });
-    }
+    console.log('✅ Chat message saved successfully:', newMessage.id);
 
     return createApiResponse({
       success: true,

@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { toastError } from "@/components/toast-varients";
 
 const signUpSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -36,14 +37,7 @@ export default function SignUpPage() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/home');
-    }
-  }, [authLoading, isAuthenticated, router]);
+  const supabase = createClient();
 
   useEffect(() => {
     setMounted(true);
@@ -63,81 +57,56 @@ export default function SignUpPage() {
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
     setApiError(null);
+    
     try {
-      const resp = await fetch("/api/users/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      // Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+          },
+        },
       });
-      const result = await resp.json();
-      console.log("signup result =>", result);
 
-      if (result?.data?.status === "ERROR") {
-        const msg = result?.data?.message || "Sign up failed";
-        if (msg.toLowerCase().includes("email") && msg.toLowerCase().includes("registered")) {
+      if (authError) {
+        if (authError.message.toLowerCase().includes('already registered')) {
           setError("email", { type: "manual", message: "Email already registered" });
         } else {
-          setApiError(msg);
+          toastError("Signup failed", authError.message);
         }
         return;
       }
 
-      if (!resp.ok) {
-        setApiError("Server error. Please try again.");
-        return;
-      }
+      if (authData?.user) {
+        // Create profile entry via API
+        const profileResponse = await fetch('/api/users/create-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: authData.user.id,
+            email: data.email,
+            name: data.name,
+          }),
+        });
 
-      // Extract token and userId in a robust way
-      const accessToken =
-        result?.data?.data?.userToken?.AccessToken ||
-        result?.data?.userToken?.AccessToken ||
-        result?.userToken?.AccessToken ||
-        result?.token || "";
-      const userId =
-        result?.data?.data?.userData?.userId ??
-        result?.data?.userData?.userId ??
-        result?.userData?.userId ?? "";
+        if (!profileResponse.ok) {
+          console.error('Profile creation failed, but user is signed up');
+        }
 
-      if (accessToken) {
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("__LOGIN_SESSION__", accessToken);
+        router.push("/home");
+        router.refresh();
       }
-      if (userId) {
-        localStorage.setItem("user_id", String(userId));
-      }
-
-      if (!accessToken) {
-        setApiError("Account created but token missing in response. Please sign in.");
-        router.push("/auth/signin");
-        return;
-      }
-
-      router.push("/home");
     } catch (e) {
-      setApiError("Network error. Please check your connection.");
+      console.error('Signup error:', e);
+      toastError("Network error", "Please check your connection.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const logoSrc = "/assets/poligap-high-resolution-logo.png";
-
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render signup form if already authenticated
-  if (isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex bg-white text-gray-900">

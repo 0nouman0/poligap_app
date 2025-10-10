@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from "@/lib/supabase/server";
+import { queries } from "@/lib/supabase/graphql";
+import { GraphQLClient } from "graphql-request";
 
 export async function POST(req: NextRequest) {
   let text = "";
@@ -8,6 +11,14 @@ export async function POST(req: NextRequest) {
   
   try {
     console.log("Contract analyze API called");
+    
+    // Authenticate user
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     
     const requestData = await req.json();
     text = requestData.text;
@@ -89,6 +100,34 @@ export async function POST(req: NextRequest) {
     console.log("Gemini response received, length:", analysisText.length);
     const parsed = parseAnalysisResult(analysisText, text);
     console.log("Analysis parsed successfully, suggestions count:", parsed.suggestions.length);
+
+    // Save contract analysis to Supabase
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const graphQLClient = new GraphQLClient(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+          {
+            headers: {
+              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        await graphQLClient.request<any>(queries.createDocumentAnalysis, {
+          user_id: user.id,
+          document_id: `contract_${Date.now()}`,
+          title: `${contractType || 'Contract'} Analysis`,
+          compliance_standard: 'Contract Review',
+          score: parsed.overallScore * 100, // Convert to percentage
+          metrics: parsed,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save contract analysis to Supabase:', error);
+      // Continue even if saving fails
+    }
 
     return NextResponse.json({ success: true, modelUsed, ...parsed });
   } catch (error) {

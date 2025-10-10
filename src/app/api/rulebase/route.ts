@@ -1,43 +1,58 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import RulebaseModel from '@/models/rulebase.model';
-
-// Ensure database connection
-async function ensureDbConnection() {
-  if (mongoose.connection.readyState !== 1) {
-    try {
-      console.log('🔄 Connecting to MongoDB...');
-      await mongoose.connect(process.env.MONGODB_URI as string);
-      console.log('✅ MongoDB connected');
-    } catch (error) {
-      console.error('❌ MongoDB connection failed:', error);
-      throw new Error('Database connection failed');
-    }
-  }
-}
+import { createClient } from '@/lib/supabase/server';
+import { queries } from '@/lib/supabase/graphql';
+import { GraphQLClient } from 'graphql-request';
 
 export async function GET() {
   try {
-    console.log('🚀 GET /api/rulebase - Starting request');
-    await ensureDbConnection();
+    console.log('� GET /api/rulebase - Starting request');
     
-    // Fetch all rules from MongoDB
-    const rules = await RulebaseModel.find({ active: true })
-      .sort({ createdAt: -1 })
-      .lean();
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        rules: [] 
+      }, { status: 401 });
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return NextResponse.json({ 
+        error: 'No session found',
+        rules: [] 
+      }, { status: 401 });
+    }
+
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
+    );
+
+    const result = await graphQLClient.request<any>(queries.getRules, {
+      userId: user.id,
+    });
+
+    const rules = result.rulebaseCollection.edges.map((edge: any) => edge.node);
     
     console.log(`✅ Found ${rules.length} rules`);
     
     // Transform rules to match frontend interface
     const transformedRules = rules.map((rule: any) => ({
-      _id: rule._id.toString(),
+      _id: rule.id,
       name: rule.name,
       description: rule.description || '',
       tags: rule.tags || [],
-      sourceType: rule.sourceType,
-      fileName: rule.fileName,
+      sourceType: rule.source_type,
+      fileName: rule.file_name,
       active: rule.active,
-      updatedAt: rule.updatedAt.toISOString(),
+      updatedAt: rule.updated_at,
     }));
     
     return NextResponse.json({ rules: transformedRules });
@@ -53,8 +68,14 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     console.log('🚀 POST /api/rulebase - Starting request');
-    await ensureDbConnection();
     
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     console.log('POST body:', body);
     
@@ -64,28 +85,42 @@ export async function POST(req: Request) {
       console.log('❌ POST error: Invalid name');
       return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
     }
-    
-    // Create new rule in MongoDB
-    const newRule = new RulebaseModel({
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    }
+
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
+    );
+
+    const result = await graphQLClient.request<any>(queries.createRule, {
       name,
       description,
       tags: Array.isArray(tags) ? tags : [],
-      sourceType,
-      active: active !== false,
+      source_type: sourceType,
+      user_id: user.id,
     });
-    
-    const savedRule = await newRule.save();
-    console.log('✅ Rule created:', savedRule._id);
+
+    const savedRule = result.insertIntorulebaseCollection.records[0];
+    console.log('✅ Rule created:', savedRule.id);
     
     // Transform for frontend
     const rule = {
-      _id: savedRule._id.toString(),
+      _id: savedRule.id,
       name: savedRule.name,
       description: savedRule.description || '',
       tags: savedRule.tags || [],
-      sourceType: savedRule.sourceType,
+      sourceType: savedRule.source_type,
       active: savedRule.active,
-      updatedAt: savedRule.updatedAt.toISOString(),
+      updatedAt: savedRule.updated_at,
     };
     
     return NextResponse.json({ rule });
@@ -101,8 +136,14 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     console.log('🚀 PATCH /api/rulebase - Starting request');
-    await ensureDbConnection();
     
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     console.log('PATCH body:', body);
     
@@ -112,38 +153,48 @@ export async function PATCH(req: Request) {
       console.log('❌ PATCH error: id is required');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
-    
-    // Prepare update object
-    const updateData: any = { updatedAt: new Date() };
-    if (typeof active === 'boolean') updateData.active = active;
-    if (typeof name === 'string') updateData.name = name;
-    if (typeof description === 'string') updateData.description = description;
-    if (Array.isArray(tags)) updateData.tags = tags;
-    
-    // Update rule in MongoDB
-    const updatedRule = await RulebaseModel.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, lean: true }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    }
+
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
     );
+
+    // Prepare update variables (only include fields that are provided)
+    const variables: any = { id };
+    if (typeof name === 'string') variables.name = name;
+    if (typeof description === 'string') variables.description = description;
+    if (Array.isArray(tags)) variables.tags = tags;
+    if (typeof active === 'boolean') variables.active = active;
+
+    const result = await graphQLClient.request<any>(queries.updateRule, variables);
+
+    const updatedRule = result.updaterulebaseCollection.records[0];
     
     if (!updatedRule) {
       console.log('❌ PATCH error: Rule not found for id:', id);
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
     
-    console.log('✅ Rule updated:', (updatedRule as any)._id);
+    console.log('✅ Rule updated:', updatedRule.id);
     
     // Transform for frontend
     const rule = {
-      _id: (updatedRule as any)._id.toString(),
-      name: (updatedRule as any).name,
-      description: (updatedRule as any).description || '',
-      tags: (updatedRule as any).tags || [],
-      sourceType: (updatedRule as any).sourceType,
-      fileName: (updatedRule as any).fileName,
-      active: (updatedRule as any).active,
-      updatedAt: (updatedRule as any).updatedAt.toISOString(),
+      _id: updatedRule.id,
+      name: updatedRule.name,
+      description: updatedRule.description || '',
+      tags: updatedRule.tags || [],
+      active: updatedRule.active,
+      updatedAt: updatedRule.updated_at,
     };
     
     return NextResponse.json({ rule });
@@ -159,8 +210,14 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     console.log('🚀 DELETE /api/rulebase - Starting request');
-    await ensureDbConnection();
     
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json().catch(() => ({}));
     console.log('DELETE body:', body);
     
@@ -170,20 +227,32 @@ export async function DELETE(req: Request) {
       console.log('❌ DELETE error: id is required');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
-    
-    // Soft delete by setting active to false
-    const deletedRule = await RulebaseModel.findByIdAndUpdate(
-      id,
-      { $set: { active: false, updatedAt: new Date() } },
-      { new: true }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    }
+
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
     );
+
+    const result = await graphQLClient.request<any>(queries.deleteRule, { id });
+
+    const deletedRule = result.updaterulebaseCollection.records[0];
     
     if (!deletedRule) {
       console.log('❌ DELETE error: Rule not found for id:', id);
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
     
-    console.log('✅ Rule soft deleted:', deletedRule._id);
+    console.log('✅ Rule soft deleted:', deletedRule.id);
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error('❌ DELETE error:', e);
@@ -193,4 +262,3 @@ export async function DELETE(req: Request) {
     }, { status: 400 });
   }
 }
-

@@ -1,25 +1,34 @@
-import AgentConversationChat from "@/models/agentConversationChat.model";
-import AgentConversation from "@/models/agentConversation.model";
-import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { queries } from "@/lib/supabase/graphql";
+import { createApiResponse } from "@/lib/apiResponse";
+import { GraphQLClient } from "graphql-request";
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createApiResponse({
+        success: false,
+        error: "Unauthorized",
+        status: 401,
+      });
+    }
+
     const {
       conversation_id,
       user_query,
-      created_at,
       content,
       streamingError,
       tool_calls,
       extra_data,
       images,
       videos,
-      audio,
-      response_audio,
     } = await request.json();
 
-    if (!conversation_id || !user_query || !created_at) {
+    if (!conversation_id || !user_query) {
       return createApiResponse({
         success: false,
         error: "Missing required fields",
@@ -27,44 +36,49 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const conversation = await AgentConversation.findById(conversation_id);
-
-    if (!conversation) {
+    // Get access token for GraphQL
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       return createApiResponse({
         success: false,
-        error: "Conversation not found",
-        status: 404,
+        error: "No session found",
+        status: 401,
       });
     }
 
-    const newChat = await AgentConversationChat.create({
-      conversationId: conversation_id,
+    const graphQLClient = new GraphQLClient(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
+    );
+
+    // Generate a unique message ID
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    // Create new chat message
+    const createResult = await graphQLClient.request<any>(queries.createMessage, {
+      conversation_id,
+      message_id: messageId,
       user_query,
-      content,
-      streamingError,
-      created_at,
-      tool_calls,
-      extra_data,
-      images,
-      videos,
-      audio,
-      response_audio,
+      ai_response: content || '',
+      message_type: 'ai',
+      tool_calls: tool_calls || [],
+      extra_data: extra_data || {},
+      images: images || [],
+      videos: videos || [],
     });
 
-    const saveChat = await newChat.save();
-
-    // Link the newly created chat to the parent conversation
-    await AgentConversation.findByIdAndUpdate(conversation_id, {
-      $push: {
-        conversationChats: saveChat._id,
-      },
-    });
+    const newChat = createResult.insertIntochat_messagesCollection.records[0];
 
     return createApiResponse({
       success: true,
       error: "Chat created successfully",
       status: 200,
-      data: saveChat,
+      data: newChat,
     });
   } catch (error) {
     console.error("Error in createChat:", error);

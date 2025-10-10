@@ -8,26 +8,33 @@ const nextConfig: NextConfig = {
     ),
   },
   images: {
-    domains: [
-      "www.shutterstock.com",
-      "images.unsplash.com",
-      "unsplash.com",
-
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.shutterstock.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "unsplash.com",
+      },
       // S3 Buckets
-      "kroolo-qastage.s3.amazonaws.com",
-      "kroolo-public-images.s3.ap-south-1.amazonaws.com",
-      "dev-enterprisesearch.s3.us-east-2.amazonaws.com",
-      "qa-enterprisesearch.s3.us-east-2.amazonaws.com",
-      "enterprise-search-dev.s3.us-east-2.amazonaws.com",
-      "enterprise-search-qa.s3.us-east-2.amazonaws.com",
-      "enterprise-search-prod.s3.us-east-2.amazonaws.com",
-      "kroolo-enterprise-search.s3.us-east-2.amazonaws.com",
-      "kroolo-enterprise-search-dev.s3.us-east-2.amazonaws.com",
-      "kroolo-enterprise-search-qa.s3.us-east-2.amazonaws.com",
-      "kroolo-enterprise-search-prod.s3.us-east-2.amazonaws.com",
-
-      // Other
-      "lh3.googleusercontent.com", // Google avatars
+      {
+        protocol: "https",
+        hostname: "*.s3.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.s3.*.amazonaws.com",
+      },
+      // Google
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
   },
   webpack(config) {
