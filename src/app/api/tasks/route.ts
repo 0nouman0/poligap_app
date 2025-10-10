@@ -5,16 +5,20 @@ import { createClient } from '@/lib/supabase/server';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const requestedUserId = searchParams.get('userId');
 
-    if (!userId) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    const supabase = await createClient();
+    // Normalize userId: if not a UUID, use authenticated user's UUID
+    const isUUID = (val: string | null) => !!val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+    const userId = isUUID(requestedUserId) ? (requestedUserId as string) : user.id;
 
     const { data, error } = await supabase
       .from('tasks')
@@ -75,14 +79,25 @@ export async function POST(request: NextRequest) {
       userId
     } = body;
 
-    if (!title || !userId) {
+    if (!title) {
       return NextResponse.json(
-        { success: false, error: 'Title and User ID are required' },
+        { success: false, error: 'Title is required' },
         { status: 400 }
       );
     }
 
     const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Normalize userId: prefer provided UUID, else use authenticated user's UUID
+    const isUUID = (val: string | null | undefined) => !!val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+    const normalizedUserId = isUUID(userId) ? (userId as string) : user.id;
 
     const { data, error } = await supabase
       .from('tasks')
@@ -96,7 +111,7 @@ export async function POST(request: NextRequest) {
         category,
         source,
         source_ref: sourceRef || {},
-        user_id: userId
+        user_id: normalizedUserId
       })
       .select()
       .single();

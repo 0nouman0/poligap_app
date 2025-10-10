@@ -28,19 +28,109 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Fetch profile using GraphQL
     const graphqlClient = createGraphQLClient(session.access_token);
-    const data: any = await graphqlClient.request(queries.getProfile, {
-      id: userId,
-    });
+    let profile;
+    
+    // Check if userId is a valid UUID
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId);
+    
+    if (isUUID) {
+      // If it's a UUID, query by id
+      const data: any = await graphqlClient.request(queries.getProfile, {
+        id: userId,
+      });
+      profile = data?.profilesCollection?.edges?.[0]?.node;
+    } else {
+      // If it's not a UUID, the incoming value is likely a MongoDB _id used on the client.
+      // Our Supabase `profiles.unique_id` stores the user's email (see create-profile route),
+      // so we should query by the authenticated user's email instead of the provided value.
+      const query = `
+        query GetProfileByUniqueId($uniqueId: String!) {
+          profilesCollection(filter: { unique_id: { eq: $uniqueId } }) {
+            edges {
+              node {
+                id
+                email
+                name
+                unique_id
+                country
+                dob
+                mobile
+                profile_image
+                banner
+                about
+                status
+                designation
+                role
+                member_status
+                company_name
+                reporting_manager
+                created_by
+                created_at
+                updated_at
+              }
+            }
+          }
+        }
+      `;
+      
+      const data: any = await graphqlClient.request(query, {
+        uniqueId: user.email,
+      });
+      profile = data?.profilesCollection?.edges?.[0]?.node;
 
-    const profile = data?.profilesCollection?.edges?.[0]?.node;
+      // Fallback: if no profile found by unique_id, use authenticated user's UUID
+      if (!profile) {
+        const byUuid: any = await graphqlClient.request(queries.getProfile, {
+          id: user.id,
+        });
+        profile = byUuid?.profilesCollection?.edges?.[0]?.node;
+      }
+    }
 
     if (!profile) {
-      return NextResponse.json(
-        { success: false, error: 'Profile not found' },
-        { status: 404 }
-      );
+      // Auto-create a minimal profile using service role (bypasses RLS)
+      try {
+        const serviceClient = createGraphQLClient(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+        const createMutation = `
+          mutation CreateProfile($id: UUID!, $email: String!, $name: String!) {
+            insertIntoprofilesCollection(
+              objects: [{
+                id: $id
+                email: $email
+                name: $name
+                unique_id: $email
+                status: "ACTIVE"
+              }]
+            ) {
+              records { id email name created_at }
+            }
+          }
+        `;
+        const defaultName =
+          (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) ||
+          (user.email ? user.email.split('@')[0] : 'User');
+        await serviceClient.request(createMutation, {
+          id: user.id,
+          email: user.email,
+          name: defaultName,
+        });
+
+        // Re-fetch after creation
+        const byUuid: any = await graphqlClient.request(queries.getProfile, {
+          id: user.id,
+        });
+        profile = byUuid?.profilesCollection?.edges?.[0]?.node;
+      } catch (e) {
+        console.error('Auto-create profile failed:', e);
+      }
+
+      if (!profile) {
+        return NextResponse.json(
+          { success: false, error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
     }
 
     // Transform to match expected format

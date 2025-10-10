@@ -126,9 +126,23 @@ export default function useAIResponseStream() {
         })
 
         if (!response.ok) {
-          const errorData = (await response.json()) as Error
-          
-          throw errorData
+          const contentType = response.headers.get('content-type') || ''
+          const rawBody = await response.text()
+          let message = `HTTP ${response.status} ${response.statusText}`
+
+          if (contentType.includes('application/json')) {
+            try {
+              const parsed = JSON.parse(rawBody) as any
+              message = parsed?.error || parsed?.message || message
+            } catch {
+              // fall through with default message
+            }
+          } else if (contentType.includes('text/html') || rawBody.trim().startsWith('<!DOCTYPE')) {
+            message = `${message} - Received HTML instead of JSON` 
+          }
+
+          const tail = rawBody ? ` | Body: ${rawBody.slice(0, 200)}` : ''
+          throw new Error(message + tail)
         }
 
         if (!response.body) {

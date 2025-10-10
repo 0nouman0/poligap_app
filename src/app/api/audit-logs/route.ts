@@ -10,17 +10,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const standards = searchParams.get('standards')?.split(',') || [];
     const limit = parseInt(searchParams.get('limit') || '20');
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
-      );
-    }
+    const requestedUserId = searchParams.get('userId');
 
     // Use Supabase Postgrest API directly (simpler than GraphQL for this)
     const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Normalize userId: if not a UUID, use authenticated user's UUID
+    const isUUID = (val: string | null) => !!val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+    const userId = isUUID(requestedUserId) ? (requestedUserId as string) : user.id;
     
     let query = supabase
       .from('document_analysis')
@@ -97,6 +101,13 @@ export async function POST(request: NextRequest) {
 
     // Use Supabase Postgrest API to insert into document_analysis
     const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     // Store all analysis data in metrics JSONB field
     const metrics = {
@@ -112,10 +123,14 @@ export async function POST(request: NextRequest) {
     // Generate a unique document_id based on fileName and timestamp
     const documentId = `${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
 
+    // Normalize userId: prefer provided UUID, else use authenticated user's UUID
+    const isUUID = (val: string | null | undefined) => !!val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+    const normalizedUserId = isUUID(userId) ? (userId as string) : user.id;
+
     const { data, error } = await supabase
       .from('document_analysis')
       .insert({
-        user_id: userId,
+        user_id: normalizedUserId,
         document_id: documentId,
         title: fileName,
         compliance_standard: standards[0] || 'general', // Use first standard as primary
