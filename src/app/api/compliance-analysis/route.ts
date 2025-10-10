@@ -389,7 +389,7 @@ export async function POST(request: NextRequest) {
           title: file.name,
           compliance_standard: selectedStandards.join(', '),
           score: analysisResult.overallScore || 0,
-          metrics: analysisResult,
+          metrics: { ...analysisResult, analysisMethod: 'policy-analysis', standards: selectedStandards },
         });
       }
     } catch (error) {
@@ -402,7 +402,6 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       selectedStandards,
       analysis: analysisResult,
-      method,
       appliedRuleBase,
       ruleCount
     });
