@@ -89,10 +89,10 @@ export const ContractCanvas: React.FC = () => {
 
   const renderVersionHistory = () => {
     return (
-      <Card className="mt-4">
+      <Card className="mt-4 bg-card">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2 text-foreground">
               <GitBranch className="h-4 w-4" />
               Version History ({versions.length} {versions.length === 1 ? 'version' : 'versions'})
             </h4>
@@ -120,7 +120,7 @@ export const ContractCanvas: React.FC = () => {
             </div>
           </div>
           {versions.length === 0 ? (
-            <div className="text-xs text-gray-500">No versions yet. Accept or reject a suggestion to create one.</div>
+            <div className="text-xs text-muted-foreground">No versions yet. Accept or reject a suggestion to create one.</div>
           ) : (
             <div className="space-y-2 max-h-[70vh] overflow-y-auto">
               {versions.map((version) => (
@@ -128,8 +128,8 @@ export const ContractCanvas: React.FC = () => {
                   key={version.id}
                   className={`p-3 rounded border cursor-pointer transition-colors ${
                     version.version === currentVersion
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                      ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
+                      : 'bg-muted border-border hover:bg-accent'
                   }`}
                   onClick={() => switchToVersion(version.version)}
                 >
@@ -142,15 +142,15 @@ export const ContractCanvas: React.FC = () => {
                         <Badge variant="outline" className="text-xs">Current</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       {formatTimestamp(version.timestamp)}
                     </div>
                   </div>
                   <div className="mt-1">
-                    <p className="text-sm text-gray-700">{version.description}</p>
+                    <p className="text-sm text-foreground">{version.description}</p>
                     {version.appliedSuggestionTitle && (
-                      <p className="text-xs text-blue-600 mt-1">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                         Applied: {version.appliedSuggestionTitle}
                       </p>
                     )}
@@ -161,20 +161,20 @@ export const ContractCanvas: React.FC = () => {
           )}
           {/* Version Details */}
           {versions.length > 0 && (
-            <div className="mt-3 p-3 border rounded bg-gray-50">
+            <div className="mt-3 p-3 border border-border rounded bg-muted">
               {(() => {
                 const current = versions.find(v => v.version === currentVersion) || versions[versions.length - 1];
                 const prev = versions.find(v => v.version === (current.version - 1));
                 const delta = prev ? Math.abs((current.content?.length || 0) - (prev.content?.length || 0)) : 0;
                 return (
                   <div className="space-y-1">
-                    <div className="text-sm font-semibold">v{current.version} Details</div>
-                    <div className="text-xs text-gray-700">{current.description || 'Saved changes'}</div>
+                    <div className="text-sm font-semibold text-foreground">v{current.version} Details</div>
+                    <div className="text-xs text-muted-foreground">{current.description || 'Saved changes'}</div>
                     {current.appliedSuggestionTitle && (
-                      <div className="text-xs"><span className="font-medium">Applied change:</span> {current.appliedSuggestionTitle}</div>
+                      <div className="text-xs text-foreground"><span className="font-medium">Applied change:</span> {current.appliedSuggestionTitle}</div>
                     )}
                     {prev && (
-                      <div className="text-xs text-gray-600">Delta vs v{prev.version}: ~{delta} characters changed</div>
+                      <div className="text-xs text-muted-foreground">Delta vs v{prev.version}: ~{delta} characters changed</div>
                     )}
                   </div>
                 );
@@ -188,7 +188,7 @@ export const ContractCanvas: React.FC = () => {
 
   const renderTextWithInlineDiffs = () => {
     if (!currentText || suggestions.length === 0) {
-      return <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{currentText}</div>;
+      return <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">{currentText}</div>;
     }
 
     const textElements: React.ReactElement[] = [];
@@ -201,7 +201,7 @@ export const ContractCanvas: React.FC = () => {
 
       if (suggestion.startIndex > lastIndex) {
         textElements.push(
-          <span key={`text-${index}`}>
+          <span key={`text-${index}`} className="text-gray-900 dark:text-gray-100">
             {currentText.slice(lastIndex, suggestion.startIndex)}
           </span>
         );
@@ -209,7 +209,7 @@ export const ContractCanvas: React.FC = () => {
 
       if (patchState === 'accepted') {
         textElements.push(
-          <span key={suggestion.id} className="bg-green-50 px-1 rounded">
+          <span key={suggestion.id} className="bg-green-50 dark:bg-green-900/50 text-foreground px-1 rounded">
             {suggestion.suggestedText}
           </span>
         );
@@ -221,19 +221,19 @@ export const ContractCanvas: React.FC = () => {
           >
             {/* Deletion - Simple red highlight with inline buttons */}
             {suggestion.type === 'deletion' && (
-              <span className="bg-red-100 border-l-4 border-red-500 px-2 py-1 relative group">
-                <span className="line-through text-red-800">{suggestion.originalText}</span>
+              <span className="bg-red-100 dark:bg-red-900/50 border-l-4 border-red-500 dark:border-red-400 px-2 py-1 relative group">
+                <span className="line-through text-red-900 dark:text-red-200">{suggestion.originalText}</span>
                 <span className="ml-2 inline-flex gap-1">
                   <button
                     onClick={() => handleAcceptSuggestion(suggestion.id)}
-                    className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    className="text-xs bg-red-500 dark:bg-red-600 text-white px-2 py-1 rounded hover:bg-red-600 dark:hover:bg-red-700"
                     title={suggestion.reasoning}
                   >
                     Remove
                   </button>
                   <button
                     onClick={() => handleRejectSuggestion(suggestion.id)}
-                    className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
+                    className="text-xs bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 rounded hover:bg-gray-400 dark:hover:bg-gray-600"
                   >
                     Keep
                   </button>
@@ -243,19 +243,19 @@ export const ContractCanvas: React.FC = () => {
 
             {/* Addition - Simple green highlight with inline buttons */}
             {suggestion.type === 'addition' && (
-              <span className="bg-green-100 border-l-4 border-green-500 px-2 py-1 relative">
-                <span className="text-green-800 font-medium">{suggestion.suggestedText}</span>
+              <span className="bg-green-100 dark:bg-green-900/50 border-l-4 border-green-500 dark:border-green-400 px-2 py-1 relative">
+                <span className="text-green-900 dark:text-green-200 font-medium">{suggestion.suggestedText}</span>
                 <span className="ml-2 inline-flex gap-1">
                   <button
                     onClick={() => handleAcceptSuggestion(suggestion.id)}
-                    className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                    className="text-xs bg-green-500 dark:bg-green-600 text-white px-2 py-1 rounded hover:bg-green-600 dark:hover:bg-green-700"
                     title={suggestion.reasoning}
                   >
                     Add
                   </button>
                   <button
                     onClick={() => handleRejectSuggestion(suggestion.id)}
-                    className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
+                    className="text-xs bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 rounded hover:bg-gray-400 dark:hover:bg-gray-600"
                   >
                     Skip
                   </button>
@@ -265,21 +265,21 @@ export const ContractCanvas: React.FC = () => {
 
             {/* Modification - Simple yellow highlight with inline buttons */}
             {(suggestion.type === 'modification' || suggestion.type === 'replacement') && (
-              <span className="bg-yellow-100 border-l-4 border-yellow-500 px-2 py-1 relative">
-                <span className="line-through text-red-700">{suggestion.originalText}</span>
-                <span className="mx-2">→</span>
-                <span className="text-green-700 font-medium">{suggestion.suggestedText}</span>
+              <span className="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 dark:border-yellow-400 px-2 py-1 relative">
+                <span className="line-through text-red-800 dark:text-red-300">{suggestion.originalText}</span>
+                <span className="mx-2 text-foreground">→</span>
+                <span className="text-green-800 dark:text-green-200 font-medium">{suggestion.suggestedText}</span>
                 <span className="ml-2 inline-flex gap-1">
                   <button
                     onClick={() => handleAcceptSuggestion(suggestion.id)}
-                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                    className="text-xs bg-blue-500 dark:bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-600 dark:hover:bg-blue-700"
                     title={suggestion.reasoning}
                   >
                     Change
                   </button>
                   <button
                     onClick={() => handleRejectSuggestion(suggestion.id)}
-                    className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded hover:bg-gray-400"
+                    className="text-xs bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 rounded hover:bg-gray-400 dark:hover:bg-gray-600"
                   >
                     Keep
                   </button>
@@ -295,29 +295,29 @@ export const ContractCanvas: React.FC = () => {
 
     if (lastIndex < currentText.length) {
       textElements.push(
-        <span key="final-text">
+        <span key="final-text" className="text-gray-900 dark:text-gray-100">
           {currentText.slice(lastIndex)}
         </span>
       );
     }
 
-    return <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">{textElements}</div>;
+    return <div className="leading-relaxed whitespace-pre-wrap">{textElements}</div>;
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-background">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">Contract Analysis</h3>
+              <h3 className="text-lg font-semibold text-foreground">Contract Analysis</h3>
               {hasUnsavedChanges && (
-                <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                <Badge variant="outline" className="text-xs text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600">
                   Unsaved Changes
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-600">Review suggested changes by Kroolo AI</p>
+            <p className="text-sm text-muted-foreground">Review suggested changes by Kroolo AI</p>
           </div>
           <div className="flex items-center gap-2">
             {hasUnsavedChanges && (
@@ -380,10 +380,10 @@ export const ContractCanvas: React.FC = () => {
           <div className="lg:col-span-3">
             <div 
               ref={containerRef}
-              className="border rounded-lg p-4 bg-white min-h-[400px] max-h-[70vh] overflow-y-auto"
+              className="border border-border rounded-lg p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-[400px] max-h-[70vh] overflow-y-auto"
             >
               {showHighlights ? renderTextWithInlineDiffs() : (
-                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
                   {currentText}
                 </div>
               )}
@@ -391,7 +391,7 @@ export const ContractCanvas: React.FC = () => {
 
             {suggestions.length > 0 && (
               <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <div className="flex gap-4">
                     <span>✅ {suggestions.filter(s => patchStates[s.id] === 'accepted').length} accepted</span>
                     <span>❌ {suggestions.filter(s => patchStates[s.id] === 'rejected').length} rejected</span>
@@ -399,22 +399,22 @@ export const ContractCanvas: React.FC = () => {
                   </div>
                   <div className="flex gap-4">
                     <span className="inline-flex items-center gap-1">
-                      <div className="w-3 h-3 bg-green-200 border border-green-500 rounded"></div>
+                      <div className="w-3 h-3 bg-green-200 dark:bg-green-800 border border-green-500 dark:border-green-400 rounded"></div>
                       Add ({suggestions.filter(s => s.type === 'addition').length})
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <div className="w-3 h-3 bg-red-200 border border-red-500 rounded"></div>
+                      <div className="w-3 h-3 bg-red-200 dark:bg-red-800 border border-red-500 dark:border-red-400 rounded"></div>
                       Remove ({suggestions.filter(s => s.type === 'deletion').length})
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <div className="w-3 h-3 bg-yellow-200 border border-yellow-500 rounded"></div>
+                      <div className="w-3 h-3 bg-yellow-200 dark:bg-yellow-800 border border-yellow-500 dark:border-yellow-400 rounded"></div>
                       Modify ({suggestions.filter(s => s.type === 'modification' || s.type === 'replacement').length})
                     </span>
                   </div>
                 </div>
                 
                 {suggestions.filter(s => patchStates[s.id] === 'pending').length > 0 && (
-                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 p-2 rounded border border-blue-200 dark:border-blue-800">
                     💡 Tip: Hover over buttons to see why each change is suggested. Click to accept or reject.
                   </div>
                 )}

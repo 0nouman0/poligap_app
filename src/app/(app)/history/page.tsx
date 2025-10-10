@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { auditApi } from "@/lib/api-client";
 import { ListSkeleton } from "@/components/ui/page-loader";
 import { useDebounce } from "@/hooks/use-performance";
+import { useUserStore } from "@/stores/user-store";
+import { useAuditLogsStore } from "@/stores/audit-logs-store";
 
 type ComplianceStatus = 'compliant' | 'non-compliant' | 'partial';
 
@@ -57,8 +59,12 @@ function statusColor(status: ComplianceStatus) {
 }
 
 export default function HistoryPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(false);
+  // User store for userId
+  const { userData } = useUserStore();
+  
+  // Use Zustand store for audit logs with caching
+  const { logs, isLoading: loading, fetchLogs } = useAuditLogsStore();
+  
   const [selected, setSelected] = useState<AuditLog | null>(null);
   const [open, setOpen] = useState(false);
   const searchParams = useSearchParams();
@@ -69,25 +75,23 @@ export default function HistoryPage() {
   const [methodFilter, setMethodFilter] = useState<'all' | 'policy-analysis' | 'contract-review' | 'policy-generator'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'compliant' | 'partial' | 'non-compliant'>('all');
 
+  // Helper to get userId with fallbacks
+  const getUserId = (): string | null => {
+    if (userData?.userId) return userData.userId;
+    if (typeof window !== 'undefined') {
+      const storedId = localStorage.getItem('user_id');
+      if (storedId) return storedId;
+    }
+    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+  };
+
+  // Fetch logs using Zustand store (with caching)
   useEffect(() => {
-    const fetchLogs = async () => {
-      setLoading(true);
-      try {
-        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-        const url = userId ? `/api/audit-logs?userId=${encodeURIComponent(userId)}` : '/api/audit-logs';
-        const resp = await fetch(url);
-        const data = await resp.json();
-        if (Array.isArray(data.logs)) {
-          setLogs(data.logs);
-        }
-      } catch (e) {
-        console.error('Failed to load history logs', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLogs();
-  }, []);
+    const userId = getUserId();
+    if (userId) {
+      fetchLogs(userId); // Will use cache if valid
+    }
+  }, [fetchLogs]);
 
   // Auto-open by logId and optional tab focus (use dialog)
   useEffect(() => {
@@ -124,16 +128,10 @@ export default function HistoryPage() {
           History
         </h1>
         <Button variant="outline" onClick={async () => {
-          // Refresh
-          try {
-            setLoading(true);
-            const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-            const url = userId ? `/api/audit-logs?userId=${encodeURIComponent(userId)}` : '/api/audit-logs';
-            const resp = await fetch(url);
-            const data = await resp.json();
-            setLogs(Array.isArray(data.logs) ? data.logs : []);
-          } finally {
-            setLoading(false);
+          // Force refresh (bypass cache)
+          const userId = getUserId();
+          if (userId) {
+            await fetchLogs(userId, true); // true = force refresh
           }
         }}>Refresh</Button>
       </div>

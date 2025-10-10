@@ -9,21 +9,27 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Upload, Plus, FileText, Tag, Trash2, Download, Search, Pencil } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useRulebaseStore } from "@/stores/rulebase-store";
 
 interface RuleItem {
   _id?: string;
+  id?: string;
   name: string;
   description?: string;
   tags?: string[];
   updatedAt?: string;
-  sourceType?: "text" | "file";
+  createdAt?: string;
+  sourceType?: "manual" | "file" | "api" | "text";
   fileName?: string;
+  fileContent?: string;
   active?: boolean;
+  userId?: string;
 }
 
 export default function RuleBasePage() {
-  const [rules, setRules] = useState<RuleItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use Zustand store for rulebase with caching
+  const { rules, isLoading: loading, fetchRules, updateRule: updateRuleInStore, addRule: addRuleToStore, deleteRule: deleteRuleFromStore } = useRulebaseStore();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newRuleName, setNewRuleName] = useState("");
@@ -36,21 +42,10 @@ export default function RuleBasePage() {
   const [editDesc, setEditDesc] = useState("");
   const [editTags, setEditTags] = useState("");
 
+  // Fetch rules using Zustand store (with caching)
   useEffect(() => {
-    const fetchRules = async () => {
-      try {
-        const res = await fetch("/api/rulebase");
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
-        setRules(Array.isArray(data?.rules) ? data.rules : []);
-      } catch (e) {
-        setRules([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRules();
-  }, []);
+    fetchRules(); // Will use cache if valid
+  }, [fetchRules]);
 
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -65,8 +60,8 @@ export default function RuleBasePage() {
   const toggleActive = async (rule: RuleItem, next: boolean) => {
     if (!rule._id) return;
     const prev = rule.active !== false;
-    // optimistic update
-    setRules(list => list.map(r => r._id === rule._id ? { ...r, active: next } : r));
+    // optimistic update in store
+    updateRuleInStore(rule._id, { active: next });
     try {
       const res = await fetch("/api/rulebase", {
         method: "PATCH",
@@ -76,10 +71,10 @@ export default function RuleBasePage() {
       if (!res.ok) throw new Error("patch failed");
       const data = await res.json().catch(() => ({}));
       if (!data?.rule) throw new Error("no rule in response");
-      setRules(list => list.map(r => r._id === rule._id ? data.rule : r));
+      updateRuleInStore(rule._id, data.rule);
     } catch (e) {
       // revert on failure
-      setRules(list => list.map(r => r._id === rule._id ? { ...r, active: prev } : r));
+      updateRuleInStore(rule._id, { active: prev });
     }
   };
 
@@ -92,7 +87,7 @@ export default function RuleBasePage() {
       const res = await fetch("/api/rulebase/upload", { method: "POST", body: form });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.rule) {
-        setRules(prev => [data.rule, ...prev]);
+        addRuleToStore(data.rule);
       }
     } catch (e) {
       // swallow errors for now
@@ -117,7 +112,7 @@ export default function RuleBasePage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.rule) {
-        setRules(prev => [data.rule, ...prev]);
+        addRuleToStore(data.rule);
         setIsCreateOpen(false);
         setNewRuleName("");
         setNewRuleDesc("");
@@ -151,7 +146,7 @@ export default function RuleBasePage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.rule) {
-        setRules(list => list.map(r => r._id === editRuleId ? data.rule : r));
+        updateRuleInStore(editRuleId, data.rule);
         setIsEditOpen(false);
       }
     } catch {}
@@ -161,8 +156,6 @@ export default function RuleBasePage() {
     if (!rule._id) return;
     const ok = window.confirm(`Delete rule "${rule.name}"? This cannot be undone.`);
     if (!ok) return;
-    const prev = rules;
-    setRules(list => list.filter(r => r._id !== rule._id));
     try {
       const res = await fetch("/api/rulebase", {
         method: "DELETE",
@@ -170,9 +163,10 @@ export default function RuleBasePage() {
         body: JSON.stringify({ id: rule._id })
       });
       if (!res.ok) throw new Error('delete failed');
-    } catch {
-      // revert on failure
-      setRules(prev);
+      // Soft delete in store
+      deleteRuleFromStore(rule._id);
+    } catch (e) {
+      console.error('Delete failed:', e);
     }
   };
 

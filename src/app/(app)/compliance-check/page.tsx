@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toastSuccess, toastError } from "@/components/toast-varients";
+import { useUserStore } from "@/stores/user-store";
+import { useAuditLogsStore } from "@/stores/audit-logs-store";
+import { useRulebaseStore } from "@/stores/rulebase-store";
 
 interface ComplianceStandard {
   id: string;
@@ -383,6 +386,30 @@ const initialResults: ComplianceResult[] = [];
 
 export default function ComplianceCheckPage() {
   const router = useRouter();
+  const { userData } = useUserStore();
+  
+  // Get userId with proper fallbacks
+  const getUserId = () => {
+    if (typeof window === 'undefined') return null;
+    
+    // Priority: userData from store > localStorage > fallback
+    if (userData?.userId && userData.userId !== "undefined" && userData.userId !== "null") {
+      return userData.userId;
+    }
+    
+    const storedUserId = localStorage.getItem('user_id');
+    if (storedUserId && storedUserId !== "undefined" && storedUserId !== "null") {
+      return storedUserId;
+    }
+    
+    // Fallback for testing - replace with your actual test user ID
+    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+  };
+  
+  // Use Zustand stores for caching
+  const { logs: auditLogs, isLoading: isLoadingLogs, fetchLogs: fetchAuditLogsFromStore, addLog } = useAuditLogsStore();
+  const { rules, fetchRules } = useRulebaseStore();
+  
   const [selectedStandards, setSelectedStandards] = useState<string[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -394,14 +421,32 @@ export default function ComplianceCheckPage() {
   const [appliedRuleBase, setAppliedRuleBase] = useState<boolean>(false);
   const [rulebaseCount, setRulebaseCount] = useState<number>(0);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>("all");
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [showIssues, setShowIssues] = useState(true);
-  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLog | null>(null);
   const [addedTaskKeys, setAddedTaskKeys] = useState<Set<string>>(new Set());
   const [addingTaskKeys, setAddingTaskKeys] = useState<Set<string>>(new Set());
   const [isLogsCollapsed, setIsLogsCollapsed] = useState(false);
+
+  // Fetch audit logs and rules from stores on mount
+  useEffect(() => {
+    const userId = getUserId();
+    if (userId) {
+      fetchAuditLogsFromStore(userId);
+    }
+    fetchRules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Filter audit logs based on selected standards
+  const filteredAuditLogs = useMemo(() => {
+    if (selectedStandards.length === 0) {
+      return [];
+    }
+    return auditLogs.filter(log => 
+      selectedStandards.some(std => log.standards?.includes(std))
+    ).slice(0, 20); // Limit to 20 most recent
+  }, [auditLogs, selectedStandards]);
 
   const steps = [
     { id: 1, title: "Select Standards", description: "Choose compliance standards" },
@@ -417,18 +462,36 @@ export default function ComplianceCheckPage() {
     }
   };
 
-  const handleAssetSelect = (assets: any[]) => {
-    if (assets.length > 0) {
-      const asset = assets[0];
-      // Convert asset to File-like object for consistency
-      const mockFile = {
-        name: asset.originalName,
-        size: asset.size || 0,
-        type: asset.mimetype || 'application/pdf',
-        lastModified: new Date(asset.uploadDate).getTime()
-      } as File;
+  const handleAssetSelect = async (assets: any[]) => {
+    if (!assets || assets.length === 0) {
+      console.warn('No assets selected');
+      return;
+    }
+
+    const asset = assets[0]; // Get first asset (single selection)
+    console.log('📥 Asset selected:', asset.originalName, asset.url);
+    
+    try {
+      // Fetch the actual file from Supabase Storage URL
+      const response = await fetch(asset.url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch asset: ${response.statusText}`);
+      }
       
-      setUploadedFile(mockFile);
+      const blob = await response.blob();
+      
+      // Create a proper File object from the blob
+      const file = new File([blob], asset.originalName || asset.filename, {
+        type: asset.mimetype || blob.type || 'application/pdf',
+        lastModified: new Date(asset.uploadDate).getTime()
+      });
+      
+      console.log('✅ File created from asset:', file.name, file.type, file.size);
+      setUploadedFile(file);
+      setIsAssetPickerOpen(false);
+    } catch (error) {
+      console.error('❌ Error loading asset:', error);
+      toastError('Asset Load Failed', error instanceof Error ? error.message : 'Failed to load selected asset');
     }
   };
 
@@ -484,43 +547,21 @@ export default function ComplianceCheckPage() {
         ? prev.filter(id => id !== standardId)
         : [...prev, standardId];
       
-      // Fetch audit logs when standards change
-      if (newStandards.length > 0) {
-        fetchAuditLogs(newStandards);
-      } else {
-        setAuditLogs([]);
-      }
-      
       return newStandards;
     });
   };
 
-  const fetchAuditLogs = async (standards: string[]) => {
-    if (standards.length === 0) return;
-    
-    setIsLoadingLogs(true);
-    try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-      const query = new URLSearchParams();
-      if (userId) query.set('userId', userId);
-      if (standards.length > 0) query.set('standards', standards.join(','));
-      query.set('limit', '20');
-      const response = await fetch(`/api/audit-logs?${query.toString()}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setAuditLogs(data.logs);
-      }
-    } catch (error) {
-      console.error('Error fetching audit logs:', error);
-    } finally {
-      setIsLoadingLogs(false);
-    }
-  };
-
   const saveAuditLog = async (result: ComplianceResult) => {
     try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const userId = getUserId();
+      console.log('💾 Saving audit log with userId:', userId, 'fileName:', result.fileName);
+      
+      if (!userId) {
+        console.error('❌ Cannot save audit log: userId is null');
+        toastError('Save Failed', 'User ID not found. Please log in again.');
+        return;
+      }
+      
       const auditLogData = {
         fileName: result.fileName,
         standards: selectedStandards,
@@ -529,7 +570,7 @@ export default function ComplianceCheckPage() {
         gapsCount: result.gaps.length,
         fileSize: uploadedFile?.size || 0,
         analysisMethod: analysisMethod || 'standard',
-        userId: userId || undefined,
+        userId: userId,
         snapshot: {
           gaps: result.gaps,
           suggestions: result.suggestions,
@@ -553,10 +594,15 @@ export default function ComplianceCheckPage() {
           suggestions: auditLogData.snapshot?.suggestions?.length || 0,
           id: json?.id
         });
+        
+        // Add to store for instant UI update
+        if (json?.log) {
+          addLog(json.log);
+        }
       }
       
-      // Refresh audit logs after saving
-      fetchAuditLogs(selectedStandards);
+      // Refresh audit logs from store (will use cache or fetch if needed)
+      fetchAuditLogsFromStore(userId, true);
     } catch (error) {
       console.error('Error saving audit log:', error);
     }
@@ -777,7 +823,7 @@ export default function ComplianceCheckPage() {
       if (key) {
         setAddingTaskKeys(prev => new Set(prev).add(key));
       }
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const userId = getUserId();
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1488,14 +1534,14 @@ export default function ComplianceCheckPage() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                   </div>
-                ) : auditLogs.length === 0 ? (
+                ) : filteredAuditLogs.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">No previous analyses found for selected standards</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {auditLogs.map((log) => {
+                    {filteredAuditLogs.map((log) => {
                       const logDate = new Date(log.analysisDate);
                       const isRecent = Date.now() - logDate.getTime() < 24 * 60 * 60 * 1000;
                       
@@ -1574,7 +1620,7 @@ export default function ComplianceCheckPage() {
                   </div>
                 )}
                 
-                {auditLogs.length > 0 && (
+                {filteredAuditLogs.length > 0 && (
                   <div className="pt-3 border-t">
                     <Button variant="outline" size="sm" className="w-full">
                       <Eye className="h-4 w-4 mr-2" />

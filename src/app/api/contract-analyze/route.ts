@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@/lib/supabase/server";
-import { queries } from "@/lib/supabase/graphql";
-import { GraphQLClient } from "graphql-request";
 
 export async function POST(req: NextRequest) {
   let text = "";
@@ -101,28 +99,26 @@ export async function POST(req: NextRequest) {
     const parsed = parseAnalysisResult(analysisText, text);
     console.log("Analysis parsed successfully, suggestions count:", parsed.suggestions.length);
 
-    // Save contract analysis to Supabase
+    // Save contract analysis to Supabase using Postgrest
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const graphQLClient = new GraphQLClient(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-          {
-            headers: {
-              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-
-        await graphQLClient.request<any>(queries.createDocumentAnalysis, {
+      const { data: analysisRecord, error: insertError } = await supabase
+        .from('document_analysis')
+        .insert({
           user_id: user.id,
           document_id: `contract_${Date.now()}`,
           title: `${contractType || 'Contract'} Analysis`,
           compliance_standard: 'Contract Review',
           score: parsed.overallScore * 100, // Convert to percentage
           metrics: { ...parsed, analysisMethod: 'contract-review' },
-        });
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Failed to save contract analysis to Supabase:', insertError);
+        // Continue even if saving fails
+      } else {
+        console.log('Contract analysis saved successfully:', analysisRecord?.id);
       }
     } catch (error) {
       console.error('Failed to save contract analysis to Supabase:', error);

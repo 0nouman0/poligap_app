@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { queries } from '@/lib/supabase/graphql';
-import { GraphQLClient } from 'graphql-request';
 
 export async function GET() {
   try {
@@ -17,34 +15,25 @@ export async function GET() {
       }, { status: 401 });
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Use Supabase Postgrest API to fetch rules
+    const { data: rules, error } = await supabase
+      .from('rulebase')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Supabase error:', error);
       return NextResponse.json({ 
-        error: 'No session found',
+        error: 'Failed to fetch rules',
         rules: [] 
-      }, { status: 401 });
+      }, { status: 500 });
     }
-
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    const result = await graphQLClient.request<any>(queries.getRules, {
-      userId: user.id,
-    });
-
-    const rules = result.rulebaseCollection.edges.map((edge: any) => edge.node);
     
-    console.log(`✅ Found ${rules.length} rules`);
+    console.log(`✅ Found ${rules?.length || 0} rules`);
     
     // Transform rules to match frontend interface
-    const transformedRules = rules.map((rule: any) => ({
+    const transformedRules = (rules || []).map((rule: any) => ({
       _id: rule.id,
       name: rule.name,
       description: rule.description || '',
@@ -86,30 +75,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    // Use Supabase Postgrest API to insert rule
+    const { data: savedRule, error } = await supabase
+      .from('rulebase')
+      .insert({
+        name,
+        description,
+        tags: Array.isArray(tags) ? tags : [],
+        source_type: sourceType,
+        user_id: user.id,
+        active
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Supabase insert error:', error);
+      return NextResponse.json({ 
+        error: 'Failed to create rule',
+        details: error.message 
+      }, { status: 500 });
     }
-
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    const result = await graphQLClient.request<any>(queries.createRule, {
-      name,
-      description,
-      tags: Array.isArray(tags) ? tags : [],
-      source_type: sourceType,
-      user_id: user.id,
-    });
-
-    const savedRule = result.insertIntorulebaseCollection.records[0];
     console.log('✅ Rule created:', savedRule.id);
     
     // Transform for frontend
@@ -154,31 +140,29 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    // Prepare update object (only include fields that are provided)
+    const updateData: any = {};
+    if (typeof name === 'string') updateData.name = name;
+    if (typeof description === 'string') updateData.description = description;
+    if (Array.isArray(tags)) updateData.tags = tags;
+    if (typeof active === 'boolean') updateData.active = active;
+
+    // Use Supabase Postgrest API to update rule
+    const { data: updatedRule, error } = await supabase
+      .from('rulebase')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', user.id) // Ensure user can only update their own rules
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Supabase update error:', error);
+      return NextResponse.json({ 
+        error: 'Failed to update rule',
+        details: error.message 
+      }, { status: 500 });
     }
-
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    // Prepare update variables (only include fields that are provided)
-    const variables: any = { id };
-    if (typeof name === 'string') variables.name = name;
-    if (typeof description === 'string') variables.description = description;
-    if (Array.isArray(tags)) variables.tags = tags;
-    if (typeof active === 'boolean') variables.active = active;
-
-    const result = await graphQLClient.request<any>(queries.updateRule, variables);
-
-    const updatedRule = result.updaterulebaseCollection.records[0];
     
     if (!updatedRule) {
       console.log('❌ PATCH error: Rule not found for id:', id);
@@ -228,24 +212,22 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    // Soft delete: set active to false
+    const { data: deletedRule, error } = await supabase
+      .from('rulebase')
+      .update({ active: false })
+      .eq('id', id)
+      .eq('user_id', user.id) // Ensure user can only delete their own rules
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Supabase delete error:', error);
+      return NextResponse.json({ 
+        error: 'Failed to delete rule',
+        details: error.message 
+      }, { status: 500 });
     }
-
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    const result = await graphQLClient.request<any>(queries.deleteRule, { id });
-
-    const deletedRule = result.updaterulebaseCollection.records[0];
     
     if (!deletedRule) {
       console.log('❌ DELETE error: Rule not found for id:', id);

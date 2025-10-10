@@ -5,16 +5,26 @@ export async function POST(req: NextRequest) {
   let file: File | null = null;
   
   try {
-    console.log("Document extraction API called");
+    console.log("📄 Document extraction API called");
     
     const formData = await req.formData();
     file = formData.get('file') as File;
     
     if (!file) {
+      console.error("❌ No file provided in request");
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    console.log("File received:", file.name, file.type, file.size);
+    // Validate file has required properties
+    if (!file.name) {
+      console.warn("⚠️ File has no name property");
+    }
+    
+    const fileName = file?.name || 'unnamed_file';
+    const fileType = file?.type || 'unknown';
+    const fileSize = file?.size || 0;
+    
+    console.log(`📥 File received: ${fileName}, type: ${fileType}, size: ${fileSize} bytes`);
 
     // Check file size limit (20MB)
     if (file.size > 20 * 1024 * 1024) {
@@ -30,38 +40,42 @@ export async function POST(req: NextRequest) {
     // Try Gemini first (primary)
     const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!apiKey) {
-      console.log("No Gemini API key found in environment variables");
+      console.error("❌ No Gemini API key found in environment variables");
       return NextResponse.json(
         { error: "Gemini API key not configured. Please set GEMINI_API_KEY in your environment variables." },
         { status: 500 }
       );
     }
 
-    console.log("Gemini API key found, length:", apiKey.length);
+    console.log(`✅ Gemini API key found, length: ${apiKey.length}`);
     
     if (apiKey) {
-      console.log("Trying Gemini for document parsing...");
+      console.log(`🤖 Attempting Gemini extraction for: ${fileName}`);
       try {
         extractedText = await extractWithGemini(file, apiKey);
         method = 'gemini';
-        console.log("Gemini extraction successful, text length:", extractedText.length);
+        console.log(`✅ Gemini extraction successful, text length: ${extractedText.length} characters`);
       } catch (geminiError) {
-        console.error("Gemini extraction failed:", geminiError);
+        console.error("❌ Gemini extraction failed:", geminiError instanceof Error ? geminiError.message : geminiError);
       }
     }
 
     // Basic extraction only for non-PDF files
-    if (!extractedText && (file.type !== 'application/pdf' && !(file.name && file.name.endsWith('.pdf')))) {
-      console.log("Using basic extraction for non-PDF files...");
+    const isPdfFile = fileType === 'application/pdf' || fileName.endsWith('.pdf');
+    if (!extractedText && !isPdfFile) {
+      console.log(`📝 Attempting basic extraction for non-PDF file: ${fileName}`);
       extractedText = await basicExtraction(file);
       method = 'basic-fallback';
+      console.log(`Basic extraction result: ${extractedText.length} characters`);
     }
     
     // For PDFs, if Gemini failed, return error instead of gibberish
-    if (!extractedText && (file.type === 'application/pdf' || (file.name && file.name.endsWith('.pdf')))) {
+    const isPdf = file.type === 'application/pdf' || (file?.name && file.name.endsWith('.pdf'));
+    if (!extractedText && isPdf) {
       console.log("PDF extraction failed - Gemini processing required");
+      const fileName = file?.name || 'uploaded PDF';
       return NextResponse.json({ 
-        error: `PDF processing failed for ${file.name || 'uploaded file'}. This PDF may be:
+        error: `PDF processing failed for ${fileName}. This PDF may be:
 1. Encrypted or password-protected
 2. Image-based (scanned document)
 3. Corrupted or malformed
@@ -76,28 +90,33 @@ Please try:
 
     // Clean up the extracted text
     if (extractedText) {
+      const originalLength = extractedText.length;
       extractedText = extractedText
         .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+      console.log(`🧹 Text cleaned: ${originalLength} → ${extractedText.length} characters`);
     }
 
     if (!extractedText || extractedText.length < 20) {
+      const displayFileName = fileName || 'the uploaded file';
+      console.error(`❌ Insufficient text extracted: ${extractedText?.length || 0} characters from ${displayFileName}`);
       return NextResponse.json({ 
-        error: `Could not extract readable text from ${file.name}. The file may be encrypted, image-based, or corrupted. Please try:
+        error: `Could not extract readable text from ${displayFileName}. The file may be encrypted, image-based, or corrupted. Please try:
 1. Converting to a text file (.txt)
 2. Using a different PDF
 3. Using the manual text input option` 
       }, { status: 400 });
     }
 
-    console.log("Successfully extracted text using:", method);
+    console.log(`✅ Successfully extracted text using: ${method}, final length: ${extractedText.length} characters`);
     
     return NextResponse.json({ 
       success: true, 
       text: extractedText,
       length: extractedText.length,
-      fileName: file.name,
+      fileName: fileName,
+      method: method
     });
 
   } catch (error) {
@@ -131,6 +150,7 @@ Please try:
 
 async function extractWithGemini(file: File, apiKey: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
+  const fileName = file?.name || 'document';
   
   // Use latest Gemini Flash 2.0/2.5 models for advanced document parsing
   const models = [
@@ -143,13 +163,16 @@ async function extractWithGemini(file: File, apiKey: string): Promise<string> {
     "gemini-1.5-pro"
   ];
   
+  let lastError: Error | null = null;
+  
   for (const modelName of models) {
     try {
-      console.log(`Trying Gemini model: ${modelName}`);
+      console.log(`Trying Gemini model: ${modelName} for file: ${fileName}`);
       const model = genAI.getGenerativeModel({ model: modelName });
       
       // For text files, use direct text processing
-      if (file.type === 'text/plain' || (file.name && file.name.endsWith('.txt'))) {
+      const isTextFile = file.type === 'text/plain' || (file?.name && file.name.endsWith('.txt'));
+      if (isTextFile) {
         const fileText = await file.text();
         
         const prompt = `You are an expert document parser and legal text analyst. Clean, structure, and organize this document text with the following requirements:
@@ -231,19 +254,24 @@ ${basicText.substring(0, 8000)}`;
           },
         });
         const response = await result.response;
-        return response.text().trim();
+        const extractedText = response.text().trim();
+        console.log(`✅ Successfully extracted text using Gemini model: ${modelName}, length: ${extractedText.length}`);
+        return extractedText;
       }
       
-      console.log(`Successfully used Gemini model: ${modelName}`);
-      break;
+      // If no file type matched, skip to next model
+      console.log(`No matching file type handler for: ${file.type}`);
+      continue;
     } catch (e) {
-      console.error(`Gemini model ${modelName} failed:`, e);
-      console.error('Error details:', e instanceof Error ? e.message : 'Unknown error');
+      lastError = e instanceof Error ? e : new Error(String(e));
+      console.error(`❌ Gemini model ${modelName} failed:`, lastError.message);
       continue;
     }
   }
   
-  throw new Error("All Gemini models failed - check API key and model availability");
+  // If all models failed, throw the last error with more context
+  const errorMsg = lastError?.message || 'Unknown error';
+  throw new Error(`All Gemini models failed to extract text from ${fileName}. Last error: ${errorMsg}. Please check API key and model availability.`);
 }
 
 // TODO: Add OpenAI extraction when package is installed
@@ -253,21 +281,41 @@ ${basicText.substring(0, 8000)}`;
 // }
 
 async function basicExtraction(file: File): Promise<string> {
+  if (!file) {
+    console.log("No file provided to basicExtraction");
+    return '';
+  }
+  
+  const fileName = file?.name || '';
+  const fileType = file?.type || '';
+  
   // Handle text files only - reject PDFs at basic level
-  if (file.type === 'text/plain' || (file.name && file.name.endsWith('.txt'))) {
-    return await file.text();
+  const isTextFile = fileType === 'text/plain' || fileName.endsWith('.txt');
+  if (isTextFile) {
+    try {
+      const text = await file.text();
+      console.log(`Basic extraction successful for text file: ${fileName}`);
+      return text;
+    } catch (error) {
+      console.error(`Failed to read text file: ${error}`);
+      return '';
+    }
   }
   
   // For PDFs, return empty string to force Gemini processing or failure
-  if (file.type === 'application/pdf' || (file.name && file.name.endsWith('.pdf'))) {
+  const isPdf = fileType === 'application/pdf' || fileName.endsWith('.pdf');
+  if (isPdf) {
     console.log("PDF detected - basic extraction not supported, requires Gemini processing");
     return '';
   }
   
   // Handle other file types as text
   try {
-    return await file.text();
-  } catch {
+    const text = await file.text();
+    console.log(`Basic extraction attempted for: ${fileName}, type: ${fileType}`);
+    return text;
+  } catch (error) {
+    console.error(`Failed to extract text from ${fileName}:`, error);
     return '';
   }
 }

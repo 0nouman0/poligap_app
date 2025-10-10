@@ -131,8 +131,6 @@ export function AppSidebar() {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const userRole = selectedCompany ? selectedCompany.role : "User";
 
-  console.log("userRole =>", userRole);
-
   // Show all navigation items for Poligap interface
   const visibleNavigationItems = navigationItems;
 

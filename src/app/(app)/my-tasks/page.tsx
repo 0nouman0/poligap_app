@@ -9,33 +9,38 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-interface Task {
-  _id?: string;
-  id?: string; // client convenience
-  title: string;
-  description?: string;
-  status: "pending" | "completed";
-  priority: "low" | "medium" | "high" | "critical";
-  dueDate?: string;
-  assignee?: string;
-  category?: string;
-  source?: "compliance" | "contract" | "manual";
-  sourceRef?: Record<string, any>;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-// Dynamic tasks loaded from API
-const initialTasks: Task[] = [];
+import { useUserStore } from "@/stores/user-store";
+import { toastError, toastSuccess } from "@/components/toast-varients";
+import { useTasksStore, type Task } from "@/stores/tasks-store";
 
 export default function MyTasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const userData = useUserStore((state) => state.userData);
+  const { 
+    tasks, 
+    isLoading: loading, 
+    error, 
+    fetchTasks, 
+    addTask, 
+    updateTask: updateTaskInStore, 
+    deleteTask: deleteTaskFromStore,
+    searchTasks,
+    getTasksByStatus,
+    getTasksByPriority,
+    getTasksBySource
+  } = useTasksStore();
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
+
+  // Helper to get userId with fallbacks
+  const getUserId = (): string | null => {
+    if (userData?.userId) return userData.userId;
+    if (typeof window !== 'undefined') {
+      const storedId = localStorage.getItem('user_id');
+      if (storedId) return storedId;
+    }
+    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+  };
 
   // Extract only the suggested fix from mixed descriptions like
   // "<issue details>. Recommended: <fix text>" or "Suggested fix: <fix text>".
@@ -62,49 +67,24 @@ export default function MyTasksPage() {
   const [infoOpen, setInfoOpen] = useState(false);
   const [infoTask, setInfoTask] = useState<Task | null>(null);
 
-  const loadTasks = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-      const params = new URLSearchParams();
-      if (userId) params.set("userId", userId);
-      if (searchTerm.trim()) params.set("q", searchTerm.trim());
-      if (activeTab !== "all") params.set("status", activeTab);
-      if (priorityFilter !== "all") params.set("priority", priorityFilter);
-      if (sourceFilter !== "all") params.set("source", sourceFilter);
-
-      const res = await fetch(`/api/tasks${params.toString() ? `?${params.toString()}` : ""}`);
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to load tasks");
-      }
-      const incoming: Task[] = (data.tasks || []).map((t: any) => ({ 
-        ...t, 
-        id: t._id || t.id,
-        // Convert any existing "in-progress" tasks to "pending"
-        status: t.status === "in-progress" ? "pending" : t.status
-      }));
-      // Deduplicate using a stable composite key
-      const byKey = new Map<string, Task>();
-      for (const t of incoming) {
-        const key = t.sourceRef && (t.sourceRef.resultId || t.sourceRef.gapId)
-          ? `${t.source || 'unknown'}:${t.title}:${t.sourceRef.resultId || ''}:${t.sourceRef.gapId || ''}`
-          : (t._id || t.id || `${t.title}:${t.dueDate || ''}`);
-        if (!byKey.has(key)) byKey.set(key, t);
-      }
-      setTasks(Array.from(byKey.values()));
-    } catch (e: any) {
-      setError(e.message || "Failed to load tasks");
-    } finally {
-      setLoading(false);
+  const loadTasks = async (force = false) => {
+    const userId = getUserId();
+    
+    if (!userId) {
+      console.error('❌ Cannot load tasks: userId is null');
+      return; // Don't show error toast, just wait for user to be initialized
     }
+
+    await fetchTasks(userId, force);
   };
 
   useEffect(() => {
-    loadTasks();
+    // Only load tasks when we have userData
+    if (userData?.userId) {
+      loadTasks();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, priorityFilter, sourceFilter]);
+  }, [userData?.userId, activeTab, priorityFilter, sourceFilter]);
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = !searchTerm.trim() ||
@@ -143,7 +123,16 @@ export default function MyTasksPage() {
     const title = newTaskTitle.trim();
     if (!title) return;
     try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const userId = getUserId();
+      
+      if (!userId) {
+        console.error('❌ Cannot create task: userId is null');
+        toastError('Create Failed', 'User ID not found. Please log in again.');
+        return;
+      }
+
+      console.log('➕ Creating task for userId:', userId);
+      
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,36 +144,78 @@ export default function MyTasksPage() {
           dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
           category: 'General',
           source: newTaskSource,
-          userId: userId || undefined
+          userId
         })
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to create task');
+      
+      // Add to store for instant UI update
+      if (data.task) {
+        addTask(data.task);
+        toastSuccess('Task Created', 'New task added successfully!');
+      }
+      
       setNewTaskTitle("");
       setNewTaskDescription("");
       setNewTaskSource('manual');
       setShowNewTaskForm(false);
-      await loadTasks();
     } catch (e) {
       console.error('Create task failed', e);
+      toastError('Create Failed', e instanceof Error ? e.message : 'Failed to create task');
     }
   };
 
   const updateTask = async (task: Task, updates: Partial<Task>) => {
     const id = task._id || task.id;
     if (!id) return;
-    await fetch('/api/tasks', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, updates })
-    }).then(() => loadTasks());
+    
+    // Optimistic update
+    updateTaskInStore(id, updates);
+    
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates })
+      });
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update task');
+      }
+      
+      toastSuccess('Task Updated', 'Task updated successfully!');
+    } catch (e) {
+      console.error('Update task failed', e);
+      toastError('Update Failed', e instanceof Error ? e.message : 'Failed to update task');
+      // Revert on error by refetching
+      await loadTasks(true);
+    }
   };
 
   const deleteTask = async (task: Task) => {
     const id = task._id || task.id;
     if (!id) return;
-    await fetch(`/api/tasks?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-      .then(() => loadTasks());
+    
+    // Optimistic delete
+    deleteTaskFromStore(id);
+    
+    try {
+      const res = await fetch(`/api/tasks?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete task');
+      }
+      
+      toastSuccess('Task Deleted', 'Task removed successfully!');
+    } catch (e) {
+      console.error('Delete task failed', e);
+      toastError('Delete Failed', e instanceof Error ? e.message : 'Failed to delete task');
+      // Revert on error by refetching
+      await loadTasks(true);
+    }
   };
 
   return (
@@ -245,7 +276,7 @@ export default function MyTasksPage() {
             <SelectItem value="manual">Manual</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" onClick={loadTasks}>Apply</Button>
+        <Button variant="outline" onClick={() => loadTasks(true)}>Apply</Button>
         </div>
 
         {/* New Task Form */}

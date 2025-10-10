@@ -38,20 +38,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-
-interface Asset {
-  _id: string;
-  filename: string;
-  originalName: string;
-  mimetype: string;
-  size: number;
-  uploadDate: string;
-  tags: string[];
-  category: string;
-  description?: string;
-  url: string;
-  thumbnailUrl?: string;
-}
+import { useAssetsStore, type Asset } from "@/stores/assets-store";
+import { toastSuccess, toastError } from "@/components/toast-varients";
+import { useUserStore } from "@/stores/user-store";
 
 interface UploadProgress {
   filename: string;
@@ -60,7 +49,40 @@ interface UploadProgress {
 }
 
 export default function UploadAssetsPage() {
-  const [assets, setAssets] = useState<Asset[]>([]);
+  // Use Zustand store for assets
+  const { 
+    assets, 
+    isLoading: loading, 
+    allTags, 
+    fetchAssets, 
+    addAsset, 
+    updateAssetTags, 
+    deleteAsset,
+    deleteMultipleAssets 
+  } = useAssetsStore();
+  
+  // Get user data
+  const { userData } = useUserStore();
+  
+  // Helper to get userId
+  const getUserId = (): string | null => {
+    if (userData?.userId) return userData.userId;
+    if (typeof window !== 'undefined') {
+      const localUserId = localStorage.getItem('user_id');
+      if (localUserId) return localUserId;
+      const userDataStr = localStorage.getItem('userData');
+      if (userDataStr) {
+        try {
+          const parsed = JSON.parse(userDataStr);
+          if (parsed?.userId) return parsed.userId;
+        } catch (e) {
+          console.error('Failed to parse userData', e);
+        }
+      }
+    }
+    return process.env.NEXT_PUBLIC_DEFAULT_USER_ID || null;
+  };
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -70,35 +92,12 @@ export default function UploadAssetsPage() {
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [newTags, setNewTags] = useState("");
-  const [allTags, setAllTags] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedFileType, setSelectedFileType] = useState<string | null>(null);
-
-  // Fetch assets from backend
-  const fetchAssets = useCallback(async () => {
-    try {
-      const response = await fetch('/api/assets');
-      if (response.ok) {
-        const data = await response.json();
-        setAssets(data.assets || []);
-        
-        // Extract all unique tags
-        const tags = new Set<string>();
-        data.assets?.forEach((asset: Asset) => {
-          asset.tags.forEach(tag => tags.add(tag));
-        });
-        setAllTags(Array.from(tags));
-      }
-    } catch (error) {
-      console.error('Error fetching assets:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     fetchAssets();
-  }, [fetchAssets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // File upload handler
   const handleFileUpload = async (files: FileList) => {
@@ -108,6 +107,7 @@ export default function UploadAssetsPage() {
     const uploadPromises = Array.from(files).map(async (file) => {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('userId', getUserId() || '');
       formData.append('category', getCategoryFromMimeType(file.type));
 
       // Initialize progress tracking
@@ -127,6 +127,7 @@ export default function UploadAssetsPage() {
 
         if (response.ok) {
           const result = await response.json();
+          console.log('Upload successful:', result);
           setUploadProgress(prev => 
             prev.map(item => 
               item.filename === file.name 
@@ -136,7 +137,9 @@ export default function UploadAssetsPage() {
           );
           return result.asset;
         } else {
-          throw new Error('Upload failed');
+          const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+          console.error('Upload failed:', response.status, errorData);
+          throw new Error(errorData.error || 'Upload failed');
         }
       } catch (error) {
         setUploadProgress(prev => 
@@ -147,6 +150,7 @@ export default function UploadAssetsPage() {
           )
         );
         console.error('Upload error:', error);
+        toastError('Upload Failed', error instanceof Error ? error.message : 'Failed to upload file');
         return null;
       }
     });
@@ -155,7 +159,10 @@ export default function UploadAssetsPage() {
     const successfulUploads = uploadedAssets.filter(asset => asset !== null);
     
     if (successfulUploads.length > 0) {
-      setAssets(prev => [...successfulUploads, ...prev]);
+      successfulUploads.forEach(asset => {
+        if (asset) addAsset(asset);
+      });
+      toastSuccess('Upload Complete', `Successfully uploaded ${successfulUploads.length} file(s)`);
     }
 
     setIsUploading(false);
@@ -210,6 +217,15 @@ export default function UploadAssetsPage() {
 
     const tags = newTags.split(',').map(tag => tag.trim()).filter(tag => tag);
     
+    // Optimistic update for each selected asset
+    selectedAssets.forEach(assetId => {
+      const asset = assets.find(a => a._id === assetId);
+      if (asset) {
+        const updatedTags = [...new Set([...asset.tags, ...tags])];
+        updateAssetTags(assetId, updatedTags);
+      }
+    });
+
     try {
       const response = await fetch('/api/assets/tags', {
         method: 'POST',
@@ -221,19 +237,28 @@ export default function UploadAssetsPage() {
       });
 
       if (response.ok) {
-        await fetchAssets();
+        toastSuccess('Tags Added', `Successfully added tags to ${selectedAssets.length} file(s)`);
         setSelectedAssets([]);
         setNewTags("");
         setIsTagDialogOpen(false);
+      } else {
+        toastError('Tag Update Failed', 'Failed to add tags');
+        await fetchAssets(undefined, true); // Revert on error
       }
     } catch (error) {
       console.error('Error adding tags:', error);
+      toastError('Tag Update Failed', 'An error occurred while adding tags');
+      await fetchAssets(undefined, true); // Revert on error
     }
   };
 
   // Delete selected assets
   const handleDeleteAssets = async () => {
     if (selectedAssets.length === 0) return;
+
+    // Optimistic delete
+    deleteMultipleAssets(selectedAssets);
+    setSelectedAssets([]);
 
     try {
       const response = await fetch('/api/assets', {
@@ -243,11 +268,15 @@ export default function UploadAssetsPage() {
       });
 
       if (response.ok) {
-        setAssets(prev => prev.filter(asset => !selectedAssets.includes(asset._id)));
-        setSelectedAssets([]);
+        toastSuccess('Assets Deleted', `Successfully deleted ${selectedAssets.length} file(s)`);
+      } else {
+        toastError('Delete Failed', 'Failed to delete assets');
+        await fetchAssets(undefined, true); // Revert on error
       }
     } catch (error) {
       console.error('Error deleting assets:', error);
+      toastError('Delete Failed', 'An error occurred while deleting assets');
+      await fetchAssets(undefined, true); // Revert on error
     }
   };
 

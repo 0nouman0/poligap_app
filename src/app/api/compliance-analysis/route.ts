@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompliancePrompt } from '@/lib/compliance-prompt';
 import { createClient } from '@/lib/supabase/server';
-import { queries } from '@/lib/supabase/graphql';
-import { GraphQLClient } from 'graphql-request';
 
 // Gemini AI with direct file upload
 async function analyzeWithGemini(file: File, selectedStandards: string[]): Promise<any> {
@@ -340,28 +338,24 @@ export async function POST(request: NextRequest) {
     let ruleCount = 0;
     if (applyRuleBase) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const graphQLClient = new GraphQLClient(
-            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-            {
-              headers: {
-                apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            }
-          );
+        // Fetch rules from Supabase using Postgrest API
+        const { data: rules, error: rulesError } = await supabase
+          .from('rulebase')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('active', true);
 
-          const rulesResult = await graphQLClient.request<any>(queries.getRules, {
-            userId: user.id,
-          });
-
-          const rules = rulesResult.rulebaseCollection.edges.map((edge: any) => edge.node);
+        if (rulesError) {
+          console.error('Failed to fetch rulebase:', rulesError);
+        } else if (rules && rules.length > 0) {
+          console.log(`📚 Applying ${rules.length} rules from rulebase`);
           const applied = applyRulebaseToAnalysis(analysisResult, rules, selectedStandards);
           analysisResult = applied.analysis;
           appliedRuleBase = applied.applied;
           ruleCount = applied.ruleCount;
           method = `${method}+rulebase`;
+        } else {
+          console.log('ℹ️ No active rules found in rulebase');
         }
       } catch (error) {
         console.error('Failed to apply rulebase:', error);
@@ -373,24 +367,27 @@ export async function POST(request: NextRequest) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const graphQLClient = new GraphQLClient(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-          {
-            headers: {
-              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              Authorization: `Bearer ${session.access_token}`,
+        // Save to Supabase using Postgrest API
+        const { error: insertError } = await supabase
+          .from('document_analysis')
+          .insert({
+            user_id: user.id,
+            document_id: `doc_${Date.now()}`,
+            title: file.name,
+            compliance_standard: selectedStandards[0] || 'general',
+            score: analysisResult.overallScore || 0,
+            metrics: { 
+              ...analysisResult, 
+              analysisMethod: 'policy-analysis', 
+              standards: selectedStandards 
             },
-          }
-        );
+          });
 
-        await graphQLClient.request<any>(queries.createDocumentAnalysis, {
-          user_id: user.id,
-          document_id: `doc_${Date.now()}`,
-          title: file.name,
-          compliance_standard: selectedStandards.join(', '),
-          score: analysisResult.overallScore || 0,
-          metrics: { ...analysisResult, analysisMethod: 'policy-analysis', standards: selectedStandards },
-        });
+        if (insertError) {
+          console.error('Failed to save analysis to document_analysis:', insertError);
+        } else {
+          console.log('✅ Analysis saved to document_analysis table');
+        }
       }
     } catch (error) {
       console.error('Failed to save analysis to Supabase:', error);

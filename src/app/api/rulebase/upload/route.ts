@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { queries } from '@/lib/supabase/graphql';
-import { GraphQLClient } from 'graphql-request';
 
 export async function POST(req: Request) {
   try {
@@ -27,32 +25,27 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const fileContent = Buffer.from(arrayBuffer).toString('utf-8');
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No session found' }, { status: 401 });
+    // Insert rule using Supabase Postgrest
+    const { data: savedRule, error: insertError } = await supabase
+      .from('rulebase')
+      .insert({
+        name: file.name,
+        description: `Uploaded rule file (${(arrayBuffer.byteLength/1024).toFixed(1)} KB)`,
+        tags: ['uploaded'],
+        source_type: 'file',
+        file_name: file.name,
+        file_content: fileContent.substring(0, 10000), // Limit content size
+        user_id: user.id,
+        active: true,
+      })
+      .select()
+      .single();
+
+    if (insertError || !savedRule) {
+      console.error('❌ Insert error:', insertError);
+      return NextResponse.json({ error: 'Failed to save rule', details: insertError?.message }, { status: 500 });
     }
 
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    const result = await graphQLClient.request<any>(queries.createRule, {
-      name: file.name,
-      description: `Uploaded rule file (${(arrayBuffer.byteLength/1024).toFixed(1)} KB)`,
-      tags: ['uploaded'],
-      source_type: 'file',
-      file_name: file.name,
-      file_content: fileContent.substring(0, 10000), // Limit content size
-      user_id: user.id,
-    });
-
-    const savedRule = result.insertIntorulebaseCollection.records[0];
     console.log('✅ Uploaded rule created:', savedRule.id);
     
     // Transform for frontend

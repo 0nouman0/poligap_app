@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Shield, FileText, CheckCircle, AlertTriangle, Download, Copy, Settings, Database, Info } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useAuditLogsStore } from "@/stores/audit-logs-store";
+import { useUserStore } from "@/stores/user-store";
 
 // Lightweight UI primitives (searchable multi-select and searchable select)
 function MultiSelect({
@@ -129,10 +131,38 @@ export default function PolicyGeneratorPage() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [result, setResult] = useState<string>("");
 
-  // Audit logs state for selected policy type
-  const [policyLogs, setPolicyLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
+  // Use Zustand store for audit logs
+  const { logs: allAuditLogs, isLoading: logsLoading, fetchLogs: fetchAuditLogs, addLog } = useAuditLogsStore();
   const [logsError, setLogsError] = useState<string | null>(null);
+  
+  // Get user data from store
+  const { userData } = useUserStore();
+
+  // Helper to get userId with fallback
+  const getUserId = (): string | null => {
+    // 1. Try user store
+    if (userData?.userId) return userData.userId;
+    
+    // 2. Try localStorage
+    if (typeof window !== 'undefined') {
+      const localUserId = localStorage.getItem('user_id');
+      if (localUserId) return localUserId;
+      
+      // 3. Try userData stored in localStorage
+      const userDataStr = localStorage.getItem('userData');
+      if (userDataStr) {
+        try {
+          const parsed = JSON.parse(userDataStr);
+          if (parsed?.userId) return parsed.userId;
+        } catch (e) {
+          console.error('Failed to parse userData from localStorage', e);
+        }
+      }
+    }
+    
+    // 4. Try environment variable
+    return process.env.NEXT_PUBLIC_DEFAULT_USER_ID || null;
+  };
 
   const [inputs, setInputs] = useState<GenInputs>({
     policyType: "Privacy Policy",
@@ -144,6 +174,14 @@ export default function PolicyGeneratorPage() {
     customRules: "",
     kbNotes: "",
   });
+
+  // Filter policy logs based on selected policy type
+  const policyLogs = useMemo(() => {
+    if (!inputs.policyType) return [];
+    return allAuditLogs.filter(log => 
+      log.standards?.includes(inputs.policyType)
+    ).slice(0, 20);
+  }, [allAuditLogs, inputs.policyType]);
 
   const steps = [
     { id: 1, title: "Select Inputs", description: "Choose policy type and context" },
@@ -217,10 +255,8 @@ export default function PolicyGeneratorPage() {
       setResult(data?.content || "");
       setCurrentStep(4);
 
-      // Save audit log for policy generation
+      // Save audit log for policy generation (store will be updated via addLog)
       await savePolicyAuditLog(data?.content || "");
-      // Refresh logs panel
-      await reloadPolicyLogs();
       console.log("Policy generation saved to history.");
     } catch (e) {
       setResult("Generation failed. Please try again.");
@@ -234,7 +270,12 @@ export default function PolicyGeneratorPage() {
   // Save to shared audit logs collection
   const savePolicyAuditLog = async (content: string) => {
     try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const userId = getUserId();
+      if (!userId) {
+        console.error('Failed to save policy audit log: User ID not found');
+        return;
+      }
+
       const payload = {
         fileName: `${inputs.policyType.replace(/\s+/g,'-').toLowerCase()}.md`,
         standards: [inputs.policyType, ...(inputs.frameworks || [])],
@@ -243,7 +284,7 @@ export default function PolicyGeneratorPage() {
         gapsCount: 0,
         fileSize: content ? content.length : 0,
         analysisMethod: 'policy-generator',
-        userId: userId || undefined,
+        userId: userId,
         snapshot: {
           inputs,
           content,
@@ -257,46 +298,25 @@ export default function PolicyGeneratorPage() {
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         console.error('Failed to save policy audit log', err);
+      } else {
+        const json = await resp.json().catch(() => null);
+        // Add to store for instant UI update
+        if (json?.log) {
+          addLog(json.log);
+        }
       }
     } catch (e) {
       console.error('Error saving policy audit log', e);
     }
   };
 
-  // Load logs for current policy type (uses audit-logs endpoint, requires userId)
-  const reloadPolicyLogs = async () => {
-    setLogsLoading(true);
-    setLogsError(null);
-    try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-      if (!userId) {
-        setPolicyLogs([]);
-        setLogsError('Sign in required to view audit logs (missing user_id).');
-        return;
-      }
-      const params = new URLSearchParams();
-      params.set('userId', userId);
-      params.set('standards', encodeURIComponent(inputs.policyType));
-      params.set('limit', '20');
-      const res = await fetch(`/api/audit-logs?${params.toString()}`);
-      const data = await res.json();
-      if (data?.success) {
-        // Filter results that include our policyType in standards
-        const logs = (data.logs || []).filter((l: any) => Array.isArray(l.standards) && l.standards.includes(inputs.policyType));
-        setPolicyLogs(logs);
-      } else {
-        setLogsError(data?.error || 'Failed to load logs');
-      }
-    } catch (e) {
-      setLogsError('Failed to load logs');
-    } finally {
-      setLogsLoading(false);
-    }
-  };
-
-  // Refresh logs when policy type changes
+  // Fetch audit logs from store when component mounts or policy type changes
   useEffect(() => {
-    void reloadPolicyLogs();
+    const userId = getUserId();
+    if (userId) {
+      setLogsError(null);
+      fetchAuditLogs(userId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputs.policyType]);
 
@@ -489,18 +509,18 @@ export default function PolicyGeneratorPage() {
         {!logsLoading && !logsError && policyLogs.length > 0 && (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
             {policyLogs.map((log: any) => (
-              <div key={log._id} className="border border-border rounded-md p-3 hover:bg-muted/40 transition-colors bg-background">
+              <div key={log._id} className="border border-border rounded-md p-3 hover:bg-accent/50 transition-colors bg-card">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium truncate">
+                  <div className="text-sm font-medium truncate text-foreground">
                     {log.fileName || inputs.policyType}
                   </div>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full border ${
                       log.status === 'compliant'
-                        ? 'border-green-300 text-green-700'
+                        ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
                         : log.status === 'non-compliant'
-                        ? 'border-red-300 text-red-700'
-                        : 'border-yellow-300 text-yellow-700'
+                        ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
+                        : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
                     }`}
                   >
                     {log.status}
@@ -520,7 +540,7 @@ export default function PolicyGeneratorPage() {
                 {Array.isArray(log.standards) && log.standards.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {log.standards.slice(0, 3).map((s: string) => (
-                      <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 border">
+                      <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         {s}
                       </span>
                     ))}

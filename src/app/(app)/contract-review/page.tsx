@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { FileText, Upload, Eye, Download, AlertTriangle, CheckCircle, Clock, User, ChevronRight, ChevronLeft, Building, Users, Shield, Handshake, Award, Home, TrendingUp, Car, ShoppingCart, Truck, Crown, Network, Search, Filter, Briefcase, Globe, Heart, Zap, Wifi, Database, Code, Palette, Music, Camera, Plane, Ship, Factory, Hammer, Wrench, Cog, Book, GraduationCap, Stethoscope, Scale, Gavel, DollarSign, CreditCard, PiggyBank, Landmark, Info, FolderOpen, BookOpen, Library, Edit3, RotateCcw, Save, X, NotebookPen, FileUp, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { Switch } from "@/components/ui/switch";
 import { ContractCanvas } from "@/components/contract-review/ContractCanvas";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useContractReviewStore } from "@/store/contractReview";
+import { useUserStore } from "@/stores/user-store";
+import { useAuditLogsStore } from "@/stores/audit-logs-store";
 
 interface ContractTemplate {
   id: string;
@@ -321,6 +323,9 @@ const severityConfig = {
 };
 
 export default function ContractReview() {
+  // User store for userId
+  const { userData } = useUserStore();
+  
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [extractedDocument, setExtractedDocument] = useState<ExtractedDocument | null>(null);
@@ -358,14 +363,32 @@ export default function ContractReview() {
   // Bridge to canvas store
   const crStore = useContractReviewStore();
   
-  // Audit logs state for selected template
-  const [templateLogs, setTemplateLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
+  // Use Zustand store for audit logs
+  const { logs: allAuditLogs, isLoading: logsLoading, fetchLogs: fetchAuditLogs, addLog } = useAuditLogsStore();
   const [logsError, setLogsError] = useState<string | null>(null);
+  
+  // Filter template logs based on selected template
+  const templateLogs = useMemo(() => {
+    if (!selectedTemplate?.id) return [];
+    // Filter logs that match the selected template
+    return allAuditLogs.filter(log => 
+      (log as any).templateId === selectedTemplate.id
+    ).slice(0, 20);
+  }, [allAuditLogs, selectedTemplate]);
   
   const templatesContainerRef = useRef<HTMLDivElement>(null);
   // Track any ongoing analysis timer to allow cleanup/cancel
   const analyzeTimerRef = useRef<number | null>(null);
+  
+  // Helper to get userId with fallbacks
+  const getUserId = (): string | null => {
+    if (userData?.userId) return userData.userId;
+    if (typeof window !== 'undefined') {
+      const storedId = localStorage.getItem('user_id');
+      if (storedId) return storedId;
+    }
+    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+  };
 
   const scrollTemplates = (direction: 'left' | 'right') => {
     const el = templatesContainerRef.current;
@@ -378,7 +401,14 @@ export default function ContractReview() {
   const saveTemplateAuditLog = async (doc: ExtractedDocument, sug: any[]) => {
     try {
       if (!selectedTemplate?.id) return; // only when a template is selected
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      
+      const userId = getUserId();
+      if (!userId) {
+        console.warn('Cannot save template audit log: userId is not available');
+        toastError('Save Failed', 'User ID is required to save template audit log');
+        return;
+      }
+      
       const status = doc.overallScore >= 90 ? 'compliant' : doc.overallScore >= 70 ? 'partial' : 'non-compliant';
       const suggestionsText: string[] = (sug || [])
         .map((s: any) => s.suggestedText || s.reasoning || s.originalText || s.description)
@@ -394,7 +424,7 @@ export default function ContractReview() {
         gapsCount: (doc.gaps || []).length,
         fileSize: uploadedFile?.size || 0,
         analysisMethod: 'contract-review',
-        userId: userId || undefined,
+        userId,
         snapshot: {
           gaps: (doc.gaps || []).map(g => ({
             id: g.id,
@@ -420,8 +450,14 @@ export default function ContractReview() {
         console.error('Failed to save template audit log', err);
         toastError('Template Log Save Failed', err?.error || 'Could not save template audit log');
       } else {
+        const json = await resp.json().catch(() => null);
         console.debug('Saved template audit log');
         toastSuccess('Template Audit Updated', 'Template history updated with this analysis.');
+        
+        // Add to store for instant UI update
+        if (json?.log) {
+          addLog(json.log);
+        }
       }
     } catch (e) {
       console.error('Error saving template audit log:', e);
@@ -431,7 +467,13 @@ export default function ContractReview() {
   // Save Contract Review analysis to shared audit logs (used by Compliance too)
   const saveContractAuditLog = async (doc: ExtractedDocument, sug: any[]) => {
     try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const userId = getUserId();
+      if (!userId) {
+        console.warn('Cannot save audit log: userId is not available');
+        toastError('Save Failed', 'User ID is required to save audit log');
+        return;
+      }
+      
       const status = doc.overallScore >= 90 ? 'compliant' : doc.overallScore >= 70 ? 'partial' : 'non-compliant';
       const suggestionsText: string[] = (sug || [])
         .map((s: any) => s.suggestedText || s.reasoning || s.originalText || s.description)
@@ -445,7 +487,7 @@ export default function ContractReview() {
         gapsCount: (doc.gaps || []).length,
         fileSize: uploadedFile?.size || 0,
         analysisMethod: 'contract-review',
-        userId: userId || undefined,
+        userId,
         snapshot: {
           gaps: (doc.gaps || []).map(g => ({
             id: g.id,
@@ -478,6 +520,11 @@ export default function ContractReview() {
           id: json?.id
         });
         toastSuccess('Audit Log Saved', 'Contract analysis saved to audit history.');
+        
+        // Add to store for instant UI update
+        if (json?.log) {
+          addLog(json.log);
+        }
       }
     } catch (e) {
       console.error('Error saving contract audit log:', e);
@@ -654,41 +701,16 @@ export default function ContractReview() {
   };
   const openFilePicker = () => fileInputRef.current?.click();
 
-  // Fetch audit logs helper and effect on template change
-  const reloadTemplateLogs = async () => {
-    if (!selectedTemplate) {
-      setTemplateLogs([]);
+  // Fetch audit logs from store when component mounts or template changes
+  useEffect(() => {
+    const userId = getUserId();
+    if (!userId) {
+      setLogsError('Sign in required to view audit logs (missing user_id).');
       return;
     }
-    setLogsLoading(true);
     setLogsError(null);
-    try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-      if (!userId) {
-        setTemplateLogs([]);
-        setLogsError('Sign in required to view audit logs (missing user_id).');
-        return;
-      }
-      const params = new URLSearchParams();
-      params.set('templateId', selectedTemplate.id);
-      params.set('limit', '20');
-      params.set('userId', userId);
-      const res = await fetch(`/api/template-audit-logs?${params.toString()}`);
-      const data = await res.json();
-      if (data?.success) {
-        setTemplateLogs(data.logs || []);
-      } else {
-        setLogsError(data?.error || 'Failed to load logs');
-      }
-    } catch (err) {
-      setLogsError('Failed to load logs');
-    } finally {
-      setLogsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    reloadTemplateLogs();
+    fetchAuditLogs(userId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTemplate]);
 
   // Log template selection event (for history analytics)
@@ -898,17 +920,37 @@ export default function ContractReview() {
     setEditedText(updated);
   };
 
-  const handleAssetSelect = (asset: any) => {
-    // Convert asset to File-like object for consistency with file upload
-    const assetFile = {
-      name: asset.name,
-      size: asset.size || 0,
-      type: asset.type || 'application/pdf',
-      lastModified: asset.lastModified || Date.now()
-    } as File;
+  const handleAssetSelect = async (assets: any[]) => {
+    if (!assets || assets.length === 0) {
+      console.warn('No assets selected');
+      return;
+    }
+
+    const asset = assets[0]; // Get first asset (single selection)
+    console.log('📥 Asset selected:', asset.originalName, asset.url);
     
-    setUploadedFile(assetFile);
-    setIsAssetPickerOpen(false);
+    try {
+      // Fetch the actual file from Supabase Storage URL
+      const response = await fetch(asset.url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch asset: ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      
+      // Create a proper File object from the blob
+      const file = new File([blob], asset.originalName || asset.filename, {
+        type: asset.mimetype || blob.type || 'application/pdf',
+        lastModified: new Date(asset.uploadDate).getTime()
+      });
+      
+      console.log('✅ File created from asset:', file.name, file.type, file.size);
+      setUploadedFile(file);
+      setIsAssetPickerOpen(false);
+    } catch (error) {
+      console.error('❌ Error loading asset:', error);
+      toastError('Asset Load Failed', error instanceof Error ? error.message : 'Failed to load selected asset');
+    }
   };
 
   const steps = [
@@ -1049,9 +1091,8 @@ export default function ContractReview() {
 
       // Save to audit logs (similar to Compliance)
       await saveContractAuditLog(document, suggestions);
-      // Save to template-specific audit logs and refresh sidebar history
+      // Save to template-specific audit logs (store will be updated via addLog)
       await saveTemplateAuditLog(document, suggestions);
-      await reloadTemplateLogs();
     } catch (error) {
       console.error('Document extraction and analysis failed:', error);
       
@@ -1706,12 +1747,12 @@ Report ID: ${Date.now()}
                     {!logsLoading && logsError && (
                       <div className="text-sm text-red-600 dark:text-red-400">{logsError}</div>
                     )}
-                    {!logsLoading && !logsError && templateLogs.filter(l => l.action !== 'selected').length === 0 && (
+                    {!logsLoading && !logsError && templateLogs.filter(l => (l as any).action !== 'selected').length === 0 && (
                       <div className="text-sm text-muted-foreground">No logs yet for this template.</div>
                     )}
-                    {!logsLoading && !logsError && templateLogs.filter(l => l.action !== 'selected').length > 0 && (
+                    {!logsLoading && !logsError && templateLogs.filter(l => (l as any).action !== 'selected').length > 0 && (
                       <div className="space-y-3">
-                        {templateLogs.filter(l => l.action !== 'selected').map((log) => (
+                        {templateLogs.filter(l => (l as any).action !== 'selected').map((log) => (
                           <div
                             key={log._id}
                             className="flex items-center justify-between border rounded-md p-3 bg-muted/40 dark:bg-muted/30 hover:bg-muted/60 transition-colors border-border dark:border-slate-700"
@@ -1720,7 +1761,7 @@ Report ID: ${Date.now()}
                               <FileText className="h-4 w-4 text-muted-foreground" />
                               <div>
                                 <div className="text-sm font-medium text-foreground">
-                                  {log.status ? `Result: ${log.status}` : (log.action === 'analyzed' ? 'Analysis completed' : 'Event')}
+                                  {log.status ? `Result: ${log.status}` : ((log as any).action === 'analyzed' ? 'Analysis completed' : 'Event')}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   {new Date(log.analysisDate).toLocaleString()} {log.fileName ? `• ${log.fileName}` : ''}
