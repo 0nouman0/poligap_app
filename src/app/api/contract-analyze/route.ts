@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
           title: `${contractType || 'Contract'} Analysis`,
           compliance_standard: 'Contract Review',
           score: parsed.overallScore * 100, // Convert to percentage
-          metrics: parsed,
+          metrics: { ...parsed, analysisMethod: 'contract-review' },
         });
       }
     } catch (error) {
