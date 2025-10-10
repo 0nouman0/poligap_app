@@ -112,8 +112,27 @@ function KnowledgePageContent() {
     return filtered;
   }, [searchQuery, activeFilter, integrations]);
 
+  // Initialize Pipedream client with token callback
   const pd = createFrontendClient({
-    externalUserId: userId,
+    externalUserId: userId || '',
+    tokenCallback: async () => {
+      const res = await fetch("/api/pd", {
+        method: "POST",
+        body: JSON.stringify({ external_user_id: userId }),
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to fetch token');
+      }
+      
+      const response = await res.json();
+      return {
+        token: response.token,
+        expiresAt: response.expires_at,
+        connectLinkUrl: response.connect_link_url,
+      };
+    },
   });
 
   // Fetch integrations on mount and for refresh
@@ -129,9 +148,12 @@ function KnowledgePageContent() {
   }
 
   useEffect(() => {
-    fetchToken("initial");
-    fetchUserEnterpriseIntegration();
-  }, []);
+    if (userId) {
+      fetchToken("initial");
+      fetchUserEnterpriseIntegration();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   async function fetchToken(app: string) {
     setIsFetchingToken((prev) => ({ ...prev, [app]: true }));

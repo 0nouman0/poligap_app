@@ -1,61 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import User from '@/models/users.model';
-import Member from '@/models/members.model';
-import Company from '@/models/companies.model';
+import { createClient } from '@/lib/supabase/server';
 import { createApiResponse } from '@/lib/apiResponse';
 
-// GET - Test MongoDB Atlas connection and show real data
+// GET - Test Supabase connection and show real data
 export async function GET(req: NextRequest) {
   try {
-    // Test database connection by counting documents
-    const userCount = await User.countDocuments();
-    const memberCount = await Member.countDocuments();
-    const companyCount = await Company.countDocuments();
-
+    const supabase = await createClient();
+    
+    // Test database connection by counting rows
+    const { count: userCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: companyCount } = await supabase.from('companies').select('*', { count: 'exact', head: true });
+    
     // Get sample data to understand structure
-    const sampleUser = await User.findOne().lean();
-    const sampleMember = await Member.findOne().lean();
-    const sampleCompany = await Company.findOne().lean();
-
+    const { data: sampleUser } = await supabase.from('profiles').select('*').limit(1).single();
+    const { data: sampleCompany } = await supabase.from('companies').select('*').limit(1).single();
+    
     // Get all users to see what's available
-    const allUsers = await User.find({}).limit(10).lean();
+    const { data: allUsers } = await supabase.from('profiles').select('*').limit(10);
 
     const connectionInfo = {
-      status: 'Connected to MongoDB Atlas',
-      database: 'poligap',
-      collections: {
-        users: {
-          count: userCount,
+      status: 'Connected to Supabase',
+      database: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      tables: {
+        profiles: {
+          count: userCount || 0,
           sample: sampleUser ? {
-            _id: sampleUser._id?.toString(),
-            userId: sampleUser.userId?.toString(),
+            id: sampleUser.id,
             email: sampleUser.email,
             name: sampleUser.name,
             status: sampleUser.status
           } : null
         },
-        members: {
-          count: memberCount,
-          sample: sampleMember ? {
-            _id: sampleMember._id?.toString(),
-            userId: sampleMember.userId?.toString(),
-            companyId: sampleMember.companyId?.toString(),
-            role: sampleMember.role,
-            status: sampleMember.status
-          } : null
-        },
         companies: {
-          count: companyCount,
+          count: companyCount || 0,
           sample: sampleCompany ? {
-            _id: sampleCompany._id?.toString(),
+            id: sampleCompany.id,
             name: sampleCompany.name,
-            companyId: sampleCompany.companyId?.toString()
+            company_id: sampleCompany.company_id
           } : null
         }
       },
-      allUsers: allUsers.map(user => ({
-        _id: user._id?.toString(),
-        userId: user.userId?.toString(),
+      allUsers: (allUsers || []).map(user => ({
+        id: user.id,
         email: user.email,
         name: user.name,
         status: user.status

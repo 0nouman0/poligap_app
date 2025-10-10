@@ -6,8 +6,14 @@ import { useAgentRevampStore } from "@/stores/agent-revamp-store";
 import LoadingSpinner from "./knowledge-loader/LoadingSpinner";
 import TertiaryButton from "./kb-components/TertiaryButton";
 import useGetMediaInfo, { MediaItem } from "./hooks/useGetMediaInfo";
-import type { IMedia } from "@/models/media.model";
 import { useCompanyStore } from "@/stores/company-store";
+
+// Local type definition for IMedia (previously from @/models/media.model)
+interface IMedia {
+  _id: string;
+  fileType?: string;
+  [key: string]: any; // Allow additional properties
+}
 
 const AgentTrainCard = () => {
   const { createdAgentDetailData } = useAiAgentsStore();

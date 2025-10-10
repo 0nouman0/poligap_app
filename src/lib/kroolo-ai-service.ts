@@ -121,29 +121,12 @@ export class KrooloAIComplianceService {
     const prompt = getCompliancePrompt(selectedStandards, documentContent);
 
     try {
-      // Try OpenAI first
-      return await this.analyzeWithOpenAI(prompt);
-    } catch (openAiErr) {
-      console.error('OpenAI analysis failed, falling back to Gemini:', openAiErr);
-      try {
-        // Fallback to Gemini
-        return await this.analyzeWithGemini(prompt);
-      } catch (geminiErr) {
-        console.error('Gemini fallback failed, attempting Kroolo AI as last resort:', geminiErr);
-        // Last resort: Kroolo AI
-        return await this.analyzeWithKrooloAI(prompt, userId, companyId);
-      }
-    }
-  }
-
-  private async analyzeWithOpenAI(prompt: string): Promise<ComplianceAnalysisResult> {
-    try {
-      const { createOpenAIAnalyzer } = await import('./openai-api');
-      const analyzer = createOpenAIAnalyzer();
-      return await analyzer.analyzeCompliance(prompt);
-    } catch (error) {
-      console.error('OpenAI analysis error:', error);
-      throw error;
+      // Try Gemini first
+      return await this.analyzeWithGemini(prompt);
+    } catch (geminiErr) {
+      console.error('Gemini analysis failed, attempting Kroolo AI as fallback:', geminiErr);
+      // Fallback to Kroolo AI
+      return await this.analyzeWithKrooloAI(prompt, userId, companyId);
     }
   }
 

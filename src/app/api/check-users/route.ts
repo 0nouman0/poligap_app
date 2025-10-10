@@ -1,37 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import User from '@/models/users.model';
+import { createClient } from '@/lib/supabase/server';
 import { createApiResponse } from '@/lib/apiResponse';
 
 // GET - Check what users exist in the database
 export async function GET(req: NextRequest) {
   try {
-    console.log('🔍 Checking users in MongoDB Atlas...');
+    console.log('🔍 Checking users in Supabase...');
+    
+    const supabase = await createClient();
     
     // Get all users to see what's actually in the database
-    const allUsers = await User.find({}).limit(20).lean();
-    console.log(`Found ${allUsers.length} users in database`);
+    const { data: allUsers, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .limit(20);
+    
+    if (error) {
+      throw new Error(`Supabase error: ${error.message}`);
+    }
+    
+    console.log(`Found ${allUsers?.length || 0} users in database`);
     
     // Get the specific user ID from localStorage that's failing
     const { searchParams } = new URL(req.url);
     const searchUserId = searchParams.get('searchUserId');
     
     const result = {
-      totalUsers: allUsers.length,
+      totalUsers: allUsers?.length || 0,
       searchedUserId: searchUserId,
-      users: allUsers.map(user => ({
-        _id: user._id?.toString(),
-        userId: user.userId?.toString(),
+      users: (allUsers || []).map(user => ({
+        _id: user.id,
+        userId: user.id,
         email: user.email,
         name: user.name,
         status: user.status,
         // Show if this matches the searched user ID
-        matchesSearch: searchUserId ? (
-          user._id?.toString() === searchUserId || 
-          user.userId?.toString() === searchUserId
-        ) : false
+        matchesSearch: searchUserId ? (user.id === searchUserId) : false
       })),
       // Try different search approaches for the failing user ID
-      searchResults: searchUserId ? await tryDifferentSearches(searchUserId) : null
+      searchResults: searchUserId ? await tryDifferentSearches(searchUserId, supabase) : null
     };
 
     return createApiResponse({
@@ -48,32 +55,43 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function tryDifferentSearches(userId: string) {
+async function tryDifferentSearches(userId: string, supabase: any) {
   const searches = [];
   
   try {
-    // Search by userId field
-    const byUserId = await User.findOne({ userId: userId }).lean();
-    searches.push({ method: 'userId string', found: !!byUserId, data: byUserId ? { _id: byUserId._id?.toString(), email: byUserId.email } : null });
+    // Search by id field
+    const { data: byId, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    searches.push({ 
+      method: 'id field', 
+      found: !!byId && !error, 
+      data: byId ? { _id: byId.id, email: byId.email } : null 
+    });
   } catch (e) {
-    searches.push({ method: 'userId string', found: false, error: 'Failed' });
+    searches.push({ method: 'id field', found: false, error: 'Failed' });
   }
 
   try {
-    // Search by _id
-    const byId = await User.findById(userId).lean();
-    searches.push({ method: '_id', found: !!byId, data: byId ? { _id: byId._id?.toString(), email: byId.email } : null });
+    // Search by email if userId looks like email
+    if (userId.includes('@')) {
+      const { data: byEmail, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', userId)
+        .single();
+      
+      searches.push({ 
+        method: 'email field', 
+        found: !!byEmail && !error, 
+        data: byEmail ? { _id: byEmail.id, email: byEmail.email } : null 
+      });
+    }
   } catch (e) {
-    searches.push({ method: '_id', found: false, error: 'Invalid ObjectId' });
-  }
-
-  try {
-    // Search by userId as ObjectId
-    const User_base = User as any;
-    const byUserIdObjectId = await User.findOne({ userId: new User_base.base.Types.ObjectId(userId) }).lean();
-    searches.push({ method: 'userId ObjectId', found: !!byUserIdObjectId, data: byUserIdObjectId ? { _id: byUserIdObjectId._id?.toString(), email: byUserIdObjectId.email } : null });
-  } catch (e) {
-    searches.push({ method: 'userId ObjectId', found: false, error: 'Invalid ObjectId' });
+    searches.push({ method: 'email field', found: false, error: 'Failed' });
   }
 
   return searches;
