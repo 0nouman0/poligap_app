@@ -27,7 +27,8 @@ const MessageArea = ({
     
   ) => Promise<void>;
 }) => {
-  const messagesArray = messages || [];
+  // Ensure messages is always an array
+  const messagesArray = Array.isArray(messages) ? messages : [];
   
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

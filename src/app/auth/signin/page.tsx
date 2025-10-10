@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { createClient } from "@/lib/supabase/client";
+import { clearOldCache } from "@/lib/utils/clear-old-cache";
 
 // Validation schema
 const signInSchema = z.object({
@@ -43,6 +44,8 @@ export default function SignInPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Clear old MongoDB cache on mount
+    clearOldCache();
     // Force light mode on this page and restore previous theme on unmount
     prevThemeRef.current = theme ?? resolvedTheme;
     setTheme("light");
@@ -51,6 +54,7 @@ export default function SignInPage() {
         setTheme(prevThemeRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const {

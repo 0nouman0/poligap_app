@@ -72,12 +72,26 @@ export function useUserProfile(): UseUserProfileReturn {
     setError(null);
     
     try {
-      // Use provided IDs or fall back to store values
-      const targetUserId = userId || userData?.userId || localStorage.getItem('user_id');
+      // Clear old localStorage user_id if it exists
+      const oldUserId = localStorage.getItem('user_id');
+      if (oldUserId && /^[0-9a-f]{24}$/i.test(oldUserId)) {
+        console.log('🧹 Clearing old MongoDB user_id from localStorage');
+        localStorage.removeItem('user_id');
+      }
+
+      // Use provided IDs or fall back to store values (but not localStorage)
+      const targetUserId = userId || userData?.userId;
       const targetCompanyId = companyId || selectedCompany?.companyId;
       
       if (!targetUserId) {
         throw new Error('User ID is required to fetch profile');
+      }
+
+      // Validate that targetUserId is a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(targetUserId)) {
+        console.error('❌ Invalid user ID format (not a UUID):', targetUserId);
+        throw new Error('Invalid user ID format. Please clear your cache and sign in again.');
       }
 
       // Check cache first
@@ -162,10 +176,17 @@ export function useUserProfile(): UseUserProfileReturn {
     setError(null);
     
     try {
-      const userId = updates.userId || profile?.userId || userData?.userId || localStorage.getItem('user_id');
+      const userId = updates.userId || profile?.userId || userData?.userId;
       
       if (!userId) {
         throw new Error('User ID is required to update profile');
+      }
+
+      // Validate that userId is a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        console.error('❌ Invalid user ID format (not a UUID):', userId);
+        throw new Error('Invalid user ID format. Please clear your cache and sign in again.');
       }
 
       const response = await fetch('/api/users/profile', {
@@ -243,9 +264,15 @@ export function useUserProfile(): UseUserProfileReturn {
 
   // Auto-fetch profile on mount with caching optimization
   useEffect(() => {
-    const userId = userData?.userId || localStorage.getItem('user_id');
+    const userId = userData?.userId;
     if (userId && !profile) {
-      fetchProfile(userId);
+      // Validate UUID format before fetching
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(userId)) {
+        fetchProfile(userId);
+      } else {
+        console.warn('⚠️ Invalid user ID in store, skipping profile fetch');
+      }
     }
   }, [userData?.userId, fetchProfile, profile]); // Only fetch if no profile exists
 

@@ -54,14 +54,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Transform to match frontend expectations
     return createApiResponse({
       success: true,
       error: "Conversation created successfully",
       status: 200,
       data: {
-        id: data.id,
-        chat_name: data.chat_name,
-        created_at: data.created_at
+        _id: data.id,
+        chatName: data.chat_name,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at || data.created_at,
+        userId: data.user_id,
+        companyId: data.company_id,
       },
     });
   } catch (error) {

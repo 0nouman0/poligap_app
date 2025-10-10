@@ -62,7 +62,7 @@ export function convertFromHistoryMessage(historyMessage: any): PlaygroundChatMe
 }
 
 /**
- * Save a single chat message to MongoDB
+ * Save a single chat message to Supabase
  */
 export async function saveChatMessage(
   message: PlaygroundChatMessage,
@@ -71,12 +71,22 @@ export async function saveChatMessage(
   try {
     const historyMessage = convertToHistoryMessage(message, conversationId);
     
-    const response = await fetch('/api/chat-history/save-message', {
+    const response = await fetch('/api/ai-chat/save-message', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(historyMessage),
+      body: JSON.stringify({
+        conversationId: historyMessage.conversationId,
+        messageId: historyMessage.messageId,
+        user_query: historyMessage.userQuery,
+        content: historyMessage.aiResponse,
+        messageType: historyMessage.messageType,
+        tool_calls: historyMessage.toolCalls,
+        extra_data: historyMessage.extraData,
+        images: historyMessage.images,
+        videos: historyMessage.videos,
+      }),
     });
 
     const result = await response.json();
@@ -162,7 +172,7 @@ export async function getChatMessages(
       offset: offset.toString(),
     });
 
-    const response = await fetch(`/api/chat-history/get-messages?${params}`);
+    const response = await fetch(`/api/ai-chat/get-messages?${params}`);
     const result = await response.json();
     
     if (!response.ok) {
@@ -212,7 +222,7 @@ export async function getChatHistory(
       params.append('companyId', companyId);
     }
 
-    const response = await fetch(`/api/chat-history/get-messages?${params}`);
+    const response = await fetch(`/api/ai-chat/get-conversation-list?${params}`);
     const result = await response.json();
     
     if (!response.ok) {
@@ -247,7 +257,7 @@ export async function deleteChatConversation(
       userId,
     });
 
-    const response = await fetch(`/api/chat-history/get-messages?${params}`, {
+    const response = await fetch(`/api/ai-chat/edit-conversation?${params}`, {
       method: 'DELETE',
     });
 

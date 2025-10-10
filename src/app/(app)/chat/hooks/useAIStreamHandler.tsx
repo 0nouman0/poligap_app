@@ -227,43 +227,27 @@ const useAIChatStreamHandler = ({
         : isGlobalAgent
         ? "Global_chat"
         : agent_name;
-      const apiUrl = isTrained
-        ? `${process.env.NEXT_PUBLIC_REACT_APP_API_URL_KROOLO_AI}/agno-agent`
-        : isGlobalAgent
-        ? `${process.env.NEXT_PUBLIC_REACT_APP_API_URL_KROOLO_AI}/global-chat-agno`
-        : `${process.env.NEXT_PUBLIC_REACT_APP_API_URL_KROOLO_AI}/custom-agent`;
+      
+      // Use local Next.js API routes instead of external Kroolo AI service
+      const apiUrl = '/api/ai-chat/stream-chat';
+      
       const session_id = isPublic ? publicUserId : selectedConversation._id;
-      const orgId = isPublic ? publicCompanyId : companyId;
-      const userId = isPublic
-        ? publicUserId
-        : localStorage.getItem("user_id")?.replace(/^"(.*)"$/, "$1");
 
-      // Use fallback values if missing
-      const actualOrgId = orgId || "60f1b2b3c4d5e6f7a8b9c0d1";
-      const actualUserId = userId || "68da404605eeba8349fc9d10";
+      // Map any non-Gemini model to Gemini
+      let geminiModel = selectedLlmModel?.modelId || "gemini-2.0-flash-exp";
+      if (!geminiModel.startsWith("gemini-")) {
+        // If not a Gemini model, use default Gemini model
+        geminiModel = "gemini-2.0-flash-exp";
+        console.log(`⚠️ Model ${selectedLlmModel?.modelId} is not supported. Using ${geminiModel} instead.`);
+      }
 
-      console.log("Stream handler - orgId:", actualOrgId, "userId:", actualUserId);
-
-      const requestData: RequestData = {
-        enable: enabledKnowledge ?? false,
-        user_id: actualUserId,
-        organization_id: actualOrgId,
-        agent_id: isTrainedAgent ?? "",
-        provider: selectedLlmModel?.provider ?? "openai",
-        files: selectedMedia.map((file) => file._id),
-        model: selectedLlmModel?.modelId ?? "gpt-4.1-mini",
-        web_search: enabledOptionIds.includes("web-search"),
-        reasoning: enabledOptionIds.includes("research"),
+      // Simplified request data for local Gemini API
+      const requestData: any = {
         user_query: "",
         session_id,
-        language: selectedLanguage.name,
-        search_depth: "advanced",
+        model: geminiModel,
         max_tokens: 4000,
       };
-      if (isTrained) {
-        requestData.user_description = user_description ?? "";
-        requestData.user_instructions = user_instructions ?? "";
-      }
 
       if (typeof input === "string") {
         requestData.user_query = input;
@@ -500,6 +484,7 @@ const useAIChatStreamHandler = ({
                       ...message,
                       content: updatedContent,
                       conversation_id: session_id,
+                      user_query: message.user_query || requestData.user_query, // Ensure user_query is preserved
                       tool_calls:
                         allToolCalls.length > 0
                           ? allToolCalls
@@ -531,13 +516,20 @@ const useAIChatStreamHandler = ({
             setStreamingErrorMessage(error.message);
           },
           onComplete: () => {
+            console.log("🎯 onComplete called. completedMessage:", completedMessage);
+            console.log("🎯 isGlobalAgent:", isGlobalAgent, "isPublic:", isPublic);
+            
             if (completedMessage && !completedMessage.streamingError) {
               setSelectedMedia([]);
               setInputMessage("");
               if (!isPublic) {
                 if (isGlobalAgent) {
-                  // debugger;
-                  console.log("completedMessage => ", completedMessage);
+                  console.log("💾 Calling saveGlobalChat with:", {
+                    id: completedMessage.id,
+                    conversation_id: completedMessage.conversation_id,
+                    user_query: completedMessage.user_query,
+                    content: completedMessage.content?.substring(0, 50),
+                  });
                   saveGlobalChat(completedMessage).catch((error) => {
                     toastError(
                       `Chat Creation Failed: ${
@@ -575,15 +567,12 @@ const useAIChatStreamHandler = ({
       isPublic,
       streamResponse,
       agent_id,
-      selectedLanguage,
       agno_id,
       saveGlobalChat,
       isGlobalAgent,
       isTrained,
       setSelectedMedia,
-      selectedMedia,
       selectedModel,
-      enabledKnowledge,
       selectedOptions,
       agent_name,
       saveChat,
@@ -593,11 +582,7 @@ const useAIChatStreamHandler = ({
       setInputMessage,
       extractToolCalls,
       extractReferences,
-      publicCompanyId,
       publicUserId,
-      user_description,
-      user_instructions,
-      companyId,
       medias,
     ]
   );

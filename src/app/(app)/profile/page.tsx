@@ -31,6 +31,7 @@ import { uploadToS3 } from "@/app/api/s3/upload/uploadtos3";
 import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/utils/user.util";
 import { useUserProfile, UserProfile } from "@/lib/hooks/useUserProfile";
+import { createClient } from "@/lib/supabase/client";
 
 interface EditableField {
   field: keyof UserData;
@@ -41,6 +42,7 @@ interface EditableField {
 export default function UserProfilePage() {
   const { userData, setUserData } = useUserStore();
   const { selectedCompany } = useCompanyStore();
+  const supabase = createClient();
   
   // Use the new profile hook
   const { 
@@ -56,6 +58,7 @@ export default function UserProfilePage() {
   // Profile data state (use profile from hook or fallback to userData)
   const [profileData, setProfileData] = useState(profile || userData);
   const [isSaving, setIsSaving] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   
   // Editable fields state
   const [editableFields, setEditableFields] = useState<Record<string, EditableField>>({});
@@ -76,12 +79,45 @@ export default function UserProfilePage() {
 
   // Fetch profile data on component mount
   useEffect(() => {
-    const userId = userData?.userId || localStorage.getItem('user_id');
+    const initializeProfile = async () => {
+      setIsInitializing(true);
+      
+      // First check if we have userId in userData
+      let userId = userData?.userId;
+      
+      // If not, try to get it from Supabase auth
+      if (!userId) {
+        console.log('� Profile page: No userId in store, fetching from Supabase auth...');
+        try {
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          
+          if (authError || !user) {
+            console.error('❌ Profile page: Failed to get auth user:', authError);
+            setIsInitializing(false);
+            return;
+          }
+          
+          userId = user.id;
+          console.log('✅ Profile page: Got userId from auth:', userId);
+        } catch (error) {
+          console.error('❌ Profile page: Error getting auth user:', error);
+          setIsInitializing(false);
+          return;
+        }
+      }
+      
+      if (userId) {
+        console.log('�🔄 Profile page: Fetching profile for user:', userId);
+        await fetchProfile(userId);
+      } else {
+        console.warn('⚠️ Profile page: No userId available');
+      }
+      
+      setIsInitializing(false);
+    };
     
-    if (userId) {
-      fetchProfile(userId);
-    }
-  }, [userData?.userId, fetchProfile]);
+    initializeProfile();
+  }, [userData?.userId, fetchProfile, supabase]);
 
   // Update profile data when profile from hook changes
   useEffect(() => {
@@ -567,18 +603,29 @@ export default function UserProfilePage() {
     );
   };
 
-  if (!profileData && !isLoading) {
+  if (isLoading || isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>No profile data available</p>
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (!profileData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="text-center">
+          <p className="text-lg mb-4">No profile data available</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Please try signing out and signing in again
+          </p>
+          <Button onClick={() => window.location.href = '/auth/signin'}>
+            Go to Sign In
+          </Button>
+        </div>
       </div>
     );
   }

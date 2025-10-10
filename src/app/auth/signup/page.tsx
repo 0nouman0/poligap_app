@@ -15,6 +15,7 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { toastError } from "@/components/toast-varients";
+import { clearOldCache } from "@/lib/utils/clear-old-cache";
 
 const signUpSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -41,12 +42,15 @@ export default function SignUpPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Clear old MongoDB cache on mount
+    clearOldCache();
     // Force light mode while on this page; restore on unmount
     prevThemeRef.current = theme ?? resolvedTheme;
     setTheme("light");
     return () => {
       if (prevThemeRef.current) setTheme(prevThemeRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { register, handleSubmit, formState: { errors }, setError } = useForm<SignUpFormData>({

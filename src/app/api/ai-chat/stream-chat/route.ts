@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+// Disable Portkey and use Gemini directly
+const USE_PORTKEY = false;
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,12 +21,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const requestBody = await request.json();
     const {
       user_query,
       session_id,
-      model = "gemini-2.0-flash-exp",
       max_tokens = 4000,
-    } = await request.json();
+    } = requestBody;
+    let model = requestBody.model || "gemini-2.0-flash-exp";
 
     if (!user_query) {
       return new Response(
@@ -33,24 +36,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate and ensure we're using a Gemini model
+    if (!model || !model.startsWith("gemini-")) {
+      console.warn(`⚠️ Invalid model "${model}" requested. Using default Gemini model.`);
+      model = "gemini-2.0-flash-exp";
+    }
+
     // Get conversation history if session_id is provided
-    let conversationHistory: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+    const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];
     
     if (session_id) {
-      const { data: messages } = await supabase
+      const { data: dbMessages } = await supabase
         .from("chat_messages")
-        .select("user_query, content")
+        .select("user_query, ai_response")
         .eq("conversation_id", session_id)
         .order("created_at", { ascending: true })
         .limit(20); // Last 20 messages for context
 
-      if (messages) {
-        conversationHistory = messages.flatMap((msg) => [
-          { role: "user", parts: [{ text: msg.user_query }] },
-          { role: "model", parts: [{ text: msg.content || "" }] },
-        ]);
+      if (dbMessages) {
+        dbMessages.forEach((msg) => {
+          messages.push({ role: "user", content: msg.user_query });
+          if (msg.ai_response) {
+            messages.push({ role: "assistant", content: msg.ai_response });
+          }
+        });
       }
     }
+
+    // Add current query
+    messages.push({ role: "user", content: user_query });
+
+    console.log('🔄 Using Direct Gemini API for chat streaming');
+
+    // Direct Gemini implementation
+    // Convert messages back to Gemini format
+    const conversationHistory: Array<{ role: string; parts: Array<{ text: string }> }> = messages
+      .slice(0, -1) // Exclude the current query
+      .map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
 
     const model_instance = genAI.getGenerativeModel({ 
       model,
@@ -67,19 +92,32 @@ export async function POST(request: NextRequest) {
     // Stream the response
     const result = await chat.sendMessageStream(user_query);
 
-    // Create a ReadableStream for SSE
+    // Create a ReadableStream for SSE with RunResponse format
     const encoder = new TextEncoder();
+    let fullContent = "";
     const stream = new ReadableStream({
       async start(controller) {
         try {
           for await (const chunk of result.stream) {
             const text = chunk.text();
-            const data = `data: ${JSON.stringify({ content: text })}\n\n`;
+            fullContent += text;
+            
+            // Send in RunResponse format expected by frontend
+            const data = `data: ${JSON.stringify({ 
+              event: "RunResponseContent",
+              content: fullContent,
+              created_at: Date.now()
+            })}\n\n`;
             controller.enqueue(encoder.encode(data));
           }
           
-          // Send done signal
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+          // Send completion signal
+          const completionData = `data: ${JSON.stringify({ 
+            event: "RunCompleted",
+            content: fullContent,
+            created_at: Date.now()
+          })}\n\n`;
+          controller.enqueue(encoder.encode(completionData));
           controller.close();
         } catch (error) {
           console.error("Streaming error:", error);

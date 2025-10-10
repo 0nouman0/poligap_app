@@ -279,19 +279,32 @@ export const useGlobalChatStore = create((set: any) => ({
     try {
       console.log("💾 Saving global chat message:", messageData);
       
+      // Transform PlaygroundChatMessage to API format
+      const apiPayload = {
+        conversationId: messageData.conversation_id,
+        messageId: messageData.id,
+        user_query: messageData.user_query || '',
+        content: messageData.content || '',
+        messageType: messageData.content ? 'ai' : 'user',
+        tool_calls: messageData.tool_calls || [],
+        extra_data: messageData.extra_data || {},
+        images: messageData.images || [],
+        videos: messageData.videos || [],
+      };
+      
       const res = await fetch("/api/ai-chat/save-message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(messageData),
+        body: JSON.stringify(apiPayload),
       });
 
       const resp = await res.json();
       console.log("💾 Save message response:", resp);
       
       if (resp?.success) {
-        console.log("✅ Message saved to MongoDB successfully");
+        console.log("✅ Message saved to Supabase successfully");
       } else {
         console.error("❌ Failed to save message:", resp.error);
         toastWarning("Save Failed", resp.error || "Failed to save message");

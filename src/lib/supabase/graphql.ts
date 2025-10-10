@@ -3,6 +3,10 @@ import { GraphQLClient } from 'graphql-request'
 const GRAPHQL_ENDPOINT = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`
 
 export function createGraphQLClient(accessToken?: string) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
   return new GraphQLClient(GRAPHQL_ENDPOINT, {
     headers: {
       apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -38,6 +42,7 @@ export const queries = {
             created_by
             created_at
             updated_at
+            profile_created_on
           }
         }
       }

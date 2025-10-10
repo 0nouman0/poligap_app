@@ -120,12 +120,17 @@ const RecentChats = ({
     if (resp) {
       console.log("resp message ===>", resp);
       
-      // Load chat history from MongoDB
+      // Load chat history from Supabase - this updates the store messages
       const loadChatHistory = useGlobalChatStore.getState().loadChatHistory;
-      await loadChatHistory(chatData._id);
+      const messages = await loadChatHistory(chatData._id);
+      
+      console.log("📨 Loaded messages:", messages);
+      
       // debugger;
       if (isMobile) setRecentChatsOpen(false);
-      setMessages(resp);
+      
+      // Messages are already set in the store by loadChatHistory, no need to call setMessages
+      // The store already has the messages, and the component will re-render automatically
     }
   };
 
@@ -177,63 +182,65 @@ const RecentChats = ({
                 ))}
               </>
             ) : (
-              Object.entries(groupedChats).map(([sectionTitle, chats]) => (
-                <div key={sectionTitle}>
-                  <h3 className="text-13 font-medium text-muted-foreground mb-1">
-                    {sectionTitle}
-                  </h3>
-                  <div className="space-y-2">
-                    {chats.map((chat) => (
-                      <div
-                        key={chat._id}
-                        onClick={() => handleGoToChat(chat)}
-                        className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors group
-                          ${
-                            selectedConversation?._id === chat._id
-                              ? "bg-primary/5 border-primary"
-                              : "hover:bg-muted"
-                          }`}
-                      >
-                        {/* <Tooltip>
-                          <TooltipTrigger asChild> */}
-                        <span>
-                          <h4 className="text-sm font-medium text-foreground truncate mb-1">
-                            {chat.chatName}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(chat.createdAt).toLocaleString("en-US", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </p>
-                        </span>
-                        {/* </TooltipTrigger> */}
-                        {/* <TooltipContent side="top">
-                             <p>{chat.chatName}</p>
-                           </TooltipContent> */}
-                        {/* </Tooltip> */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(event) =>
-                                handleDeleteConversation(event, chat._id)
-                              }
-                              className="cursor-pointer hidden group-hover:block text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" sideOffset={5}>
-                            <p>Delete</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    ))}
+              <>
+                {Object.entries(groupedChats).map(([sectionTitle, chats]) => (
+                  <div key={sectionTitle}>
+                    <h3 className="text-13 font-medium text-muted-foreground mb-1">
+                      {sectionTitle}
+                    </h3>
+                    <div className="space-y-2">
+                      {chats.map((chat, idx) => (
+                        <div
+                          key={chat._id || `chat-${idx}`}
+                          onClick={() => handleGoToChat(chat)}
+                          className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors group
+                            ${
+                              selectedConversation?._id === chat._id
+                                ? "bg-primary/5 border-primary"
+                                : "hover:bg-muted"
+                            }`}
+                        >
+                          {/* <Tooltip>
+                            <TooltipTrigger asChild> */}
+                          <span>
+                            <h4 className="text-sm font-medium text-foreground truncate mb-1">
+                              {chat.chatName}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(chat.createdAt).toLocaleString("en-US", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          </span>
+                          {/* </TooltipTrigger> */}
+                          {/* <TooltipContent side="top">
+                               <p>{chat.chatName}</p>
+                             </TooltipContent> */}
+                          {/* </Tooltip> */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(event) =>
+                                  handleDeleteConversation(event, chat._id)
+                                }
+                                className="cursor-pointer hidden group-hover:block text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" sideOffset={5}>
+                              <p>Delete</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         </div>

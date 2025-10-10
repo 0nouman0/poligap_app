@@ -42,7 +42,8 @@ const Messages = ({
   handleCreateProject,
   handleCreateDoc,
 }: MessageListProps) => {
-  const messagesArray = messages || [];
+  // Ensure messages is always an array
+  const messagesArray = Array.isArray(messages) ? messages : [];
 
   if (messagesArray.length === 0) {
     return <div></div>;

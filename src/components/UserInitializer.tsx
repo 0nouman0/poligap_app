@@ -3,14 +3,14 @@
 import { useEffect, useRef } from 'react';
 import { useUserStore } from '@/stores/user-store';
 import { createClient } from '@/lib/supabase/client';
-import { createGraphQLClient, queries } from '@/lib/supabase/graphql';
+import { clearOldCache } from '@/lib/utils/clear-old-cache';
 
 // Global flag to prevent multiple initializations
 let globalInitializing = false;
 let globalInitialized = false;
 
 export function UserInitializer() {
-  const { userData, setUserData } = useUserStore();
+  const { userData, setUserData, clearUserData } = useUserStore();
   const hasRunRef = useRef(false);
   const supabase = createClient();
 
@@ -21,14 +21,11 @@ export function UserInitializer() {
       if (hasRunRef.current) return;
       hasRunRef.current = true;
 
+      // Clear old MongoDB-based cache if it exists
+      clearOldCache();
+
       if (globalInitialized) {
         console.log('✅ User already globally initialized');
-        return;
-      }
-
-      if (userData?.userId) {
-        console.log('✅ User already initialized:', userData.email);
-        globalInitialized = true;
         return;
       }
 
@@ -46,26 +43,32 @@ export function UserInitializer() {
         
         if (userError || !user) {
           console.warn('⚠️ No authenticated user found');
+          // Clear any cached user data
+          clearUserData();
           return;
+        }
+
+        console.log('📡 User authenticated:', user.id);
+        
+        // Check if cached userData has wrong ID format (MongoDB ObjectId instead of UUID)
+        if (userData?.userId && userData.userId !== user.id) {
+          console.warn('⚠️ Cached user ID mismatch, clearing cache...');
+          clearUserData();
         }
 
         console.log('📡 Fetching user profile from Supabase...');
         
-        // Get user session for access token
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.access_token) {
-          console.warn('⚠️ No access token found');
-          return;
+        // Fetch profile directly from Supabase
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('❌ Profile fetch error:', profileError);
+          // If profile doesn't exist, we'll create a basic one below
         }
-
-        // Fetch profile using GraphQL
-        const graphqlClient = createGraphQLClient(session.access_token);
-        const data: any = await graphqlClient.request(queries.getProfile, {
-          id: user.id,
-        });
-
-        const profile = data?.profilesCollection?.edges?.[0]?.node;
 
         if (profile && isMounted) {
           const profileData = {
@@ -136,6 +139,7 @@ export function UserInitializer() {
       isMounted = false;
       globalInitializing = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null;

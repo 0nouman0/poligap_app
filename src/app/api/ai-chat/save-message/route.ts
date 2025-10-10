@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       messageId,
       user_query,
       content,
+      ai_response, // Support both content and ai_response
       messageType = 'ai',
       tool_calls = [],
       extra_data = {},
@@ -39,6 +40,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Use ai_response if provided, otherwise use content
+    const responseText = ai_response || content || '';
+
     // Check if message already exists
     const { data: existingMessages } = await supabase
       .from('chat_messages')
@@ -53,7 +57,7 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from('chat_messages')
         .update({
-          ai_response: content,
+          ai_response: responseText,
           tool_calls: tool_calls.length > 0 ? tool_calls : null,
           extra_data: Object.keys(extra_data).length > 0 ? extra_data : null,
           images: images.length > 0 ? images : null,
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
         conversation_id: conversationId,
         message_id: messageId,
         user_query: user_query || '',
-        ai_response: content || '',
+        ai_response: responseText,
         message_type: messageType,
         tool_calls,
         extra_data,

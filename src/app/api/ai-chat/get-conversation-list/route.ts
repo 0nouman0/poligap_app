@@ -31,10 +31,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Transform Supabase format to match frontend expectations
+    const transformedData = (data || []).map((conversation: any) => ({
+      _id: conversation.id,
+      chatName: conversation.chat_name || 'Untitled Chat',
+      createdAt: conversation.created_at,
+      updatedAt: conversation.updated_at || conversation.created_at,
+      userId: conversation.user_id,
+      companyId: conversation.company_id,
+      agentId: conversation.agent_id,
+    }));
+
     return createApiResponse({
       status: 200,
       success: true,
-      data: data || [],
+      data: transformedData,
     });
   } catch (error) {
     console.error("Error in get-conversation-list:", error);

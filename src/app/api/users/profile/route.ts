@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createGraphQLClient, queries } from '@/lib/supabase/graphql';
 
 // GET - Fetch user profile
 export async function GET(req: NextRequest) {
@@ -9,6 +8,7 @@ export async function GET(req: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error('Auth error in profile route:', authError);
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -17,24 +17,22 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId') || user.id;
+    console.log('Fetching profile for userId:', userId);
 
-    // Get session for access token
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) {
+    // Fetch profile directly from Supabase
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error('Supabase query error:', profileError);
       return NextResponse.json(
-        { success: false, error: 'No session found' },
-        { status: 401 }
+        { success: false, error: `Database error: ${profileError.message}`, details: profileError },
+        { status: 500 }
       );
     }
-
-    // Fetch profile using GraphQL
-    const graphqlClient = createGraphQLClient(session.access_token);
-    const data: any = await graphqlClient.request(queries.getProfile, {
-      id: userId,
-    });
-
-    const profile = data?.profilesCollection?.edges?.[0]?.node;
 
     if (!profile) {
       return NextResponse.json(
@@ -47,8 +45,8 @@ export async function GET(req: NextRequest) {
     const profileData = {
       _id: profile.id,
       userId: profile.id,
-      name: profile.name,
-      email: profile.email,
+      name: profile.name || '',
+      email: profile.email || '',
       mobile: profile.mobile || '',
       dob: profile.dob || '',
       country: profile.country || '',
@@ -67,12 +65,12 @@ export async function GET(req: NextRequest) {
       reportingManager: profile.reporting_manager || null,
       created_by: profile.created_by || null,
       createdBy: profile.created_by || null,
-      created_at: profile.created_at,
-      createdAt: profile.created_at,
-      updated_at: profile.updated_at,
-      updatedAt: profile.updated_at,
-      profile_created_on: profile.profile_created_on,
-      profileCreatedOn: profile.profile_created_on,
+      created_at: profile.created_at || new Date().toISOString(),
+      createdAt: profile.created_at || new Date().toISOString(),
+      updated_at: profile.updated_at || new Date().toISOString(),
+      updatedAt: profile.updated_at || new Date().toISOString(),
+      profile_created_on: profile.profile_created_on || profile.created_at || new Date().toISOString(),
+      profileCreatedOn: profile.profile_created_on || profile.created_at || new Date().toISOString(),
     };
 
     const response = NextResponse.json({
@@ -112,46 +110,46 @@ export async function PUT(req: NextRequest) {
 
     const targetUserId = userId || user.id;
 
-    // Get session for access token
-    const { data: { session } } = await supabase.auth.getSession();
+    // Prepare updates (map camelCase to snake_case)
+    const profileUpdates: any = {
+      updated_at: new Date().toISOString(),
+    };
     
-    if (!session?.access_token) {
+    if (updates.name !== undefined) profileUpdates.name = updates.name;
+    if (updates.mobile !== undefined) profileUpdates.mobile = updates.mobile;
+    if (updates.dob !== undefined) profileUpdates.dob = updates.dob;
+    if (updates.country !== undefined) profileUpdates.country = updates.country;
+    if (updates.designation !== undefined) profileUpdates.designation = updates.designation;
+    if (updates.about !== undefined) profileUpdates.about = updates.about;
+    if (updates.profileImage !== undefined || updates.profile_image !== undefined) {
+      profileUpdates.profile_image = updates.profileImage || updates.profile_image;
+    }
+    if (updates.banner !== undefined) profileUpdates.banner = updates.banner;
+    if (updates.companyName !== undefined || updates.company_name !== undefined) {
+      profileUpdates.company_name = updates.companyName || updates.company_name;
+    }
+    if (updates.status !== undefined) profileUpdates.status = updates.status;
+    if (updates.role !== undefined) profileUpdates.role = updates.role;
+
+    // Update profile directly in Supabase
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('profiles')
+      .update(profileUpdates)
+      .eq('id', targetUserId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Profile update error:', updateError);
       return NextResponse.json(
-        { success: false, error: 'No session found' },
-        { status: 401 }
+        { success: false, error: `Update failed: ${updateError.message}`, details: updateError },
+        { status: 500 }
       );
     }
 
-    // Prepare updates (map camelCase to snake_case)
-    const profileUpdates: any = {};
-    
-    if (updates.name) profileUpdates.name = updates.name;
-    if (updates.mobile) profileUpdates.mobile = updates.mobile;
-    if (updates.dob) profileUpdates.dob = updates.dob;
-    if (updates.country) profileUpdates.country = updates.country;
-    if (updates.designation) profileUpdates.designation = updates.designation;
-    if (updates.about) profileUpdates.about = updates.about;
-    if (updates.profileImage || updates.profile_image) {
-      profileUpdates.profile_image = updates.profileImage || updates.profile_image;
-    }
-    if (updates.banner) profileUpdates.banner = updates.banner;
-    if (updates.companyName || updates.company_name) {
-      profileUpdates.company_name = updates.companyName || updates.company_name;
-    }
-    if (updates.status) profileUpdates.status = updates.status;
-    if (updates.role) profileUpdates.role = updates.role;
-
-    const graphqlClient = createGraphQLClient(session.access_token);
-    const data: any = await graphqlClient.request(queries.updateProfile, {
-      id: targetUserId,
-      ...profileUpdates,
-    });
-
-    const updatedProfile = data?.updateprofilesCollection?.records?.[0];
-
     if (!updatedProfile) {
       return NextResponse.json(
-        { success: false, error: 'Profile update failed' },
+        { success: false, error: 'Profile update failed - no data returned' },
         { status: 500 }
       );
     }
