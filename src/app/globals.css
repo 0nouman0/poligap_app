@@ -231,6 +231,23 @@
     scrollbar-width: thin;
     scrollbar-color: #c1c1c1 #f1f1f1;
   }
+
+  /* Fix: Allow scrolling when dropdown/popover is open */
+  /* Prevent Radix UI from blocking scroll */
+  body[data-scroll-locked] {
+    overflow: auto !important;
+    padding-right: 0px !important;
+  }
+
+  /* Ensure dropdown menu doesn't block pointer events on the page */
+  [data-radix-popper-content-wrapper] {
+    pointer-events: none !important;
+  }
+
+  /* But allow pointer events on the dropdown content itself */
+  [data-radix-popper-content-wrapper] > * {
+    pointer-events: auto !important;
+  }
 }
 
 /* just in case */

@@ -192,13 +192,20 @@ export default function UserProfilePage() {
   };
 
   const updateFieldValue = (fieldName: string, value: string) => {
-    setEditableFields(prev => ({
-      ...prev,
-      [fieldName]: {
-        ...prev[fieldName],
-        value
-      }
-    }));
+    setEditableFields(prev => {
+      const existingField = prev[fieldName] || {
+        field: fieldName as keyof UserData,
+        isEditing: true
+      };
+      
+      return {
+        ...prev,
+        [fieldName]: {
+          ...existingField,
+          value
+        }
+      };
+    });
   };
 
   const handleBannerEdit = () => {
@@ -543,21 +550,23 @@ export default function UserProfilePage() {
     type?: string; 
   }) => {
     const isEditing = editableFields[fieldName]?.isEditing;
-    const editValue = editableFields[fieldName]?.value || value;
+    // Use ?? instead of || to allow empty strings
+    const editValue = editableFields[fieldName]?.value ?? value ?? '';
 
     return (
       <div className="flex items-center justify-between p-3 rounded-lg border">
         <div className="flex items-center gap-3">
           <Icon className="h-4 w-4 text-muted-foreground" />
-          <div>
+          <div className="flex-1">
             <Label className="text-sm font-medium">{label}</Label>
             {isEditing ? (
               <Input
                 type={type}
                 value={editValue}
                 onChange={(e) => updateFieldValue(fieldName, e.target.value)}
-                className="mt-1 h-8"
+                className="mt-1 h-8 w-full"
                 autoFocus
+                placeholder={`Enter ${label.toLowerCase()}`}
               />
             ) : (
               <p className="text-sm text-muted-foreground mt-1">
@@ -735,13 +744,21 @@ export default function UserProfilePage() {
                     value={profileData?.name || ''}
                     icon={User}
                   />
-                  <EditableFieldComponent
-                    fieldName="email"
-                    label="Email Address"
-                    value={profileData?.email || ''}
-                    icon={Mail}
-                    type="email"
-                  />
+                  {/* Email field - Display only (managed by Supabase Auth) */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <Label className="text-sm font-medium">Email Address</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {profileData?.email || 'Not provided'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Email is managed by your account settings
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   <EditableFieldComponent
                     fieldName="mobile"
                     label="Phone Number"
@@ -780,7 +797,7 @@ export default function UserProfilePage() {
                     {editableFields['about']?.isEditing ? (
                       <div className="space-y-3">
                         <Textarea
-                          value={editableFields['about']?.value || profileData?.about || ''}
+                          value={editableFields['about']?.value ?? profileData?.about ?? ''}
                           onChange={(e) => updateFieldValue('about', e.target.value)}
                           placeholder="Tell us about yourself..."
                           className="min-h-[100px]"

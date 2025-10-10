@@ -41,10 +41,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Transform to match expected format
+    // Transform to match expected format (camelCase for frontend)
     const profileData = {
       _id: profile.id,
       userId: profile.id,
+      uniqueId: profile.id,
       name: profile.name || '',
       email: profile.email || '',
       mobile: profile.mobile || '',
@@ -115,21 +116,31 @@ export async function PUT(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     
+    // Basic fields
     if (updates.name !== undefined) profileUpdates.name = updates.name;
     if (updates.mobile !== undefined) profileUpdates.mobile = updates.mobile;
     if (updates.dob !== undefined) profileUpdates.dob = updates.dob;
     if (updates.country !== undefined) profileUpdates.country = updates.country;
     if (updates.designation !== undefined) profileUpdates.designation = updates.designation;
     if (updates.about !== undefined) profileUpdates.about = updates.about;
+    
+    // Image fields
     if (updates.profileImage !== undefined || updates.profile_image !== undefined) {
       profileUpdates.profile_image = updates.profileImage || updates.profile_image;
     }
-    if (updates.banner !== undefined) profileUpdates.banner = updates.banner;
+    if (updates.banner !== undefined) {
+      profileUpdates.banner = updates.banner;
+    }
+    
+    // Company and status fields
     if (updates.companyName !== undefined || updates.company_name !== undefined) {
       profileUpdates.company_name = updates.companyName || updates.company_name;
     }
     if (updates.status !== undefined) profileUpdates.status = updates.status;
     if (updates.role !== undefined) profileUpdates.role = updates.role;
+    
+    // Note: Email is managed by Supabase Auth and should not be updated here
+    // If email update is needed, use Supabase Auth updateUser() method
 
     // Update profile directly in Supabase
     const { data: updatedProfile, error: updateError } = await supabase
@@ -154,9 +165,42 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    // Transform to match expected format (camelCase for frontend)
+    const transformedProfile = {
+      _id: updatedProfile.id,
+      userId: updatedProfile.id,
+      uniqueId: updatedProfile.id,
+      name: updatedProfile.name || '',
+      email: updatedProfile.email || '',
+      mobile: updatedProfile.mobile || '',
+      dob: updatedProfile.dob || '',
+      country: updatedProfile.country || '',
+      designation: updatedProfile.designation || '',
+      about: updatedProfile.about || '',
+      profile_image: updatedProfile.profile_image || '',
+      profileImage: updatedProfile.profile_image || '',
+      banner: updatedProfile.banner || { image: '', color: '', type: '', yOffset: 0 },
+      company_name: updatedProfile.company_name || '',
+      companyName: updatedProfile.company_name || '',
+      status: updatedProfile.status || 'ACTIVE',
+      role: updatedProfile.role || 'USER',
+      member_status: updatedProfile.member_status || 'ACTIVE',
+      memberStatus: updatedProfile.member_status || 'ACTIVE',
+      reporting_manager: updatedProfile.reporting_manager || null,
+      reportingManager: updatedProfile.reporting_manager || null,
+      created_by: updatedProfile.created_by || null,
+      createdBy: updatedProfile.created_by || null,
+      created_at: updatedProfile.created_at || new Date().toISOString(),
+      createdAt: updatedProfile.created_at || new Date().toISOString(),
+      updated_at: updatedProfile.updated_at || new Date().toISOString(),
+      updatedAt: updatedProfile.updated_at || new Date().toISOString(),
+      profile_created_on: updatedProfile.profile_created_on || updatedProfile.created_at || new Date().toISOString(),
+      profileCreatedOn: updatedProfile.profile_created_on || updatedProfile.created_at || new Date().toISOString(),
+    };
+
     return NextResponse.json({
       success: true,
-      data: updatedProfile,
+      data: transformedProfile,
     });
 
   } catch (error: any) {
