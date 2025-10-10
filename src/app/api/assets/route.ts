@@ -1,52 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
 
+// TODO: Migrate to Supabase media table
 // GET - Fetch all assets
 export async function GET(request: NextRequest) {
   try {
-    const { db } = await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    
-    const category = searchParams.get('category');
-    const tags = searchParams.get('tags')?.split(',').filter(Boolean);
-    const search = searchParams.get('search');
-    
-    // Build query
-    let query: any = {};
-    
-    if (category && category !== 'all') {
-      query.category = category;
-    }
-    
-    if (tags && tags.length > 0) {
-      query.tags = { $in: tags };
-    }
-    
-    if (search) {
-      query.$or = [
-        { originalName: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    const assets = await db
-      .collection('assets')
-      .find(query)
-      .sort({ uploadDate: -1 })
-      .toArray();
-    
+    // Return empty array for now - to be migrated to Supabase media table
     return NextResponse.json({ 
-      success: true, 
-      assets: assets.map(asset => ({
-        ...asset,
-        _id: asset._id.toString()
-      }))
+      success: true,
+      assets: []
     });
-    
   } catch (error) {
-    console.error('Error fetching assets:', error);
+    console.error('Assets GET error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch assets' },
       { status: 500 }
@@ -54,47 +18,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// DELETE - Delete multiple assets
+// POST - Upload asset (not implemented yet)
+export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { success: false, error: 'Asset upload not yet migrated to Supabase' },
+    { status: 501 }
+  );
+}
+
+// DELETE - Delete assets (not implemented yet)
 export async function DELETE(request: NextRequest) {
-  try {
-    const { db } = await connectToDatabase();
-    const { assetIds } = await request.json();
-    
-    if (!assetIds || !Array.isArray(assetIds)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid asset IDs provided' },
-        { status: 400 }
-      );
-    }
-    
-    // Convert string IDs to ObjectIds
-    const objectIds = assetIds.map(id => new ObjectId(id));
-    
-    // Get assets to delete (for file cleanup)
-    const assetsToDelete = await db
-      .collection('assets')
-      .find({ _id: { $in: objectIds } })
-      .toArray();
-    
-    // Delete from database
-    const result = await db
-      .collection('assets')
-      .deleteMany({ _id: { $in: objectIds } });
-    
-    // TODO: Delete actual files from storage (implement based on your storage solution)
-    // This would typically involve deleting files from your file storage system
-    
-    return NextResponse.json({
-      success: true,
-      deletedCount: result.deletedCount,
-      message: `Successfully deleted ${result.deletedCount} asset(s)`
-    });
-    
-  } catch (error) {
-    console.error('Error deleting assets:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete assets' },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json(
+    { success: false, error: 'Asset deletion not yet migrated to Supabase' },
+    { status: 501 }
+  );
 }

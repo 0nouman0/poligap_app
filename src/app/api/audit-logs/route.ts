@@ -1,42 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
+import { createClient } from '@/lib/supabase/server';
+import { createGraphQLClient } from '@/lib/supabase/graphql';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = process.env.DB_NAME || 'poligap';
-
-interface AuditLog {
-  _id?: ObjectId;
-  fileName: string;
-  standards: string[];
-  score: number;
-  status: 'compliant' | 'non-compliant' | 'partial';
-  gapsCount: number;
-  analysisDate: Date;
-  fileSize: number;
-  analysisMethod?: string;
-  userId?: string;
-  sessionId?: string;
-  snapshot?: {
-    gaps?: Array<{
-      id: string;
-      title: string;
-      description: string;
-      priority: 'critical' | 'high' | 'medium' | 'low';
-      category: string;
-      recommendation: string;
-      section?: string;
-    }>;
-    suggestions?: string[];
-    // Optional full analysis payload for detailed History rendering
-    fullResult?: any;
-  };
-}
-
-async function connectToDatabase() {
-  const client = new MongoClient(MONGODB_URI);
-  await client.connect();
-  return client.db(DB_NAME);
-}
+// This API uses document_analysis table to store compliance analysis history
+// (originally named audit_logs in MongoDB)
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,29 +18,51 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Use Supabase Postgrest API directly (simpler than GraphQL for this)
+    const supabase = await createClient();
     
-    const db = await connectToDatabase();
-    const collection = db.collection<AuditLog>('audit_logs');
-    
-    // Build query to match any of the selected standards
-    const query: Record<string, any> = {
-      userId,
-      ...(standards.length > 0 ? { standards: { $in: standards } } : {}),
-    };
-    
-    const logs = await collection
-      .find(query)
-      .sort({ analysisDate: -1 })
-      .limit(limit)
-      .toArray();
-    
-    return NextResponse.json({ 
-      success: true, 
-      logs: logs.map(log => ({
-        ...log,
-        _id: log._id?.toString()
-      }))
-    });
+    let query = supabase
+      .from('document_analysis')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    // Filter by standards if provided (stored in metrics->standards)
+    if (standards.length > 0) {
+      // Since standards is in the metrics JSONB field, we need to filter differently
+      query = query.containedBy('metrics', { standards });
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch audit logs' },
+        { status: 500 }
+      );
+    }
+
+    // Transform Supabase data to match expected format
+    const logs = (data || []).map((doc: any) => ({
+      _id: doc.id,
+      id: doc.id,
+      fileName: doc.title || 'Untitled',
+      standards: doc.metrics?.standards || [],
+      score: doc.score || 0,
+      status: doc.metrics?.status || 'unknown',
+      gapsCount: doc.metrics?.gapsCount || 0,
+      analysisDate: doc.created_at,
+      fileSize: doc.metrics?.fileSize || 0,
+      analysisMethod: doc.metrics?.analysisMethod,
+      userId: doc.user_id,
+      sessionId: doc.metrics?.sessionId,
+      snapshot: doc.metrics?.snapshot || {}
+    }));
+
+    return NextResponse.json({ success: true, logs });
   } catch (error) {
     console.error('Error fetching audit logs:', error);
     return NextResponse.json(
@@ -106,30 +95,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await connectToDatabase();
-    const collection = db.collection<AuditLog>('audit_logs');
-    
-    const auditLog: AuditLog = {
-      fileName,
+    // Use Supabase Postgrest API to insert into document_analysis
+    const supabase = await createClient();
+
+    // Store all analysis data in metrics JSONB field
+    const metrics = {
       standards,
-      score,
       status,
       gapsCount: gapsCount || 0,
-      analysisDate: new Date(),
       fileSize: fileSize || 0,
       analysisMethod,
-      userId,
       sessionId,
       snapshot
     };
 
-    const result = await collection.insertOne(auditLog);
-    
-    return NextResponse.json({ 
-      success: true, 
-      id: result.insertedId.toString(),
-      log: { ...auditLog, _id: result.insertedId.toString() }
-    });
+    const { data, error } = await supabase
+      .from('document_analysis')
+      .insert({
+        user_id: userId,
+        title: fileName,
+        compliance_standard: standards[0] || 'general', // Use first standard as primary
+        score: score,
+        metrics
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create audit log' },
+        { status: 500 }
+      );
+    }
+
+    // Transform response to match expected format
+    const log = {
+      _id: data.id,
+      id: data.id,
+      fileName: data.title,
+      standards,
+      score: data.score,
+      status,
+      gapsCount: gapsCount || 0,
+      analysisDate: data.created_at,
+      fileSize: fileSize || 0,
+      analysisMethod,
+      userId: data.user_id,
+      sessionId,
+      snapshot
+    };
+
+    return NextResponse.json({ success: true, log });
   } catch (error) {
     console.error('Error creating audit log:', error);
     return NextResponse.json(
