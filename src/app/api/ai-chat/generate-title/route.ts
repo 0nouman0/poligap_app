@@ -1,35 +1,35 @@
-import PortkeyClient from "@/lib/portkey";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 async function agentTitleGenerator(userPrompt: string) {
   try {
     if (!userPrompt) {
-      return createApiResponse({
-        success: false,
-        error: "Missing required fields",
-        status: 400,
-      });
+      return "New Chat";
     }
 
-    // Check if Portkey API key is available
-    if (!process.env.PORTKEY_API_KEY) {
-      console.log("⚠️ PORTKEY_API_KEY not found, using fallback title generation");
-      // Generate a simple title based on the user prompt
-      const words = userPrompt.split(' ').slice(0, 5).join(' ');
-      return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
+    // Use Gemini AI for title generation (more reliable)
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+        
+        const prompt = `Generate a very short chat title (max 5 words) for this user message: "${userPrompt}". Return only the title, no quotes or extra text.`;
+        const result = await model.generateContent(prompt);
+        const title = result.response.text().trim();
+        
+        return title || `Chat: ${userPrompt.split(' ').slice(0, 3).join(' ')}`;
+      } catch (geminiError) {
+        console.error("Gemini title generation failed:", geminiError);
+        // Fall through to simple title
+      }
     }
 
-    const portkeyClient = new PortkeyClient();
-    const response = await portkeyClient.client.prompts.completions.create({
-      promptID: "pp-agent-titl-a0a456",
-      variables: { user_prompt: userPrompt },
-    });
-
-    return response.choices[0].message.content;
+    // Simple fallback title generation
+    const words = userPrompt.split(' ').slice(0, 5).join(' ');
+    return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
   } catch (error) {
-    console.error("Portkey API error:", error);
-    // Fallback title generation
+    console.error("Title generation error:", error);
     const words = userPrompt.split(' ').slice(0, 5).join(' ');
     return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
   }

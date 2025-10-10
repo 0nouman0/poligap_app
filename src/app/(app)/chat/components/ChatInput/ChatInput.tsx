@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import type {
+  AgentSelectedChatType,
   AgentType,
   MediaTypeProps,
   MultiSelectOption,
@@ -207,8 +208,7 @@ const ChatInput = ({
     const currentMessage = inputMessage;
     setInputMessage("");
     try {
-      let createdConvo = {
-        _id: "",
+      let createdConvo: AgentSelectedChatType = {
         chatName: "",
         createdAt: new Date().toISOString(),
       };
@@ -216,10 +216,13 @@ const ChatInput = ({
       const messagesArray = messages || [];
 
       if (handleCreateConversation) {
+        // Support both id and _id formats (Supabase uses id, MongoDB uses _id)
+        const conversationId = selectedConversation?.id || selectedConversation?._id;
+        
         // On first message, ensure a conversation exists
-        if (messagesArray.length === 0 && (!selectedConversation || selectedConversation._id === "")) {
+        if (messagesArray.length === 0 && (!selectedConversation || conversationId === "")) {
           createdConvo = await handleCreateConversation();
-        } else if (messagesArray.length === 0 && selectedConversation && selectedConversation._id !== "") {
+        } else if (messagesArray.length === 0 && selectedConversation && conversationId !== "") {
           createdConvo = selectedConversation;
         } else {
           createdConvo = selectedConversation ?? createdConvo;

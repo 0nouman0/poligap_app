@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { queries } from "@/lib/supabase/graphql";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
-import { GraphQLClient } from "graphql-request";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,36 +15,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get access token for GraphQL
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Use Supabase Postgrest API to get conversations
+    const { data, error } = await supabase
+      .from('agent_conversations')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase query error:', error);
       return createApiResponse({
         success: false,
-        error: "No session found",
-        status: 401,
+        error: `Failed to fetch conversations: ${error.message}`,
+        status: 500,
       });
     }
-
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    const result = await graphQLClient.request<any>(queries.getConversations, {
-      userId: user.id,
-    });
-
-    const conversationList = result.agent_conversationsCollection.edges.map((edge: any) => edge.node);
 
     return createApiResponse({
       status: 200,
       success: true,
-      data: conversationList,
+      data: data || [],
     });
   } catch (error) {
     console.error("Error in get-conversation-list:", error);

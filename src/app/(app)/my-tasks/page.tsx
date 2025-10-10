@@ -66,7 +66,9 @@ export default function MyTasksPage() {
     setLoading(true);
     setError(null);
     try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
       const params = new URLSearchParams();
+      if (userId) params.set("userId", userId);
       if (searchTerm.trim()) params.set("q", searchTerm.trim());
       if (activeTab !== "all") params.set("status", activeTab);
       if (priorityFilter !== "all") params.set("priority", priorityFilter);
@@ -141,6 +143,7 @@ export default function MyTasksPage() {
     const title = newTaskTitle.trim();
     if (!title) return;
     try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -151,7 +154,8 @@ export default function MyTasksPage() {
           priority: 'medium',
           dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
           category: 'General',
-          source: newTaskSource
+          source: newTaskSource,
+          userId: userId || undefined
         })
       });
       const data = await res.json();

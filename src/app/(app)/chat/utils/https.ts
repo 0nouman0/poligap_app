@@ -89,10 +89,10 @@ export const assignHeader = async (request: InternalAxiosRequestConfig) => {
 };
 
 export const krooloHttpClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_REACT_APP_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_REACT_APP_API_URL || '',
 });
 export const httpClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_REACT_APP_API_URL!.replace("/v1", ""),
+  baseURL: process.env.NEXT_PUBLIC_REACT_APP_API_URL?.replace("/v1", "") || '',
 });
 
 krooloHttpClient.interceptors.request.use(assignHeader);

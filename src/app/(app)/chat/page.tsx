@@ -15,7 +15,11 @@ import { ChatSkeleton } from "@/components/ui/page-loader";
 const AgentChat = () => {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const searchParams = useSearchParams();
-  const companyId = selectedCompany?.companyId || "60f1b2b3c4d5e6f7a8b9c0d1"; // Fallback company ID
+  // Only use companyId if it's a valid UUID format, otherwise null
+  const companyId = selectedCompany?.companyId && 
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedCompany.companyId)
+    ? selectedCompany.companyId 
+    : null;
   const { userData } = useUserStore();
   
   // Better user ID handling with proper fallbacks

@@ -777,6 +777,7 @@ export default function ComplianceCheckPage() {
       if (key) {
         setAddingTaskKeys(prev => new Set(prev).add(key));
       }
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -787,6 +788,7 @@ export default function ComplianceCheckPage() {
           priority: payload.priority,
           category: payload.category,
           source: 'compliance',
+          userId: userId || undefined,
           // include analysis timestamp for better task context
           sourceRef: {
             ...payload.sourceRef,

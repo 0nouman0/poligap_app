@@ -442,7 +442,8 @@ export interface companyPropTypes {
 }
 
 export interface AgentSelectedChatType {
-  _id: string;
+  _id?: string; // MongoDB format (legacy)
+  id?: string;  // Supabase format (current)
   chatName: string;
   createdAt: string;
 }

@@ -1,9 +1,20 @@
 import { createApiResponse } from "@/lib/apiResponse";
-import AgentConversation from "@/models/agentConversation.model";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return createApiResponse({
+        success: false,
+        error: "Unauthorized",
+        status: 401,
+      });
+    }
+
     const {
       conversationId,
       chatName,
@@ -18,18 +29,29 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const updatedConversation = await AgentConversation.findByIdAndUpdate(
-      conversationId,
-      {
-        $set: {
-          chatName: chatName,
-          summary: summary,
-        },
-      },
-      { new: true }
-    );
+    // Use Supabase Postgrest API to update conversation
+    const { data, error } = await supabase
+      .from('agent_conversations')
+      .update({
+        chat_name: chatName,
+        summary: summary,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', conversationId)
+      .eq('user_id', user.id) // Ensure user owns the conversation
+      .select()
+      .single();
 
-    if (!updatedConversation) {
+    if (error) {
+      console.error('Supabase update error:', error);
+      return createApiResponse({
+        success: false,
+        error: `Failed to update conversation: ${error.message}`,
+        status: error.code === 'PGRST116' ? 404 : 500,
+      });
+    }
+
+    if (!data) {
       return createApiResponse({
         success: false,
         error: "Conversation not found",
@@ -40,7 +62,7 @@ export async function POST(request: NextRequest) {
     return createApiResponse({
       success: true,
       error: "Conversation updated successfully",
-      data: updatedConversation,
+      data: data,
       status: 200,
     });
   } catch (error) {

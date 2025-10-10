@@ -5,6 +5,7 @@ class PortkeyClient {
   constructor() {
     this.client = new Portkey({
       apiKey: process.env.PORTKEY_API_KEY,
+      baseURL: "https://api.portkey.ai/v1",
     });
   }
 }

@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { queries } from "@/lib/supabase/graphql";
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
-import { GraphQLClient } from "graphql-request";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +17,14 @@ export async function POST(request: NextRequest) {
 
     const { companyId } = await request.json();
     
+    // Validate UUID format (UUID v4 regex)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validCompanyId = companyId && uuidRegex.test(companyId) ? companyId : null;
+    
+    if (companyId && !validCompanyId) {
+      console.warn('Invalid company_id format (not a UUID), setting to null:', companyId);
+    }
+    
     // Generate conversation name with current time
     const conversationName = new Date().toLocaleTimeString("en-IN", {
       hour: "numeric",
@@ -27,39 +33,36 @@ export async function POST(request: NextRequest) {
       timeZone: "Asia/Kolkata",
     });
 
-    // Get access token for GraphQL
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Use Supabase Postgrest API to create conversation
+    const { data, error } = await supabase
+      .from('agent_conversations')
+      .insert({
+        chat_name: conversationName,
+        user_id: user.id,
+        company_id: validCompanyId,
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
       return createApiResponse({
         success: false,
-        error: "No session found",
-        status: 401,
+        error: `Failed to create conversation: ${error.message}`,
+        status: 500,
       });
     }
-
-    const graphQLClient = new GraphQLClient(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/graphql/v1`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    const result = await graphQLClient.request<any>(queries.createConversation, {
-      chat_name: conversationName,
-      user_id: user.id,
-      company_id: companyId || null,
-    });
-
-    const newConversation = result.insertIntoagent_conversationsCollection.records[0];
 
     return createApiResponse({
       success: true,
       error: "Conversation created successfully",
       status: 200,
-      data: newConversation,
+      data: {
+        id: data.id,
+        chat_name: data.chat_name,
+        created_at: data.created_at
+      },
     });
   } catch (error) {
     console.error("Error in createChat:", error);

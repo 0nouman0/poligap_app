@@ -109,10 +109,14 @@ export async function POST(request: NextRequest) {
       snapshot
     };
 
+    // Generate a unique document_id based on fileName and timestamp
+    const documentId = `${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+
     const { data, error } = await supabase
       .from('document_analysis')
       .insert({
         user_id: userId,
+        document_id: documentId,
         title: fileName,
         compliance_standard: standards[0] || 'general', // Use first standard as primary
         score: score,

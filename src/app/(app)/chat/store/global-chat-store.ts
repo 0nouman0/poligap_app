@@ -654,7 +654,8 @@ export const useGlobalChatStore = create((set: any) => ({
       if (resp?.success) {
         const storeState = useGlobalChatStore.getState() as any;
         const selectedConversation = storeState.selectedConversation;
-        const conversationId = conversationIdOverride || selectedConversation?._id;
+        // Support both id and _id formats (Supabase uses id, MongoDB uses _id)
+        const conversationId = conversationIdOverride || selectedConversation?.id || selectedConversation?._id;
         console.log("selectedConversation for edit:", selectedConversation);
 
         if (conversationId) {
