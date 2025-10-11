@@ -15,11 +15,12 @@ export async function GET() {
       }, { status: 401 });
     }
 
-    // Use Supabase Postgrest API to fetch rules
+    // Use Supabase Postgrest API to fetch rules (only active ones)
     const { data: rules, error } = await supabase
       .from('rulebase')
       .select('*')
       .eq('user_id', user.id)
+      .neq('active', false) // Only fetch active rules
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -212,10 +213,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    // Soft delete: set active to false
+    // Hard delete: actually remove from database
     const { data: deletedRule, error } = await supabase
       .from('rulebase')
-      .update({ active: false })
+      .delete()
       .eq('id', id)
       .eq('user_id', user.id) // Ensure user can only delete their own rules
       .select()
@@ -234,8 +235,8 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
     }
     
-    console.log('✅ Rule soft deleted:', deletedRule.id);
-    return NextResponse.json({ success: true });
+    console.log('✅ Rule deleted:', deletedRule.id);
+    return NextResponse.json({ success: true, deletedId: deletedRule.id });
   } catch (e) {
     console.error('❌ DELETE error:', e);
     return NextResponse.json({ 

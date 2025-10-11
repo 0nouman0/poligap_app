@@ -7,7 +7,6 @@ import {
   Image, 
   FileText, 
   Video, 
-  Music, 
   Archive, 
   Search, 
   Filter, 
@@ -24,7 +23,6 @@ import {
   Hash,
   FileImage,
   FileVideo,
-  FileAudio,
   FileSpreadsheet,
   Presentation
 } from "lucide-react";
@@ -182,7 +180,7 @@ export default function UploadAssetsPage() {
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) return <Image className="h-5 w-5" />;
     if (mimeType.startsWith('video/')) return <Video className="h-5 w-5" />;
-    if (mimeType.startsWith('audio/')) return <Music className="h-5 w-5" />;
+    if (mimeType.startsWith('audio/')) return <Video className="h-5 w-5" />;
     if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-5 w-5" />;
     if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-5 w-5" />;
     return <File className="h-5 w-5" />;
@@ -277,6 +275,40 @@ export default function UploadAssetsPage() {
       console.error('Error deleting assets:', error);
       toastError('Delete Failed', 'An error occurred while deleting assets');
       await fetchAssets(undefined, true); // Revert on error
+    }
+  };
+
+  // View asset
+  const handleViewAsset = (asset: Asset) => {
+    if (asset.url) {
+      window.open(asset.url, '_blank');
+    } else {
+      toastError('View Failed', 'File URL not available');
+    }
+  };
+
+  // Download asset
+  const handleDownloadAsset = async (asset: Asset) => {
+    if (!asset.url) {
+      toastError('Download Failed', 'File URL not available');
+      return;
+    }
+
+    try {
+      const response = await fetch(asset.url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = asset.originalName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toastSuccess('Download Started', `Downloading ${asset.originalName}`);
+    } catch (error) {
+      console.error('Error downloading asset:', error);
+      toastError('Download Failed', 'An error occurred while downloading the file');
     }
   };
 
@@ -376,10 +408,9 @@ export default function UploadAssetsPage() {
           </div>
 
           {/* File Type Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { type: 'images', label: 'Photos', icon: FileImage, accept: 'image/*', color: 'bg-pink-100 text-pink-800 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-300' },
-              { type: 'audio', label: 'Music', icon: FileAudio, accept: 'audio/*', color: 'bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300' },
               { type: 'documents', label: 'Documents', icon: FileText, accept: '.pdf,.doc,.docx,.txt,.rtf', color: 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300' },
               { type: 'spreadsheets', label: 'Sheets', icon: FileSpreadsheet, accept: '.xlsx,.xls,.csv', color: 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-300' },
               { type: 'presentations', label: 'Presentations', icon: Presentation, accept: '.pptx,.ppt', color: 'bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-300' }
@@ -580,10 +611,26 @@ export default function UploadAssetsPage() {
                       />
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewAsset(asset);
+                        }}
+                      >
                         <Eye className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadAsset(asset);
+                        }}
+                      >
                         <Download className="h-3 w-3" />
                       </Button>
                     </div>
@@ -654,10 +701,24 @@ export default function UploadAssetsPage() {
                     </div>
                   )}
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewAsset(asset);
+                      }}
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadAsset(asset);
+                      }}
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>

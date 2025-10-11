@@ -36,7 +36,9 @@ type SignInFormData = z.infer<typeof signInSchema>;
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
   const router = useRouter();
+  const searchParams = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
   const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
@@ -44,6 +46,17 @@ export default function SignInPage() {
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check if user came from email verification
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('verified') === 'true') {
+      setVerificationSuccess(true);
+      // Clear the URL parameter after 5 seconds
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/auth/signin');
+      }, 5000);
+    }
+    
     // Clear old MongoDB cache on mount
     clearOldCache();
     // Force light mode on this page and restore previous theme on unmount
@@ -128,6 +141,24 @@ export default function SignInPage() {
           {/* Sign In Form */}
           <div className="space-y-6">
             <h2 className="text-xl font-medium text-center">Sign in</h2>
+            
+            {/* Email Verification Success Banner */}
+            {verificationSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-green-900">Email Verified Successfully!</h3>
+                  <p className="text-xs text-green-700 mt-1">
+                    Your account is now active. Please sign in to continue.
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs font-medium">

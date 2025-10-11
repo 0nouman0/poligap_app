@@ -110,12 +110,10 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
     }));
   },
 
-  // Delete a rule from the cache (soft delete)
+  // Delete a rule from the cache (hard delete - remove from list)
   deleteRule: (id: string) => {
     set((state) => ({
-      rules: state.rules.map(rule =>
-        rule._id === id || rule.id === id ? { ...rule, active: false } : rule
-      )
+      rules: state.rules.filter(rule => rule._id !== id && rule.id !== id)
     }));
   },
 

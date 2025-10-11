@@ -63,7 +63,7 @@ export default function SignUpPage() {
     setApiError(null);
     
     try {
-      // Sign up with Supabase Auth
+      // Sign up with Supabase Auth with email confirmation required
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -71,6 +71,7 @@ export default function SignUpPage() {
           data: {
             name: data.name,
           },
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
 
@@ -99,8 +100,15 @@ export default function SignUpPage() {
           console.error('Profile creation failed, but user is signed up');
         }
 
-        router.push("/home");
-        router.refresh();
+        // Check if email confirmation is required
+        if (authData.user.email_confirmed_at === null) {
+          // Email confirmation is required - redirect to verification page
+          router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`);
+        } else {
+          // Email is already confirmed (shouldn't happen for new signups, but just in case)
+          router.push("/home");
+          router.refresh();
+        }
       }
     } catch (e) {
       console.error('Signup error:', e);
