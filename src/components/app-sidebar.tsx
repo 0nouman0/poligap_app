@@ -40,6 +40,7 @@ import { useCompanyStore } from "@/stores/company-store";
 // Define page types for type safety
 type PageType =
   | "dashboard"
+  | "home"
   | "my-tasks"
   | "chat"
   | "compliance-check"
@@ -54,6 +55,11 @@ type PageType =
   | "settings";
 
 const navigationItems = [
+  {
+    title: "Home",
+    icon: Home,
+    page: "/home" as PageType,
+  },
   {
     title: "My Tasks",
     icon: CheckSquare,
@@ -156,17 +162,17 @@ export function AppSidebar() {
   }) => {
     const buttonContent = (
       <div
-        className={`text-card-foreground hover:bg-filter-menu hover:text-accent-foreground ${
+        className={`group flex items-center gap-2.5 px-2.5 py-1.5 w-full rounded-md transition-all duration-200 cursor-pointer ${
           isActive
-            ? "bg-filter-menu text-accent-foreground"
-            : ""
-        } cursor-pointer flex items-center gap-2 px-2 py-1.5 w-full rounded-md transition-colors`}
+            ? "bg-gray-100 text-gray-900 font-medium rounded-md"
+            : "text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-slate-100"
+        }`}
       >
         <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">
-          <Icon className="h-5 w-5" />
+          <Icon className="h-4 w-4" />
         </div>
         <span
-          className={`font-medium text-13 transition-opacity duration-300 whitespace-nowrap ${
+          className={`nav-text transition-opacity duration-300 whitespace-nowrap ${
             sidebarCollapsed
               ? "opacity-0 w-0 overflow-hidden"
               : "opacity-100"
@@ -203,14 +209,14 @@ export function AppSidebar() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-48px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-44px)] overflow-hidden">
       <TooltipProvider delayDuration={300}>
         <SidebarProvider>
           {/* Sidebar */}
           <div
             className={`border-r border-border ${
               sidebarCollapsed ? "w-[60px]" : "w-[200px]"
-            } transition-all duration-300 flex flex-col h-[calc(100vh-48px)] overflow-hidden relative group`}
+            } transition-all duration-300 flex flex-col h-[calc(100vh-44px)] overflow-hidden relative group`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -276,8 +282,8 @@ export function AppSidebar() {
             </div> */}
 
             {/* Navigation Items */}
-            <div className="flex-1 overflow-y-auto pt-0 pb-1">
-              <div className="px-1 space-y-0.5">
+            <div className="flex-1 overflow-y-auto pt-2 pb-1">
+              <div className="px-1 space-y-1">
                 {visibleNavigationItems.map((item) => (
                   <MenuItemWithTooltip
                     key={item.title}
@@ -292,8 +298,8 @@ export function AppSidebar() {
             </div>
 
             {/* Bottom Navigation Items */}
-            <div className="mt-auto py-1.5 border-t border-border">
-              <div className="px-1 space-y-0.5">
+            <div className="mt-auto border-t border-gray-200 dark:border-slate-700 mt-4 pt-2">
+              <div className="px-1 space-y-1">
                 {visibleBottomNavigationItems.map((item) => (
                   <MenuItemWithTooltip
                     key={item.title}

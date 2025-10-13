@@ -1,5 +1,6 @@
 import localFont from "next/font/local";
 import "./globals.css";
+import "../styles/typography.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/toast-provider";
 import { Metadata } from "next";

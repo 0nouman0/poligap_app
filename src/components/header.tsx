@@ -199,7 +199,7 @@ export const Header = memo(function Header() {
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container grid grid-cols-[auto_1fr_auto] h-[48px] max-w-screen items-center px-6 gap-4">
+      <div className="container grid grid-cols-[auto_1fr_auto] h-[44px] max-w-screen items-center px-6 gap-4">
         {/* Logo Section */}
         <div className="flex items-center">
           <img

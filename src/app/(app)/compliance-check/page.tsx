@@ -42,12 +42,29 @@ interface ComplianceResult {
   id: string;
   fileName: string;
   standard: string;
-  status: "compliant" | "non-compliant" | "partial";
+  status: "compliant" | "non-compliant" | "partial" | "failed";
   score: number;
   gaps: ComplianceGap[];
   suggestions: string[];
   uploadDate: string;
   detailedAnalysis?: any;
+  failureReason?: string;
+  relevanceAssessment?: {
+    isRelevant: boolean;
+    reason: string;
+    confidence: number;
+  };
+  errorDetails?: {
+    type: string;
+    message: string;
+    reason: string;
+    confidence: number;
+  };
+  summary?: {
+    totalGaps: number;
+    criticalIssues: number;
+    recommendedActions: string[];
+  };
 }
 
 interface AuditLog {
@@ -891,31 +908,33 @@ export default function ComplianceCheckPage() {
         <div className={`${selectedStandards.length > 0 ? 'flex-1' : 'w-full'} space-y-8`}>
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+        <h1 className="font-h1 text-foreground flex items-center justify-center gap-2">
           <Shield className="h-8 w-8" />
           Compliance Check
         </h1>
-        <p className="text-muted-foreground">
+        <p className="font-body-16 text-muted-foreground">
           Analyze your documents against compliance standards using AI
         </p>
       </div>
 
       {/* Stepper Indicator */}
-      <div className="flex items-center justify-center space-x-4">
+      <div className="flex items-center justify-center space-x-6">
         {steps.map((step, index) => (
           <div key={step.id} className="flex items-center">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${currentStep >= step.id
-              ? 'bg-primary border-primary text-primary-foreground'
-              : 'border-muted-foreground text-muted-foreground'
+            <div className={`flex items-center justify-center w-14 h-14 rounded-full border-3 transition-all shadow-sm ${currentStep >= step.id
+              ? 'bg-teal-600 border-teal-600 text-white shadow-teal-200'
+              : currentStep === step.id
+              ? 'bg-teal-50 border-teal-600 text-teal-700 shadow-teal-100'
+              : 'border-gray-300 text-gray-400 bg-white'
               }`}>
               {currentStep > step.id ? (
-                <CheckCircle className="h-5 w-5" />
+                <CheckCircle className="h-6 w-6" />
               ) : (
-                <span className="text-sm font-medium">{step.id}</span>
+                <span className="font-body-16-medium">{step.id}</span>
               )}
             </div>
             {index < steps.length - 1 && (
-              <div className={`w-16 h-0.5 mx-2 transition-all ${currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground/30'
+              <div className={`w-20 h-1 mx-3 rounded-full transition-all ${currentStep > step.id ? 'bg-teal-600' : 'bg-gray-200'
                 }`} />
             )}
           </div>
@@ -924,8 +943,8 @@ export default function ComplianceCheckPage() {
 
       {/* Step Title */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold">{steps[currentStep - 1]?.title}</h2>
-        <p className="text-muted-foreground text-lg">{steps[currentStep - 1]?.description}</p>
+        <h2 className={`font-h2 ${currentStep === 1 ? 'text-teal-700' : 'text-gray-900'}`}>{steps[currentStep - 1]?.title}</h2>
+        <p className="font-body-16 text-muted-foreground">{steps[currentStep - 1]?.description}</p>
       </div>
 
       {/* Step Content */}
@@ -933,18 +952,19 @@ export default function ComplianceCheckPage() {
         <CardContent className="p-10">
           {/* In-box navigation for all steps (hidden on Results page) */}
           {currentStep !== 4 && (
-          <div className="flex justify-end gap-2 -mt-4 mb-4">
+          <div className="flex justify-center gap-4 -mt-4 mb-8">
             <Button
               variant="outline"
-              size="sm"
+              size="default"
               onClick={prevStep}
               disabled={currentStep === 1 || isAnalyzing}
+              className="font-body-14-medium px-8 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50"
             >
-              <ChevronLeft className="h-4 w-4 mr-2" />
+              <ChevronLeft className="h-5 w-5 mr-2" />
               Previous
             </Button>
             <Button
-              size="sm"
+              size="default"
               onClick={() => {
                 if (currentStep === 3) {
                   if (canAnalyze) {
@@ -961,9 +981,10 @@ export default function ComplianceCheckPage() {
                 currentStep === 5 ||
                 isAnalyzing
               }
+              className="font-body-14-medium px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white border-2 border-teal-600 hover:border-teal-700 transition-all duration-200 disabled:opacity-50 shadow-md hover:shadow-lg"
             >
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
+              {currentStep === 3 ? 'Analyze' : 'Next'}
+              <ChevronRight className="h-5 w-5 ml-2" />
             </Button>
           </div>
           )}
@@ -972,21 +993,23 @@ export default function ComplianceCheckPage() {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-body-16-medium text-center text-gray-700">
                     {selectedStandards.length} of {complianceStandards.length} standards selected
                   </p>
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-3 items-center">
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
+                    className="font-body-14-medium px-6 py-2.5 border-2 border-teal-200 text-teal-700 hover:bg-teal-50 hover:border-teal-300 transition-all duration-200"
                     onClick={() => setSelectedStandards(complianceStandards.map(s => s.id))}
                   >
                     Select All
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="default"
+                    className="font-body-14-medium px-6 py-2.5 border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
                     onClick={() => setSelectedStandards([])}
                   >
                     Clear All
@@ -994,23 +1017,25 @@ export default function ComplianceCheckPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[450px] overflow-y-auto p-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[450px] overflow-y-auto p-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {complianceStandards.map((standard) => (
                   <Card
                     key={standard.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${selectedStandards.includes(standard.id) ? "ring-2 ring-primary bg-primary/5" : ""
+                    className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 ${selectedStandards.includes(standard.id) 
+                      ? "ring-2 ring-teal-500 bg-teal-50 border-teal-200 shadow-md" 
+                      : "border-gray-200 hover:border-teal-200 shadow-sm"
                       }`}
                     onClick={() => handleStandardToggle(standard.id)}
                   >
-                    <CardContent className="p-4 text-center relative min-h-[120px] flex flex-col justify-center">
+                    <CardContent className="p-5 text-center relative min-h-[140px] flex flex-col justify-center">
                       {selectedStandards.includes(standard.id) && (
-                        <div className="absolute top-2 right-2">
-                          <CheckCircle className="h-4 w-4 text-primary" />
+                        <div className="absolute top-3 right-3">
+                          <CheckCircle className="h-5 w-5 text-teal-600" />
                         </div>
                       )}
-                      <standard.icon className="h-7 w-7 mx-auto mb-3 text-primary" />
-                      <h3 className="font-medium text-sm mb-1">{standard.name}</h3>
-                      <p className="text-xs text-muted-foreground leading-tight">{standard.description}</p>
+                      <standard.icon className={`h-8 w-8 mx-auto mb-4 ${selectedStandards.includes(standard.id) ? 'text-teal-600' : 'text-gray-600'}`} />
+                      <h3 className="font-body-14-medium mb-2 text-gray-900">{standard.name}</h3>
+                      <p className="font-body-12 text-gray-600 leading-relaxed">{standard.description}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -1023,13 +1048,13 @@ export default function ComplianceCheckPage() {
             <div className="space-y-6">
               <div className="grid md:grid-cols-2 gap-8">
                 {/* Upload New File */}
-                <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <Card className="border-2 border-dashed border-gray-300 hover:border-teal-400 transition-all duration-200 shadow-sm hover:shadow-md">
                   <CardHeader className="text-center">
-                    <CardTitle className="flex items-center justify-center gap-2">
+                    <CardTitle className="font-h3 flex items-center justify-center gap-2 text-gray-900">
                       <Upload className="h-5 w-5" />
                       Upload New Document
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="font-body-14 text-gray-600">
                       Upload a policy document for compliance analysis
                     </CardDescription>
                   </CardHeader>
@@ -1051,20 +1076,20 @@ export default function ComplianceCheckPage() {
                         </label>
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-body-12 text-gray-500">
                       Supported formats: PDF, DOC, DOCX, TXT
                     </p>
                   </CardContent>
                 </Card>
 
                 {/* Select from Assets */}
-                <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <Card className="border-2 border-dashed border-gray-300 hover:border-teal-400 transition-all duration-200 shadow-sm hover:shadow-md">
                   <CardHeader className="text-center">
-                    <CardTitle className="flex items-center justify-center gap-2">
+                    <CardTitle className="font-h3 flex items-center justify-center gap-2 text-gray-900">
                       <FolderOpen className="h-5 w-5" />
                       Select from Assets
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="font-body-14 text-gray-600">
                       Choose from your previously uploaded documents
                     </CardDescription>
                   </CardHeader>
@@ -1079,7 +1104,7 @@ export default function ComplianceCheckPage() {
                     >
                       Browse Assets
                     </Button>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-body-12 text-gray-500">
                       Select from your uploaded documents
                     </p>
                   </CardContent>
@@ -1098,10 +1123,10 @@ export default function ComplianceCheckPage() {
                           </div>
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-green-900 dark:text-green-100">File Selected Successfully</h3>
-                          <p className="text-green-700 dark:text-green-300 mt-1">
-                            <span className="font-medium">{uploadedFile.name}</span>
-                            <span className="text-sm ml-2">({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                          <h3 className="font-body-16-medium text-green-900 dark:text-green-100">File Selected Successfully</h3>
+                          <p className="font-body-14 text-green-700 dark:text-green-300 mt-1">
+                            <span className="font-body-14-medium">{uploadedFile.name}</span>
+                            <span className="font-body-12 ml-2">({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
                           </p>
                         </div>
                         <div className="flex-shrink-0">
@@ -1128,13 +1153,13 @@ export default function ComplianceCheckPage() {
             <div className="space-y-8">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Analysis Options</CardTitle>
+                  <CardTitle className="font-h3 text-gray-900">Analysis Options</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">Apply RuleBase</div>
-                      <div className="text-sm text-muted-foreground">Use your custom company rules during analysis</div>
+                      <div className="font-body-16-medium text-gray-900">Apply RuleBase</div>
+                      <div className="font-body-14 text-gray-600">Use your custom company rules during analysis</div>
                     </div>
                     <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
                   </div>
@@ -1143,7 +1168,7 @@ export default function ComplianceCheckPage() {
               <div className="grid md:grid-cols-2 gap-8">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Selected Standards</CardTitle>
+                    <CardTitle className="font-h3 text-gray-900">Selected Standards</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -1152,7 +1177,7 @@ export default function ComplianceCheckPage() {
                         return standard ? (
                           <div key={standardId} className="flex items-center gap-2">
                             <standard.icon className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-medium">{standard.name}</span>
+                            <span className="font-body-14-medium text-gray-900">{standard.name}</span>
                           </div>
                         ) : null;
                       })}
@@ -1162,21 +1187,21 @@ export default function ComplianceCheckPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Document</CardTitle>
+                    <CardTitle className="font-h3 text-gray-900">Document</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {uploadedFile ? (
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
                         <div>
-                          <p className="text-sm font-medium">{uploadedFile.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-body-14-medium text-gray-900">{uploadedFile.name}</p>
+                          <p className="font-body-12 text-gray-600">
                             {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No file selected</p>
+                      <p className="font-body-14 text-gray-600">No file selected</p>
                     )}
                   </CardContent>
                 </Card>
@@ -1498,14 +1523,11 @@ export default function ComplianceCheckPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Bottom navigation removed per design: navigation is now at the top controls */}
-
         </div>
 
         {/* Audit Logs Sidebar */}
         {selectedStandards.length > 0 && (
-          <div className={`relative ${isLogsCollapsed ? 'w-6' : 'w-80'} flex-shrink-0 transition-all duration-300`}>
+          <div className={`relative ${isLogsCollapsed ? 'w-6' : 'w-72'} flex-shrink-0 transition-all duration-300`}>
             {/* Drawer Toggle */}
             <Button
               variant="secondary"
@@ -1519,13 +1541,22 @@ export default function ComplianceCheckPage() {
             </Button>
 
             {!isLogsCollapsed && (
-            <Card className="h-fit sticky top-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
+            <Card className="h-fit sticky top-6 shadow-lg border-2 border-gray-200">
+              <CardHeader className="pb-3 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 h-6 w-6 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                  onClick={() => setIsLogsCollapsed(true)}
+                  title="Close panel"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <CardTitle className="font-h3 flex items-center gap-2 text-gray-900">
                   <History className="h-5 w-5" />
                   Audit Logs
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="font-body-14 text-gray-600">
                   Historical analyses for selected standards
                 </CardDescription>
               </CardHeader>
@@ -1548,41 +1579,45 @@ export default function ComplianceCheckPage() {
                       return (
                         <Card
                           key={log._id}
-                          className={`p-3 cursor-pointer hover:shadow-md transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          className={`p-4 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
                             isRecent
                               ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
-                              : 'hover:bg-muted/50'
+                              : 'hover:bg-gray-50 border-gray-200 hover:border-gray-300'
                           }`}
                           onClick={() => { setSelectedAuditLog(log); setIsLogDialogOpen(true); }}
                         >
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate text-foreground" title={log.fileName}>
+                                <p className="font-body-14-medium truncate text-gray-900 mb-2" title={log.fileName}>
                                   {log.fileName}
                                 </p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge className={getStatusColor(log.status)} variant="secondary">
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`${getStatusColor(log.status)} font-body-12-medium`} variant="secondary">
                                     {log.status}
                                   </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {log.score}%
+                                  <span className={`font-body-12-medium ${
+                                    log.score < 50 ? 'text-red-600' : 
+                                    log.score < 80 ? 'text-orange-600' : 
+                                    'text-green-600'
+                                  }`}>
+                                    {log.score}% {log.score < 80 ? 'non-compliant' : 'compliant'}
                                   </span>
                                 </div>
                               </div>
                               <div className="flex flex-col items-end gap-1 ml-2">
                                 {isRecent && (
-                                  <Badge variant="outline" className="text-xs border-primary text-primary">New</Badge>
+                                  <Badge variant="outline" className="font-body-12 border-primary text-primary">New</Badge>
                                 )}
                                 <Link href={`/history?logId=${log._id}`} onClick={(e)=>e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 p-0" title="Open full report in History">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 p-0 hover:bg-teal-100 hover:text-teal-700 transition-colors" title="Open full report in History">
                                     <Info className="h-4 w-4" />
                                   </Button>
                                 </Link>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-3 font-body-12 text-gray-500">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 {logDate.toLocaleDateString()}
@@ -1593,7 +1628,7 @@ export default function ComplianceCheckPage() {
                               </span>
                               {log?.analysisMethod?.includes('+rulebase') && (
                                 <span className="flex items-center gap-1" title="RuleBase applied">
-                                  <BookOpen className="h-3 w-3 text-primary" />
+                                  <BookOpen className="h-3 w-3 text-teal-600" />
                                   RB
                                 </span>
                               )}
@@ -1601,18 +1636,16 @@ export default function ComplianceCheckPage() {
                             
                             <div className="flex flex-wrap gap-1">
                               {log.standards.slice(0, 2).map((standard) => (
-                                <Badge key={standard} variant="outline" className="text-xs border-muted-300 text-muted-700 dark:border-muted-700 dark:text-muted-300">
+                                <Badge key={standard} variant="outline" className="font-body-12 border-gray-300 text-gray-600">
                                   {standard.toUpperCase()}
                                 </Badge>
                               ))}
                               {log.standards.length > 2 && (
-                                <Badge variant="outline" className="text-xs border-muted-300 text-muted-700 dark:border-muted-700 dark:text-muted-300">
+                                <Badge variant="outline" className="font-body-12 border-gray-300 text-gray-600">
                                   +{log.standards.length - 2}
                                 </Badge>
                               )}
                             </div>
-                            
-                            
                           </div>
                         </Card>
                       );
@@ -1621,8 +1654,12 @@ export default function ComplianceCheckPage() {
                 )}
                 
                 {filteredAuditLogs.length > 0 && (
-                  <div className="pt-3 border-t">
-                    <Button variant="outline" size="sm" className="w-full">
+                  <div className="pt-4 border-t border-gray-200 text-center">
+                    <Button 
+                      variant="outline" 
+                      size="default" 
+                      className="w-full font-body-14-medium px-6 py-3 border-2 border-teal-200 text-teal-700 hover:bg-teal-50 hover:border-teal-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       View All History
                     </Button>
