@@ -16,7 +16,7 @@ You are an expert legal compliance analyst with deep knowledge of regulatory fra
 
 3. **Real Gap Identification**: For each selected compliance standard, identify ACTUAL gaps by:
    - Comparing document content against specific regulatory requirements
-   - Identifying missing mandatory clauses, procedures, or provisions
+   - Identifying missing mandatory clauses, procedures, or provisionsg
    - Finding insufficient coverage of required topics
    - Noting outdated language or non-compliant terminology
    - Highlighting areas where the policy contradicts regulatory requirements
@@ -44,13 +44,31 @@ Please structure your response as a JSON object with the following format:
       "score": number (0-100),
       "status": "compliant" | "partial" | "non-compliant",
       "gaps": [
-        "string (specific gap description)"
+        {
+          "title": "string (short, specific gap title)",
+          "description": "string (concise but specific description of the issue)",
+          "severity": "critical" | "high" | "medium" | "low",
+          "category": "string (e.g., Data Protection, Security, Incident Response)",
+          "recommendedAction": "string (specific remediation steps)",
+          "evidence": "string (direct quote or summary from the document that proves the gap)",
+          "regulationReference": "string (e.g., GDPR Art. 30, HIPAA 164.312)",
+          "section": "string (document section/area if identifiable)",
+          "risk": "string (business/regulatory risk if unaddressed)"
+        }
       ],
       "suggestions": [
         "string (specific improvement recommendation)"
       ],
       "criticalIssues": [
-        "string (high-priority compliance issues)"
+        {
+          "title": "string",
+          "description": "string",
+          "severity": "critical",
+          "evidence": "string",
+          "regulationReference": "string",
+          "recommendedAction": "string",
+          "section": "string"
+        }
       ]
     }
   ],

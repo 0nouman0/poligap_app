@@ -618,7 +618,6 @@ export default function ComplianceCheckPage() {
     setResults([]);
 
     try {
-      // Additional validation
       if (!uploadedFile.name.endsWith('.pdf') && !uploadedFile.name.endsWith('.doc') && !uploadedFile.name.endsWith('.docx') && !uploadedFile.name.endsWith('.txt')) {
         throw new Error('Unsupported file format. Please upload PDF, DOC, DOCX, or TXT files.');
       }
@@ -628,13 +627,8 @@ export default function ComplianceCheckPage() {
       formData.append('selectedStandards', JSON.stringify(selectedStandards));
       formData.append('applyRuleBase', String(applyRuleBase));
 
-      const response = await fetch('/api/compliance-analysis', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const response = await fetch('/api/compliance-analysis', { method: 'POST', body: formData });
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Analysis failed');
       }
@@ -646,101 +640,93 @@ export default function ComplianceCheckPage() {
 
       const analysis = data.analysis;
       const overallScore = analysis.overallScore || 75;
-      const status = overallScore >= 90 ? "compliant" : overallScore >= 70 ? "partial" : "non-compliant";
+      const status = overallScore >= 90 ? 'compliant' : overallScore >= 70 ? 'partial' : 'non-compliant';
 
       const allGaps: ComplianceGap[] = [];
       const allSuggestions: string[] = [];
 
       analysis.standardsAnalysis?.forEach((standardAnalysis: any, index: number) => {
-        // Process regular gaps
-        if (standardAnalysis.gaps && standardAnalysis.gaps.length > 0) {
-          const gapsWithPriority = standardAnalysis.gaps.map((gap: string, gapIndex: number) => {
-            // Determine priority based on content and context
+        if (Array.isArray(standardAnalysis.gaps) && standardAnalysis.gaps.length > 0) {
+          const gapsWithPriority: ComplianceGap[] = standardAnalysis.gaps.map((gap: any, gapIndex: number) => {
+            const isString = typeof gap === 'string';
+            const text = isString ? (gap as string) : `${gap?.title || ''} ${gap?.description || ''}`.trim();
+
             let priority: 'critical' | 'high' | 'medium' | 'low' = 'medium';
-            const gapLower = gap.toLowerCase();
-            
-            if (gapLower.includes('complete absence') || gapLower.includes('lacks any mention') || 
-                gapLower.includes('no procedures') || gapLower.includes('critical') ||
-                standardAnalysis.score === 0) {
+            const gapLower = (text || '').toLowerCase();
+            if (gapLower.includes('complete absence') || gapLower.includes('lacks any mention') || gapLower.includes('no procedures') || gapLower.includes('critical') || standardAnalysis.score === 0) {
               priority = 'critical';
-            } else if (gapLower.includes('insufficient') || gapLower.includes('inadequate') || 
-                      gapLower.includes('missing') || standardAnalysis.score < 30) {
+            } else if (gapLower.includes('insufficient') || gapLower.includes('inadequate') || gapLower.includes('missing') || standardAnalysis.score < 30) {
               priority = 'high';
-            } else if (gapLower.includes('limited') || gapLower.includes('unclear') || 
-                      standardAnalysis.score < 70) {
+            } else if (gapLower.includes('limited') || gapLower.includes('unclear') || standardAnalysis.score < 70) {
               priority = 'medium';
             } else {
               priority = 'low';
             }
-            
-            // Build concise one-liner description (keep header/title as-is)
-            const oneLiner = (gap
-              .replace(/\s+/g, ' ')
-              .split(/[\.!?]/)[0]
-              .trim()
-            ).slice(0, 140);
 
-            // Try to extract justification/evidence from analysis if present
-            const jSrc =
-              (standardAnalysis.justifications && standardAnalysis.justifications[gapIndex]) ||
-              (standardAnalysis.evidence && standardAnalysis.evidence[gapIndex]) ||
-              (standardAnalysis.citations && standardAnalysis.citations[gapIndex]) ||
-              (standardAnalysis.quotes && standardAnalysis.quotes[gapIndex]) ||
-              null;
-            const justification = typeof jSrc === 'string'
-              ? `The document states: "${jSrc}"`
-              : jSrc?.text
-                ? `The document states: "${jSrc.text}"`
-                : `The document indicates: ${oneLiner}.`;
+            const oneLiner = (text.replace(/\s+/g, ' ').split(/[\.!?]/)[0].trim()).slice(0, 140);
+            const jSrc = (standardAnalysis.justifications && standardAnalysis.justifications[gapIndex]) ||
+                         (standardAnalysis.evidence && standardAnalysis.evidence[gapIndex]) ||
+                         (standardAnalysis.citations && standardAnalysis.citations[gapIndex]) ||
+                         (standardAnalysis.quotes && standardAnalysis.quotes[gapIndex]) ||
+                         null;
+            const evidence = isString ? undefined : (gap?.evidence || null);
+            const regulationRef = isString ? undefined : (gap?.regulationReference || null);
+            const baseJust = evidence
+              ? `The document states: "${evidence}"`
+              : typeof jSrc === 'string'
+                ? `The document states: "${jSrc}"`
+                : jSrc?.text
+                  ? `The document states: "${jSrc.text}"`
+                  : `The document indicates: ${oneLiner}.`;
+            const justification = regulationRef ? `${baseJust} [Ref: ${regulationRef}]` : baseJust;
 
             return {
               id: `gap-${index}-${gapIndex}`,
-              title: gap.split('.')[0]?.trim() || gap.substring(0, 80).trim(),
-              description: oneLiner,
-              priority,
-              category: standardAnalysis.standard || 'General',
-              recommendation: `Address this ${priority} priority gap by implementing proper compliance measures for ${standardAnalysis.standard}.`,
+              title: isString ? (gap as string).split('.')[0]?.trim() || (gap as string).substring(0, 80).trim() : (gap?.title || oneLiner || 'Compliance Gap'),
+              description: isString ? oneLiner : (gap?.description || oneLiner),
+              priority: (isString ? priority : (gap?.severity || priority)) as 'critical' | 'high' | 'medium' | 'low',
+              category: (isString ? (standardAnalysis.standard || 'General') : (gap?.category || standardAnalysis.standard || 'General')),
+              recommendation: isString ? `Address this ${priority} priority gap by implementing proper compliance measures for ${standardAnalysis.standard}.` : (gap?.recommendedAction || `Address this ${priority} priority gap by implementing proper compliance measures for ${standardAnalysis.standard}.`),
               justification,
-              section: `${standardAnalysis.standard} Analysis`
+              section: (isString ? `${standardAnalysis.standard} Analysis` : (gap?.section || `${standardAnalysis.standard} Analysis`))
             };
           });
           allGaps.push(...gapsWithPriority);
         }
-        
-        // Process critical issues as critical priority gaps
-        if (standardAnalysis.criticalIssues && standardAnalysis.criticalIssues.length > 0) {
-          const criticalGaps = standardAnalysis.criticalIssues.map((issue: string, issueIndex: number) => {
-            const oneLiner = (issue.replace(/•$/, '').trim().split(/[\.!?]/)[0] || issue).slice(0, 140);
-            const ev = standardAnalysis?.criticalEvidence && (standardAnalysis.criticalEvidence[issueIndex]?.text || standardAnalysis.criticalEvidence[issueIndex]);
-            const justification = ev ? `The document states: "${ev}"` : `The document indicates: ${oneLiner}.`;
-            return ({
+
+        if (Array.isArray(standardAnalysis.criticalIssues) && standardAnalysis.criticalIssues.length > 0) {
+          const criticalGaps: ComplianceGap[] = standardAnalysis.criticalIssues.map((issue: any, issueIndex: number) => {
+            const isString = typeof issue === 'string';
+            const text = isString ? (issue as string) : `${issue?.title || ''} ${issue?.description || ''}`.trim();
+            const oneLiner = (text.replace(/•$/, '').trim().split(/[\.!?]/)[0] || text).slice(0, 140);
+            const ev = isString ? (standardAnalysis?.criticalEvidence && (standardAnalysis.criticalEvidence[issueIndex]?.text || standardAnalysis.criticalEvidence[issueIndex])) : (issue?.evidence || null);
+            const regulationRef = isString ? undefined : (issue?.regulationReference || null);
+            const baseJust = ev ? `The document states: "${ev}"` : `The document indicates: ${oneLiner}.`;
+            const justification = regulationRef ? `${baseJust} [Ref: ${regulationRef}]` : baseJust;
+            return {
               id: `critical-${index}-${issueIndex}`,
-              title: issue.split('.')[0]?.trim() || issue.substring(0, 80).trim(),
-              description: oneLiner,
-              priority: 'critical' as const,
+              title: isString ? (issue as string).split('.')[0]?.trim() || (issue as string).substring(0, 80).trim() : (issue?.title || oneLiner || 'Critical Issue'),
+              description: isString ? oneLiner : (issue?.description || oneLiner),
+              priority: 'critical',
               category: standardAnalysis.standard || 'General',
-              recommendation: `This critical issue requires immediate attention and comprehensive remediation for ${standardAnalysis.standard} compliance.`,
+              recommendation: isString ? `This critical issue requires immediate attention and comprehensive remediation for ${standardAnalysis.standard} compliance.` : (issue?.recommendedAction || `This critical issue requires immediate attention and comprehensive remediation for ${standardAnalysis.standard} compliance.`),
               justification,
-              section: `${standardAnalysis.standard} Critical Issues`
-            });
+              section: isString ? `${standardAnalysis.standard} Critical Issues` : (issue?.section || `${standardAnalysis.standard} Critical Issues`)
+            } as ComplianceGap;
           });
           allGaps.push(...criticalGaps);
         }
-        
-        if (standardAnalysis.suggestions && standardAnalysis.suggestions.length > 0) {
+
+        if (Array.isArray(standardAnalysis.suggestions) && standardAnalysis.suggestions.length > 0) {
           allSuggestions.push(...standardAnalysis.suggestions);
         }
       });
 
-      if (allGaps.length === 0 && allSuggestions.length === 0 && overallScore === 75) {
-        throw new Error('Analysis did not produce meaningful results.');
-      }
-
       const newResult: ComplianceResult = {
         id: Date.now().toString(),
-        fileName: uploadedFile?.name || 'Unknown File',
-        standard: selectedStandards.map(s => s.toUpperCase()).join(", "),
-        status: status,
+        fileName: uploadedFile.name,
+        standard: selectedStandards.map(s => s.toUpperCase()).join(', '),
+        status,
         score: overallScore,
         gaps: allGaps.length > 0 ? allGaps : [{
           id: 'no-gaps',
@@ -751,24 +737,21 @@ export default function ComplianceCheckPage() {
           recommendation: 'Continue monitoring compliance status.',
           section: 'Overall'
         }],
-        suggestions: allSuggestions.length > 0 ? allSuggestions : ["No specific improvement suggestions were generated."],
+        suggestions: allSuggestions.length > 0 ? allSuggestions : ['No specific improvement suggestions were generated.'],
         uploadDate: new Date().toISOString().split('T')[0],
         detailedAnalysis: analysis
       };
 
       setResults([newResult]);
-      
-      // Save audit log
       await saveAuditLog(newResult);
-      
       setCurrentStep(4);
     } catch (error) {
       console.error('Analysis error:', error);
       const errorResult: ComplianceResult = {
         id: Date.now().toString(),
         fileName: uploadedFile?.name || 'Unknown File',
-        standard: selectedStandards.map(s => s.toUpperCase()).join(", "),
-        status: "non-compliant",
+        standard: selectedStandards.map(s => s.toUpperCase()).join(', '),
+        status: 'non-compliant',
         score: 0,
         gaps: [{
           id: 'analysis-error',
@@ -779,7 +762,7 @@ export default function ComplianceCheckPage() {
           recommendation: 'Please try again or contact support',
           section: 'Error'
         }],
-        suggestions: ["Please try again or contact support"],
+        suggestions: ['Please try again or contact support'],
         uploadDate: new Date().toISOString().split('T')[0]
       };
       setResults([errorResult]);
@@ -788,37 +771,53 @@ export default function ComplianceCheckPage() {
       setIsAnalyzing(false);
     }
   };
-
+  // Status helpers
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "compliant": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "partial": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-      case "non-compliant": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      case 'compliant': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'partial': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'non-compliant': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "compliant": return <CheckCircle className="h-4 w-4" />;
-      case "partial": return <AlertTriangle className="h-4 w-4" />;
-      case "non-compliant": return <AlertTriangle className="h-4 w-4" />;
+      case 'compliant': return <CheckCircle className="h-4 w-4" />;
+      case 'partial': return <AlertTriangle className="h-4 w-4" />;
+      case 'non-compliant': return <AlertTriangle className="h-4 w-4" />;
       default: return <FileText className="h-4 w-4" />;
     }
   };
 
+  // Step navigation
+  const nextStep = () => {
+    if (currentStep < steps.length) setCurrentStep(currentStep + 1);
+  };
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  // Step guards
+  const canProceedToStep2 = selectedStandards.length > 0;
+  const canProceedToStep3 = uploadedFile !== null;
+  const canAnalyze = selectedStandards.length > 0 && uploadedFile !== null;
+
   // Create a task in backend tasks collection with client-side dedupe
-  const addTask = async (payload: {
-    title: string;
-    description?: string;
-    priority: "critical" | "high" | "medium" | "low";
-    category?: string;
-    sourceRef?: { resultId?: string; gapId?: string; fileName?: string; standard?: string; analyzedAt?: string };
-  }, options?: { dedupeKey?: string }) => {
+  const addTask = async (
+    payload: {
+      title: string;
+      description?: string;
+      priority: 'critical' | 'high' | 'medium' | 'low';
+      category?: string;
+      sourceRef?: { resultId?: string; gapId?: string; fileName?: string; standard?: string; analyzedAt?: string };
+    },
+    options?: { dedupeKey?: string }
+  ) => {
     try {
       const key = options?.dedupeKey;
       if (key && addedTaskKeys.has(key)) {
-        return { success: true, deduped: true };
+        return { success: true, deduped: true } as const;
       }
       if (key) {
         setAddingTaskKeys(prev => new Set(prev).add(key));
@@ -835,12 +834,11 @@ export default function ComplianceCheckPage() {
           category: payload.category,
           source: 'compliance',
           userId: userId || undefined,
-          // include analysis timestamp for better task context
           sourceRef: {
             ...payload.sourceRef,
             analyzedAt: payload.sourceRef?.analyzedAt || new Date().toISOString(),
           },
-        })
+        }),
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
@@ -864,22 +862,6 @@ export default function ComplianceCheckPage() {
       }
     }
   };
-
-  const nextStep = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const canProceedToStep2 = selectedStandards.length > 0;
-  const canProceedToStep3 = uploadedFile !== null;
-  const canAnalyze = selectedStandards.length > 0 && uploadedFile !== null;
 
   return (
     <div className="w-full mx-auto p-6 space-y-8 relative">
