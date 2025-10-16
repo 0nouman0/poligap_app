@@ -118,7 +118,7 @@ export default function SignUpPage() {
     }
   };
 
-  const logoSrc = "/assets/poligap-high-resolution-logo.png";
+  const logoSrc = "/assets/poligap-logo.png";
 
   return (
     <div className="min-h-screen flex bg-white text-gray-900">
@@ -126,7 +126,7 @@ export default function SignUpPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <div className="flex items-center justify-center">
-              <Image src={logoSrc} alt="Poligap AI" width={200} height={200} className="object-contain" />
+              <Image src={logoSrc} alt="Poligap AI" width={280} height={280} className="object-contain" />
             </div>
           </div>
 

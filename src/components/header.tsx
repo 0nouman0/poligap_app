@@ -174,7 +174,7 @@ export const Header = memo(function Header() {
 
   // Memoized values for performance
   const headerImageSrc = useMemo(() => 
-    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-high-resolution-logo.png",
+    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-logo.png",
     []
   );
   
@@ -205,7 +205,7 @@ export const Header = memo(function Header() {
           <img
             src={headerImageSrc}
             alt="Poligap"
-            className="h-6 sm:h-7 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto"
+            className="h-9 sm:h-10 md:h-11 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto"
             onClick={handleLogoClick}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
