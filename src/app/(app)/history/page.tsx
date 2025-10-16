@@ -136,52 +136,6 @@ export default function HistoryPage() {
         }}>Refresh</Button>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {/* Method filter */}
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-muted-foreground mr-1">Type:</span>
-          {([
-            { id: 'all', label: 'All' },
-            { id: 'policy-analysis', label: 'Policy Analysis' },
-            { id: 'contract-review', label: 'Contract Review' },
-            { id: 'policy-generator', label: 'Generated Policies' },
-          ] as const).map(btn => (
-            <Button
-              key={btn.id}
-              size="sm"
-              variant={methodFilter === btn.id ? 'default' : 'outline'}
-              className="h-8"
-              onClick={() => setMethodFilter(btn.id)}
-            >
-              {btn.label}
-            </Button>
-          ))}
-        </div>
-        {/* Separator */}
-        <div className="h-6 w-px bg-border mx-1" />
-        {/* Status filter */}
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-muted-foreground mr-1">Status:</span>
-          {([
-            { id: 'all', label: 'All' },
-            { id: 'compliant', label: 'Compliant' },
-            { id: 'partial', label: 'Partial' },
-            { id: 'non-compliant', label: 'Non-compliant' },
-          ] as const).map(btn => (
-            <Button
-              key={btn.id}
-              size="sm"
-              variant={statusFilter === btn.id ? 'default' : 'outline'}
-              className="h-8"
-              onClick={() => setStatusFilter(btn.id)}
-            >
-              {btn.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
       {loading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : logs.length === 0 ? (

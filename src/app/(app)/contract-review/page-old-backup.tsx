@@ -20,20 +20,15 @@ import { useContractReviewStore } from "@/store/contractReview";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 
-interface RequiredSection {
-  title: string;
-  priority: "critical" | "high" | "medium" | "low";
-}
-
 interface ContractTemplate {
   id: string;
   name: string;
   type: string;
   description: string;
-  sections: number;
-  sources: string[];
+  sections: TemplateSection[];
+  lastUpdated: string;
   isBaseline: boolean;
-  requiredSections: RequiredSection[];
+  sources: string[];
 }
 
 interface TemplateSection {
@@ -101,628 +96,203 @@ const knowledgeBaseTemplates: ContractTemplate[] = [
     id: "service-agreement",
     name: "Service Agreement Template",
     type: "service",
-    description: "Baseline template for service agreements",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
+    description: "Baseline template for service agreements with all required clauses",
+    sections: [
+      {
+        id: "parties",
+        title: "Parties",
+        content: "This Agreement is entered between [Company Name] and [Service Provider]",
+        isRequired: true,
+        priority: "critical",
+        guidelines: ["Must clearly identify all parties", "Include legal entity names and addresses"]
+      },
+      {
+        id: "scope",
+        title: "Scope of Services",
+        content: "Detailed description of services to be provided",
+        isRequired: true,
+        priority: "critical",
+        guidelines: ["Must be specific and measurable", "Include deliverables and timelines"]
+      },
+      {
+        id: "payment",
+        title: "Payment Terms",
+        content: "Payment schedule, amounts, and terms",
+        isRequired: true,
+        priority: "high",
+        guidelines: ["Clear payment schedule", "Late payment penalties", "Currency specification"]
+      },
+      {
+        id: "termination",
+        title: "Termination Clause",
+        content: "Conditions under which agreement can be terminated",
+        isRequired: true,
+        priority: "high",
+        guidelines: ["Notice period requirements", "Termination for cause", "Post-termination obligations"]
+      },
+      {
+        id: "liability",
+        title: "Limitation of Liability",
+        content: "Liability limitations and indemnification clauses",
+        isRequired: true,
+        priority: "critical",
+        guidelines: ["Cap on damages", "Mutual indemnification", "Insurance requirements"]
+      }
+    ],
+    lastUpdated: "2024-01-15",
     isBaseline: true,
-    requiredSections: [
-      { title: "Definitions", priority: "high" },
-      { title: "Scope of Services", priority: "high" },
-      { title: "Fees & Payment", priority: "medium" },
-      { title: "Term & Termination", priority: "critical" },
-      { title: "Limitation of Liability", priority: "medium" }
-    ]
+    sources: ["Internal Legal KB", "Law Insider"]
   },
-  {
-    id: "msa",
-    name: "Master Services Agreement",
-    type: "service",
-    description: "Baseline template for service agreements",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Definitions", priority: "high" },
-      { title: "Scope of Services", priority: "high" },
-      { title: "Fees & Payment", priority: "medium" },
-      { title: "Term & Termination", priority: "critical" },
-      { title: "Limitation of Liability", priority: "medium" }
-    ]
-  },
-  {
-    id: "nda",
-    name: "Non-Disclosure Agreement",
-    type: "legal",
-    description: "Baseline template for service agreements",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Definitions", priority: "high" },
-      { title: "Scope of Services", priority: "high" },
-      { title: "Fees & Payment", priority: "medium" },
-      { title: "Term & Termination", priority: "critical" },
-      { title: "Limitation of Liability", priority: "medium" }
-    ]
-  },
-  {
-    id: "dpa",
-    name: "Data Processing Agreement",
-    type: "technology",
-    description: "Baseline template for service agreements",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Definitions", priority: "high" },
-      { title: "Scope of Services", priority: "high" },
-      { title: "Fees & Payment", priority: "medium" },
-      { title: "Term & Termination", priority: "critical" },
-      { title: "Limitation of Liability", priority: "medium" }
-    ]
-  },
-  {
-    id: "sla",
-    name: "Service Level Agreement",
-    type: "technology",
-    description: "Baseline template for service agreements",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Definitions", priority: "high" },
-      { title: "Scope of Services", priority: "high" },
-      { title: "Fees & Payment", priority: "medium" },
-      { title: "Term & Termination", priority: "critical" },
-      { title: "Limitation of Liability", priority: "medium" }
-    ]
-  },
-  {
-    id: "employment",
-    name: "Employment Agreement",
-    type: "hr",
-    description: "Standard employment contract template",
-    sections: 8,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Position & Duties", priority: "high" },
-      { title: "Compensation", priority: "critical" },
-      { title: "Benefits", priority: "medium" },
-      { title: "Confidentiality", priority: "high" },
-      { title: "Termination", priority: "critical" }
-    ]
-  },
-  {
-    id: "consulting",
-    name: "Consulting Agreement",
-    type: "service",
-    description: "Independent contractor consulting template",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Scope of Work", priority: "high" },
-      { title: "Compensation", priority: "high" },
-      { title: "IP Ownership", priority: "critical" },
-      { title: "Term & Termination", priority: "medium" },
-      { title: "Confidentiality", priority: "high" }
-    ]
-  },
-  {
-    id: "vendor",
-    name: "Vendor Agreement",
-    type: "procurement",
-    description: "Standard vendor/supplier contract",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Products & Services", priority: "high" },
-      { title: "Pricing & Payment", priority: "high" },
-      { title: "Delivery Terms", priority: "medium" },
-      { title: "Warranties", priority: "medium" },
-      { title: "Liability", priority: "high" }
-    ]
-  },
-  {
-    id: "partnership",
-    name: "Partnership Agreement",
-    type: "corporate",
-    description: "Business partnership contract template",
-    sections: 9,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Business Purpose", priority: "high" },
-      { title: "Capital Contributions", priority: "critical" },
-      { title: "Profit Distribution", priority: "critical" },
-      { title: "Decision Making", priority: "high" },
-      { title: "Dissolution", priority: "medium" }
-    ]
-  },
-  {
-    id: "licensing",
-    name: "Software Licensing Agreement",
-    type: "technology",
-    description: "Software license and usage rights",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "License Grant", priority: "critical" },
-      { title: "Restrictions", priority: "high" },
-      { title: "Fees", priority: "high" },
-      { title: "Support & Maintenance", priority: "medium" },
-      { title: "Termination", priority: "high" }
-    ]
-  },
-  {
-    id: "saas",
-    name: "SaaS Agreement",
-    type: "technology",
-    description: "Software as a Service subscription",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Service Description", priority: "high" },
-      { title: "Subscription Terms", priority: "critical" },
-      { title: "Data Security", priority: "critical" },
-      { title: "SLA", priority: "high" },
-      { title: "Liability", priority: "medium" }
-    ]
-  },
-  {
-    id: "reseller",
-    name: "Reseller Agreement",
-    type: "sales",
-    description: "Product resale and distribution rights",
-    sections: 8,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Territory", priority: "high" },
-      { title: "Products", priority: "high" },
-      { title: "Pricing & Discounts", priority: "critical" },
-      { title: "Marketing", priority: "medium" },
-      { title: "Termination", priority: "medium" }
-    ]
-  },
-  {
-    id: "franchise",
-    name: "Franchise Agreement",
-    type: "business",
-    description: "Franchise operation and licensing",
-    sections: 12,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Franchise Grant", priority: "critical" },
-      { title: "Territory", priority: "high" },
-      { title: "Fees & Royalties", priority: "critical" },
-      { title: "Operations Manual", priority: "high" },
-      { title: "Training", priority: "medium" }
-    ]
-  },
-  {
-    id: "distribution",
-    name: "Distribution Agreement",
-    type: "sales",
-    description: "Product distribution rights",
-    sections: 8,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Distribution Rights", priority: "critical" },
-      { title: "Territory", priority: "high" },
-      { title: "Minimum Orders", priority: "medium" },
-      { title: "Pricing", priority: "high" },
-      { title: "Term", priority: "medium" }
-    ]
-  },
-  {
-    id: "lease-commercial",
-    name: "Commercial Lease Agreement",
-    type: "real-estate",
-    description: "Commercial property lease",
-    sections: 10,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Premises", priority: "critical" },
-      { title: "Rent", priority: "critical" },
-      { title: "Term", priority: "high" },
-      { title: "Maintenance", priority: "medium" },
-      { title: "Insurance", priority: "medium" }
-    ]
-  },
-  {
-    id: "lease-equipment",
-    name: "Equipment Lease Agreement",
-    type: "finance",
-    description: "Equipment rental and lease",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Equipment Description", priority: "high" },
-      { title: "Lease Payments", priority: "critical" },
-      { title: "Maintenance", priority: "medium" },
-      { title: "Insurance", priority: "medium" },
-      { title: "Return Conditions", priority: "high" }
-    ]
-  },
-  {
-    id: "loan",
-    name: "Loan Agreement",
-    type: "finance",
-    description: "Business or personal loan contract",
-    sections: 8,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Loan Amount", priority: "critical" },
-      { title: "Interest Rate", priority: "critical" },
-      { title: "Repayment Terms", priority: "critical" },
-      { title: "Collateral", priority: "high" },
-      { title: "Default", priority: "high" }
-    ]
-  },
-  {
-    id: "agency",
-    name: "Agency Agreement",
-    type: "service",
-    description: "Sales or service agency representation",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Appointment", priority: "critical" },
-      { title: "Territory", priority: "high" },
-      { title: "Commission", priority: "critical" },
-      { title: "Obligations", priority: "high" },
-      { title: "Termination", priority: "medium" }
-    ]
-  },
-  {
-    id: "joint-venture",
-    name: "Joint Venture Agreement",
-    type: "corporate",
-    description: "Collaborative business venture",
-    sections: 10,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Purpose", priority: "high" },
-      { title: "Contributions", priority: "critical" },
-      { title: "Management", priority: "high" },
-      { title: "Profit Sharing", priority: "critical" },
-      { title: "Exit Strategy", priority: "medium" }
-    ]
-  },
-  {
-    id: "merger",
-    name: "Merger Agreement",
-    type: "corporate",
-    description: "Company merger and acquisition",
-    sections: 15,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Transaction Structure", priority: "critical" },
-      { title: "Consideration", priority: "critical" },
-      { title: "Representations", priority: "high" },
-      { title: "Conditions", priority: "high" },
-      { title: "Indemnification", priority: "high" }
-    ]
-  },
-  {
-    id: "shareholder",
-    name: "Shareholders Agreement",
-    type: "corporate",
-    description: "Rights and obligations of shareholders",
-    sections: 11,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Share Ownership", priority: "critical" },
-      { title: "Voting Rights", priority: "high" },
-      { title: "Dividends", priority: "medium" },
-      { title: "Transfer Restrictions", priority: "high" },
-      { title: "Dispute Resolution", priority: "medium" }
-    ]
-  },
-  {
-    id: "ip-assignment",
-    name: "IP Assignment Agreement",
-    type: "legal",
-    description: "Intellectual property rights transfer",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "IP Description", priority: "critical" },
-      { title: "Assignment", priority: "critical" },
-      { title: "Consideration", priority: "high" },
-      { title: "Warranties", priority: "high" },
-      { title: "Indemnification", priority: "medium" }
-    ]
-  },
-  {
-    id: "trademark-license",
-    name: "Trademark License Agreement",
-    type: "legal",
-    description: "Trademark usage rights",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Licensed Marks", priority: "critical" },
-      { title: "Scope", priority: "high" },
-      { title: "Quality Control", priority: "high" },
-      { title: "Royalties", priority: "critical" },
-      { title: "Term", priority: "medium" }
-    ]
-  },
-  {
-    id: "manufacturing",
-    name: "Manufacturing Agreement",
-    type: "operations",
-    description: "Product manufacturing contract",
-    sections: 9,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Products", priority: "critical" },
-      { title: "Specifications", priority: "critical" },
-      { title: "Pricing", priority: "high" },
-      { title: "Quality Standards", priority: "high" },
-      { title: "Delivery", priority: "medium" }
-    ]
-  },
-  {
-    id: "supply",
-    name: "Supply Agreement",
-    type: "procurement",
-    description: "Raw materials or goods supply",
-    sections: 8,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Products", priority: "high" },
-      { title: "Pricing", priority: "critical" },
-      { title: "Delivery Schedule", priority: "high" },
-      { title: "Quality Assurance", priority: "high" },
-      { title: "Payment Terms", priority: "critical" }
-    ]
-  },
-  {
-    id: "purchase",
-    name: "Purchase Agreement",
-    type: "procurement",
-    description: "Asset or business purchase",
-    sections: 10,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Purchase Price", priority: "critical" },
-      { title: "Assets Included", priority: "critical" },
-      { title: "Closing Conditions", priority: "high" },
-      { title: "Representations", priority: "high" },
-      { title: "Indemnification", priority: "medium" }
-    ]
-  },
-  {
-    id: "maintenance",
-    name: "Maintenance Agreement",
-    type: "service",
-    description: "Equipment or software maintenance",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Services", priority: "high" },
-      { title: "Response Time", priority: "high" },
-      { title: "Fees", priority: "critical" },
-      { title: "Term", priority: "medium" },
-      { title: "Liability", priority: "medium" }
-    ]
-  },
-  {
-    id: "escrow",
-    name: "Escrow Agreement",
-    type: "finance",
-    description: "Third-party escrow arrangement",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Escrowed Property", priority: "critical" },
-      { title: "Release Conditions", priority: "critical" },
-      { title: "Escrow Agent Duties", priority: "high" },
-      { title: "Fees", priority: "medium" },
-      { title: "Term", priority: "medium" }
-    ]
-  },
-  {
-    id: "indemnity",
-    name: "Indemnity Agreement",
-    type: "legal",
-    description: "Liability protection and indemnification",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Indemnification Scope", priority: "critical" },
-      { title: "Covered Losses", priority: "high" },
-      { title: "Limitations", priority: "high" },
-      { title: "Defense", priority: "medium" },
-      { title: "Insurance", priority: "medium" }
-    ]
-  },
-  {
-    id: "settlement",
-    name: "Settlement Agreement",
-    type: "legal",
-    description: "Dispute resolution and settlement",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Settlement Terms", priority: "critical" },
-      { title: "Payment", priority: "critical" },
-      { title: "Release", priority: "high" },
-      { title: "Confidentiality", priority: "high" },
-      { title: "Non-Admission", priority: "medium" }
-    ]
-  },
-  {
-    id: "sponsorship",
-    name: "Sponsorship Agreement",
-    type: "marketing",
-    description: "Event or program sponsorship",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Sponsorship Benefits", priority: "high" },
-      { title: "Fees", priority: "critical" },
-      { title: "Marketing Rights", priority: "high" },
-      { title: "Deliverables", priority: "medium" },
-      { title: "Term", priority: "medium" }
-    ]
-  },
-  {
-    id: "advertising",
-    name: "Advertising Agreement",
-    type: "marketing",
-    description: "Advertising services contract",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Ad Placement", priority: "high" },
-      { title: "Fees", priority: "critical" },
-      { title: "Content Approval", priority: "high" },
-      { title: "Performance Metrics", priority: "medium" },
-      { title: "Term", priority: "medium" }
-    ]
-  },
-  {
-    id: "hosting",
-    name: "Hosting Agreement",
-    type: "technology",
-    description: "Web or server hosting services",
-    sections: 7,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Services", priority: "high" },
-      { title: "Uptime SLA", priority: "critical" },
-      { title: "Fees", priority: "high" },
-      { title: "Data Security", priority: "critical" },
-      { title: "Support", priority: "medium" }
-    ]
-  },
-  {
-    id: "api",
-    name: "API License Agreement",
-    type: "technology",
-    description: "API access and usage rights",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "API Access", priority: "critical" },
-      { title: "Usage Limits", priority: "high" },
-      { title: "Fees", priority: "high" },
-      { title: "Data Rights", priority: "critical" },
-      { title: "Support", priority: "medium" }
-    ]
-  },
-  {
-    id: "referral",
-    name: "Referral Agreement",
-    type: "sales",
-    description: "Customer referral compensation",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Referral Terms", priority: "high" },
-      { title: "Commission", priority: "critical" },
-      { title: "Qualified Referrals", priority: "high" },
-      { title: "Payment Terms", priority: "high" },
-      { title: "Term", priority: "medium" }
-    ]
-  },
-  {
-    id: "influencer",
-    name: "Influencer Agreement",
-    type: "marketing",
-    description: "Social media influencer partnership",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Content Requirements", priority: "high" },
-      { title: "Compensation", priority: "critical" },
-      { title: "Exclusivity", priority: "medium" },
-      { title: "IP Rights", priority: "high" },
-      { title: "FTC Compliance", priority: "high" }
-    ]
-  },
-  {
-    id: "coaching",
-    name: "Coaching Agreement",
-    type: "service",
-    description: "Professional coaching services",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Services", priority: "high" },
-      { title: "Fees", priority: "critical" },
-      { title: "Schedule", priority: "medium" },
-      { title: "Confidentiality", priority: "high" },
-      { title: "Termination", priority: "medium" }
-    ]
-  },
-  {
-    id: "training",
-    name: "Training Agreement",
-    type: "service",
-    description: "Corporate or professional training",
-    sections: 6,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Training Program", priority: "high" },
-      { title: "Fees", priority: "critical" },
-      { title: "Materials", priority: "medium" },
-      { title: "Certification", priority: "medium" },
-      { title: "IP Rights", priority: "high" }
-    ]
-  },
-  {
-    id: "subscription",
-    name: "Subscription Agreement",
-    type: "service",
-    description: "Recurring service subscription",
-    sections: 5,
-    sources: ["Internal Legal KB", "Law Insider"],
-    isBaseline: true,
-    requiredSections: [
-      { title: "Services", priority: "high" },
-      { title: "Subscription Fee", priority: "critical" },
-      { title: "Auto-Renewal", priority: "high" },
-      { title: "Cancellation", priority: "high" },
-      { title: "Refund Policy", priority: "medium" }
-    ]
-  }
+  { id: "msa", name: "Master Services Agreement", type: "service", description: "Standard MSA with SOWs", sections: [
+      { id: "msa-def", title: "Definitions", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "msa-scope", title: "Scope of Services", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "msa-fees", title: "Fees & Payment", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "msa-term", title: "Term & Termination", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "msa-liability", title: "Limitation of Liability", content: "", isRequired: true, priority: "critical", guidelines: [] }
+    ], lastUpdated: "2024-02-10", isBaseline: true, sources: ["Internal Legal KB", "Law Insider"] },
+  { id: "sow", name: "Statement of Work (SOW)", type: "service", description: "Detailed work scope", sections: [
+      { id: "sow-deliverables", title: "Deliverables", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "sow-milestones", title: "Milestones", content: "", isRequired: false, priority: "medium", guidelines: [] },
+      { id: "sow-acceptance", title: "Acceptance Criteria", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-03-12", isBaseline: false, sources: ["Internal Legal KB"] },
+  { id: "nda-mutual", name: "Mutual NDA", type: "legal", description: "Mutual confidentiality obligations", sections: [
+      { id: "nda-def", title: "Definitions", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "nda-conf", title: "Confidential Information", content: "", isRequired: true, priority: "critical", guidelines: [] },
+      { id: "nda-term", title: "Term", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "nda-excl", title: "Exclusions", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "nda-rem", title: "Remedies", content: "", isRequired: false, priority: "low", guidelines: [] }
+    ], lastUpdated: "2024-01-28", isBaseline: true, sources: ["Cornell LII", "Law Insider"] },
+  { id: "nda-oneway", name: "One-way NDA", type: "legal", description: "Disclosing party protections", sections: [
+      { id: "ondadef", title: "Definitions", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "ondarecip", title: "Recipient Obligations", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "ondaterm", title: "Term & Return", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2023-12-05", isBaseline: false, sources: ["Cornell LII"] },
+  { id: "dpa", name: "Data Processing Addendum", type: "technology", description: "GDPR/CCPA aligned DPA", sections: [
+      { id: "dpa-roles", title: "Roles & Responsibilities", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "dpa-security", title: "Security Measures", content: "", isRequired: true, priority: "critical", guidelines: [] },
+      { id: "dpa-sub", title: "Subprocessors", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "dpa-xfer", title: "Data Transfers", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "dpa-breach", title: "Breach Notification", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-04-02", isBaseline: true, sources: ["EDPB", "ICO"] },
+  { id: "sla", name: "Service Level Agreement", type: "technology", description: "Uptime and remedies", sections: [
+      { id: "sla-uptime", title: "Uptime Commitment", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "sla-credits", title: "Service Credits", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "sla-support", title: "Support Tiers", content: "", isRequired: false, priority: "low", guidelines: [] }
+    ], lastUpdated: "2024-03-20", isBaseline: true, sources: ["Internal Legal KB"] },
+  { id: "eula", name: "End User License Agreement", type: "technology", description: "Software licensing terms", sections: [
+      { id: "eula-license", title: "License Grant", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "eula-restrict", title: "Restrictions", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "eula-warranty", title: "Disclaimer/Warranty", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-01-06", isBaseline: false, sources: ["Open Source Templates", "Law Insider"] },
+  { id: "reseller", name: "Reseller Agreement", type: "commercial", description: "Channel partner terms", sections: [
+      { id: "reseller-territory", title: "Territory", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "reseller-targets", title: "Sales Targets", content: "", isRequired: false, priority: "low", guidelines: [] },
+      { id: "reseller-brand", title: "Branding & Compliance", content: "", isRequired: false, priority: "low", guidelines: [] }
+    ], lastUpdated: "2024-02-14", isBaseline: false, sources: ["Law Insider"] },
+  { id: "distribution", name: "Distribution Agreement", type: "commercial", description: "Territories and quotas", sections: [
+      { id: "dist-territory", title: "Territory & Exclusivity", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "dist-min", title: "Minimum Commitments", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-03-01", isBaseline: false, sources: ["Law Insider"] },
+  { id: "license-ip", name: "IP License Agreement", type: "legal", description: "Scope and exclusivity", sections: [
+      { id: "ip-scope", title: "Scope of License", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "ip-royalty", title: "Royalties", content: "", isRequired: false, priority: "low", guidelines: [] }
+    ], lastUpdated: "2024-01-19", isBaseline: true, sources: ["WIPO", "Law Insider"] },
+  { id: "subprocessing", name: "Sub-processor Agreement", type: "technology", description: "Downstream obligations", sections: [
+      { id: "sub-contract", title: "Contractual Flowdown", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-02-27", isBaseline: false, sources: ["EDPB"] },
+  { id: "consulting", name: "Consulting Agreement", type: "business", description: "Advisory scope and fees", sections: [
+      { id: "consult-scope", title: "Scope", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "consult-fees", title: "Fees", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-02-08", isBaseline: false, sources: ["Internal Legal KB"] },
+  { id: "employment", name: "Employment Agreement", type: "legal", description: "Employee terms and IP", sections: [
+      { id: "emp-role", title: "Role & Duties", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "emp-comp", title: "Compensation", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "emp-ip", title: "IP Assignment", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-03-11", isBaseline: true, sources: ["SHRM", "Law Insider"] },
+  { id: "contractor", name: "Independent Contractor", type: "legal", description: "Contractor engagement terms", sections: [
+      { id: "ctr-scope", title: "Scope", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "ctr-ip", title: "IP & Ownership", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-03-05", isBaseline: true, sources: ["SHRM"] },
+  { id: "partners", name: "Partnership Agreement", type: "business", description: "Governance and capital", sections: [
+      { id: "part-cap", title: "Capital Contributions", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "part-govern", title: "Governance", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-02-01", isBaseline: false, sources: ["Law Insider"] },
+  { id: "jv", name: "Joint Venture Agreement", type: "business", description: "JV structure and exits", sections: [
+      { id: "jv-structure", title: "Structure", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-01-30", isBaseline: false, sources: ["Law Insider"] },
+  { id: "franchise", name: "Franchise Agreement", type: "business", description: "Franchise operations", sections: [
+      { id: "fran-fees", title: "Fees", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-01-22", isBaseline: false, sources: ["FTC Franchise Guide"] },
+  { id: "lease-commercial", name: "Commercial Lease", type: "property", description: "Premises and rent", sections: [
+      { id: "lease-term", title: "Term", content: "", isRequired: true, priority: "medium", guidelines: [] },
+      { id: "lease-rent", title: "Rent & Escalation", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-03-25", isBaseline: true, sources: ["Law Insider"] },
+  { id: "lease-equipment", name: "Equipment Lease", type: "property", description: "Equipment rental terms", sections: [
+      { id: "el-term", title: "Term & Ownership", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-01-18", isBaseline: false, sources: ["Law Insider"] },
+  { id: "purchase", name: "Purchase Agreement", type: "commercial", description: "Sale of goods terms", sections: [
+      { id: "po-goods", title: "Goods & Delivery", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "po-inspect", title: "Inspection & Acceptance", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-02-21", isBaseline: true, sources: ["UCC", "Law Insider"] },
+  { id: "supply", name: "Supply Agreement", type: "commercial", description: "Supply commitments", sections: [
+      { id: "supply-forecast", title: "Forecast & Orders", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-02-26", isBaseline: false, sources: ["Law Insider"] },
+  { id: "manufacturing", name: "Manufacturing Agreement", type: "commercial", description: "Production and quality", sections: [
+      { id: "mfg-quality", title: "Quality & Audits", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-03-02", isBaseline: false, sources: ["ISO", "Law Insider"] },
+  { id: "maintenance", name: "Maintenance Agreement", type: "service", description: "Support and repairs", sections: [
+      { id: "maint-scope", title: "Scope & SLAs", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-03-08", isBaseline: false, sources: ["Internal Legal KB"] },
+  { id: "warranty", name: "Warranty Agreement", type: "commercial", description: "Warranty scope/limits", sections: [
+      { id: "warr-scope", title: "Scope & Duration", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-01-26", isBaseline: false, sources: ["Manufacturing Templates"] },
+  { id: "software-license", name: "Software License", type: "technology", description: "On-prem license terms", sections: [
+      { id: "swl-grant", title: "Grant & Restrictions", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-02-02", isBaseline: true, sources: ["Open Source Templates", "Law Insider"] },
+  { id: "saas", name: "SaaS Subscription", type: "technology", description: "Cloud subscription terms", sections: [
+      { id: "saas-sub", title: "Subscription & Term", content: "", isRequired: true, priority: "high", guidelines: [] },
+      { id: "saas-data", title: "Data & Privacy", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-02-12", isBaseline: true, sources: ["Internal Legal KB"] },
+  { id: "hosting", name: "Hosting Agreement", type: "technology", description: "Hosting obligations", sections: [
+      { id: "host-availability", title: "Availability & Support", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-02-18", isBaseline: false, sources: ["Internal Legal KB"] },
+  { id: "api", name: "API Terms", type: "technology", description: "API usage and limits", sections: [
+      { id: "api-keys", title: "API Keys & Limits", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-02-24", isBaseline: false, sources: ["Developer Docs Samples"] },
+  { id: "privacy", name: "Privacy Policy", type: "legal", description: "Data privacy disclosures", sections: [
+      { id: "pp-collect", title: "Collection & Use", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-03-14", isBaseline: true, sources: ["ICO", "OECD"] },
+  { id: "terms", name: "Terms of Service", type: "legal", description: "Website/app terms", sections: [
+      { id: "tos-use", title: "Acceptable Use", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-03-19", isBaseline: true, sources: ["Internal Legal KB"] },
+  { id: "affiliate", name: "Affiliate Agreement", type: "commercial", description: "Affiliate payouts", sections: [
+      { id: "aff-payouts", title: "Payouts & Tracking", content: "", isRequired: false, priority: "low", guidelines: [] }
+    ], lastUpdated: "2024-03-23", isBaseline: false, sources: ["Marketing Templates"] },
+  { id: "influencer", name: "Influencer Agreement", type: "commercial", description: "Creator campaigns", sections: [
+      { id: "inf-deliverables", title: "Deliverables & IP", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-03-28", isBaseline: false, sources: ["Marketing Templates"] },
+  { id: "sponsorship", name: "Sponsorship Agreement", type: "commercial", description: "Event sponsorship", sections: [
+      { id: "spon-rights", title: "Sponsorship Rights", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-04-03", isBaseline: false, sources: ["Event Templates"] },
+  { id: "merger", name: "Merger Agreement", type: "business", description: "M&A transaction doc", sections: [
+      { id: "mna-reps", title: "Reps & Warranties", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-04-06", isBaseline: false, sources: ["ABA Model Docs"] },
+  { id: "asset-sale", name: "Asset Purchase Agreement", type: "business", description: "Asset transfer terms", sections: [
+      { id: "apa-assets", title: "Assets & Liabilities", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-04-09", isBaseline: false, sources: ["ABA Model Docs"] },
+  { id: "shareholders", name: "Shareholders Agreement", type: "business", description: "Shareholder rights", sections: [
+      { id: "sha-rights", title: "Rights & Restrictions", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-04-12", isBaseline: true, sources: ["Internal Legal KB"] },
+  { id: "bylaws", name: "Company Bylaws", type: "business", description: "Corporate governance", sections: [
+      { id: "bylaws-board", title: "Board & Meetings", content: "", isRequired: true, priority: "medium", guidelines: [] }
+    ], lastUpdated: "2024-04-15", isBaseline: false, sources: ["Internal Legal KB"] },
+  { id: "gdpr", name: "GDPR Addendum", type: "technology", description: "EU data compliance", sections: [
+      { id: "gdpr-basis", title: "Legal Basis", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-04-18", isBaseline: true, sources: ["EDPB", "ICO"] },
+  { id: "hipaa", name: "HIPAA BAA", type: "healthcare", description: "Protected health info", sections: [
+      { id: "hipaa-safeguards", title: "Safeguards & PHI", content: "", isRequired: true, priority: "high", guidelines: [] }
+    ], lastUpdated: "2024-04-20", isBaseline: true, sources: ["HHS"] }
 ];
-
 
 // Severity color configuration
 const severityConfig = {
@@ -1432,12 +1002,12 @@ export default function ContractReview() {
       }
 
       // Build template clauses for analysis
-      const clauses = selectedTemplate?.requiredSections?.map(s => ({
+      const clauses = selectedTemplate?.sections?.map(s => ({
         title: s.title,
-        content: '',
-        isRequired: true,
+        content: s.content || '',
+        isRequired: s.isRequired,
         priority: s.priority,
-        guidelines: []
+        guidelines: s.guidelines || []
       })) || [];
 
       // Call Gemini API for analysis
@@ -1906,348 +1476,321 @@ Report ID: ${Date.now()}
   };
 
   return (
-    <div className="w-full h-screen bg-[#FAFAFB] dark:bg-gray-900 overflow-hidden flex flex-col">
-      {/* Top Header Section - matches Figma */}
-      <div className="px-6 pt-5 pb-3">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
-            <Shield className="h-5 w-5 text-[#3B43D6]" />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">Contract Review</h1>
-            <p className="text-[11px] text-[#6A707C] dark:text-gray-400 mt-0.5 leading-tight">
-              Upload contracts and get AI-powered analysis against reference templates
-            </p>
-          </div>
-        </div>
+    <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+          <FileText className="h-8 w-8" />
+          Contract Review
+        </h1>
+        <p className="text-muted-foreground">
+          Upload contracts and get AI-powered analysis against reference templates
+        </p>
       </div>
 
-      {/* Step Indicator and Title Section - matches Figma */}
-      <div className="px-6 pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">
-              {currentStep === 1 ? "Choose a baseline template from knowledge base" : steps[currentStep - 1]?.title}
-            </h2>
-            <p className="text-[11px] text-[#6A707C] dark:text-gray-400 mt-0.5">
-              {currentStep === 1 ? "40 templates" : steps[currentStep - 1]?.description}
-            </p>
-          </div>
-          
-          {/* Stepper */}
-          <div className="flex items-center gap-3">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${
-                  currentStep >= step.id
-                    ? 'bg-[#3B43D6] text-white'
-                    : 'bg-white dark:bg-gray-800 border border-[#D9D9D9] dark:border-gray-600 text-[#717171] dark:text-gray-400'
-                }`}>
-                  <span className="text-sm font-semibold">
-                    {String(step.id).padStart(2, '0')}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <svg className="w-14 h-9 mx-0" viewBox="0 0 56 36">
-                    <line x1="0" y1="18" x2="56" y2="18" stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} strokeWidth="1" strokeDasharray="2 2" />
-                  </svg>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 px-6 pb-4 overflow-hidden flex flex-col">
-        {/* Step 1: Select Template */}
-        {currentStep === 1 && (
-          <div className="flex-1 flex flex-col space-y-3 overflow-hidden">
-            {/* Top Navigation Bar */}
-            <div className="flex items-center justify-between">
-              <div className="relative w-[280px]">
-                <Input
-                  placeholder="Search Template..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
-                />
-                <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3" viewBox="0 0 12 12" fill="none">
-                  <path d="M5.5 9.5C7.70914 9.5 9.5 7.70914 9.5 5.5C9.5 3.29086 7.70914 1.5 5.5 1.5C3.29086 1.5 1.5 3.29086 1.5 5.5C1.5 7.70914 3.29086 9.5 5.5 9.5Z" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M10.5 10.5L8.5 8.5" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              
-              {/* Navigation Buttons */}
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="h-9 px-4 text-xs"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  disabled={!canProceedToStep2}
-                  className="h-9 px-4 text-xs bg-[#3B43D6] hover:bg-[#2D35B8]"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
+      {/* Stepper Indicator */}
+      <div className="flex items-center justify-center space-x-4">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${currentStep >= step.id
+              ? 'bg-primary border-primary text-primary-foreground'
+              : 'border-muted-foreground text-muted-foreground'
+              }`}>
+              {currentStep > step.id ? (
+                <CheckCircle className="h-5 w-5" />
+              ) : (
+                <span className="text-sm font-medium">{step.id}</span>
+              )}
             </div>
+            {index < steps.length - 1 && (
+              <div className={`w-16 h-0.5 mx-2 transition-all ${currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground/30'
+                }`} />
+            )}
+          </div>
+        ))}
+      </div>
 
-            {/* Main Content Grid */}
-            <div className="flex-1 flex gap-4 overflow-hidden">
-              {/* Left Side - Templates Grid */}
-              <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-hidden flex flex-col">
-                <div className="mb-3">
-                  <h3 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-1.5">Contract Templates</h3>
-                  <p className="text-[11px] text-[#6A707C] dark:text-gray-400 leading-[14px]">
-                    Select a baseline template that has been reviewed and approved by legal experts. Your uploaded contract will be compared against this template to identify gaps and weaknesses.
-                  </p>
+      {/* Step Title */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold">{steps[currentStep - 1]?.title}</h2>
+        <p className="text-muted-foreground text-lg">{steps[currentStep - 1]?.description}</p>
+      </div>
+
+      {/* Step Content */}
+      <Card className="min-h-[600px]">
+        <CardContent className="p-10">
+          {/* In-box navigation (top of panel) - hidden on step 4 to avoid duplicate Previous */}
+          {currentStep !== 4 && (
+          <div className="flex items-center justify-between -mt-4 mb-6">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="px-3"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            {currentStep < 5 && (
+              <Button
+                onClick={nextStep}
+                disabled={
+                  (currentStep === 1 && !canProceedToStep2) ||
+                  (currentStep === 2 && !canProceedToStep3) ||
+                  (currentStep === 3 && !canProceedToStep4) ||
+                  (currentStep === 4 && !extractedDocument)
+                }
+                className="px-3"
+              >
+                {currentStep === 4 ? 'Proceed to Download' : 'Next'}
+                <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+            {currentStep === 5 && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={analyzeNewContract}
+                  variant="outline"
+                  className="px-4"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Analyze New Contract
+                </Button>
+                <Button
+                  onClick={() => exportContractReport('text')}
+                  disabled={!extractedDocument || !uploadedFile}
+                  className="px-4"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Report (Text)
+                </Button>
+                <Button
+                  onClick={() => exportContractReport('pdf')}
+                  disabled={!extractedDocument || !uploadedFile}
+                  className="px-4 bg-red-600 hover:bg-red-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Report (PDF)
+                </Button>
+                <Button
+                  onClick={downloadContract}
+                  disabled={!uploadedFile}
+                  className="px-4 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete & Download
+                </Button>
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Step 1: Select Template from Knowledge Base */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <Library className="h-16 w-16 text-primary mx-auto mb-4" />
+                <h3 className="text-2xl font-bold mb-2">Contract Templates</h3>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Select a baseline template that has been reviewed and approved by legal experts. 
+                  Your uploaded contract will be compared against this template to identify gaps and weaknesses.
+                </p>
+                <div className="mt-4 max-w-md mx-auto">
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search template"
+                  />
                 </div>
+              </div>
+
+              <div className="relative">
+                {(() => {
+                  const filteredTemplates = knowledgeBaseTemplates.filter(t =>
+                    t.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+                  return (
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-sm text-muted-foreground">{filteredTemplates.length} templates</div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="icon" onClick={() => scrollTemplates('left')} aria-label="Scroll left">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => scrollTemplates('right')} aria-label="Scroll right">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
                 
-                {/* Template Cards Grid */}
-                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                  <div className="grid grid-cols-4 gap-4 pr-1">
-                    {knowledgeBaseTemplates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase())).map((template) => {
-                      const isSelected = selectedTemplate?.id === template.id;
+
+                <div
+                  ref={templatesContainerRef}
+                  className="overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                >
+                  <div className="flex gap-4 pr-2">
+                    {knowledgeBaseTemplates
+                      .filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                      .map((template) => {
+                      const selected = selectedTemplate?.id === template.id;
+                      const dimNonSelected = !!selectedTemplate && !selected;
                       return (
-                        <div
+                        <Card
                           key={template.id}
+                          className={`min-w-[300px] max-w-[300px] cursor-pointer transition-all border-2 ${
+                            selected ? 'border-primary bg-primary/5 shadow-lg' : 'border-muted hover:border-primary/50'
+                          } ${dimNonSelected ? 'opacity-80' : ''}`}
                           onClick={() => handleTemplateSelect(template)}
-                          className={`bg-white dark:bg-gray-800 rounded-[8px] shadow-sm cursor-pointer transition-all hover:shadow-md ${
-                            isSelected ? 'ring-2 ring-[#3B43D6] shadow-md' : 'border border-gray-100 dark:border-gray-700 hover:border-[#3B43D6]/50'
-                          }`}
                         >
-                          <div className="p-3">
-                            <div className="flex items-start justify-between mb-2.5">
-                              <div className="w-10 h-10 rounded-full bg-[#EFF1F6] dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                <BookOpen className="h-5 w-5 text-[#3B43D6]" />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="bg-[#EDFFDE] dark:bg-green-900/30 rounded-full px-2 py-0.5 flex items-center gap-1">
-                                  <Award className="h-2.5 w-2.5 text-[#47AF47]" />
-                                  <span className="text-[9px] font-medium text-[#47AF47]">Baseline</span>
-                                </div>
-                                <CheckCircle className="h-4 w-4 text-[#DADADA] dark:text-gray-600" />
-                              </div>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <BookOpen className="h-8 w-8 text-primary" />
+                              {template.isBaseline && (
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                  <Award className="h-3 w-3 mr-1" />
+                                  Baseline
+                                </Badge>
+                              )}
                             </div>
-                            
-                            <div className="mb-2.5">
-                              <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-1 leading-tight line-clamp-2">{template.name}</h4>
-                              <p className="text-[10px] text-[#6A707C] dark:text-gray-400 leading-tight line-clamp-2">{template.description}</p>
-                            </div>
-                            
-                            <div className="space-y-1.5">
-                              <div className="text-[10px] font-semibold text-[#2D2F34] dark:text-gray-300">
-                                Sections: {template.sections}
+                            <CardTitle className="text-lg truncate" title={template.name}>{template.name}</CardTitle>
+                            <CardDescription className="overflow-hidden text-ellipsis whitespace-nowrap" title={template.description}>{template.description}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-3">
+                              <div className="text-sm text-muted-foreground">
+                                <strong>Sections:</strong> {template.sections.length}
                               </div>
-                              <div className="text-[10px] font-semibold text-[#2D2F34] dark:text-gray-300 truncate">
-                                Sources: {template.sources.join(", ")}
+                              <div className="text-sm text-muted-foreground">
+                                <strong>Sources:</strong> {template.sources.join(', ')}
                               </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                  <span className="text-[9px] font-medium text-[#2D2F34] dark:text-gray-300">Parties</span>
+                              {template.sections.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {template.sections.slice(0, 3).map((section) => (
+                                    <Badge key={section.id} variant="outline" className="text-xs">
+                                      {section.title}
+                                    </Badge>
+                                  ))}
+                                  {template.sections.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{template.sections.length - 3} more
+                                    </Badge>
+                                  )}
                                 </div>
-                                <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                  <span className="text-[9px] font-medium text-[#2D2F34] dark:text-gray-300">+{template.requiredSections.length - 1} more</span>
-                                </div>
-                              </div>
+                              )}
                             </div>
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                       );
                     })}
                   </div>
                 </div>
               </div>
 
-              
-              {/* Right Side - Selected Template Details */}
               {selectedTemplate && (
-                <div className="w-[320px] flex-shrink-0 flex flex-col gap-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                  {/* Template Details Card */}
-                  <div className="bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4">
-                    <h3 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-4 leading-tight">
+                <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                      <Info className="h-5 w-5" />
                       Selected Template: {selectedTemplate.name}
-                    </h3>
-                    
-                    {/* Required Sections */}
-                    <div className="mb-5">
-                      <h4 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-3">Required Sections:</h4>
-                      <div className="space-y-2.5">
-                        {selectedTemplate.requiredSections.slice(0, 5).map((section, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
-                            <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 flex-1 leading-tight">{section.title}</span>
-                            <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium whitespace-nowrap ${
-                              section.priority === 'critical' ? 'bg-[#EDDBDB] text-[#BA0003]' :
-                              section.priority === 'high' ? 'bg-[#FFE7E0] text-[#E55400]' :
-                              section.priority === 'medium' ? 'bg-[#FFF8CB] text-[#BF6D0A]' :
-                              'bg-[#E8E9FF] text-[#6E72FF]'
-                            }`}>
-                              {section.priority.charAt(0).toUpperCase() + section.priority.slice(1)}
-                            </span>
-                          </div>
-                        ))}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">Required Sections:</h4>
+                        <ul className="space-y-1">
+                          {selectedTemplate.sections.filter(s => s.isRequired).map((section) => (
+                            <li key={section.id} className="flex items-center gap-2 text-sm">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span>{section.title}</span>
+                              <Badge className={`text-xs ${
+                                section.priority === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+                                section.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300' :
+                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                              }`}>
+                                {section.priority}
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">What We'll Check:</h4>
+                        <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                          <li>• Missing required sections</li>
+                          <li>• Weak or incomplete clauses</li>
+                          <li>• Non-compliant language</li>
+                          <li>• Risk exposure areas</li>
+                        </ul>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              )}
 
-                    {/* What We'll Check */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-3">What We'll Check:</h4>
-                      <div className="space-y-2.5">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
-                          <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 leading-tight">Missing required sections</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
-                          <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 leading-tight">Weak or incomplete clauses</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
-                          <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 leading-tight">Non-compliant language</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
-                          <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 leading-tight">Risk exposure areas</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Audit Logs Card */}
-                  <div className="bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4">
-                    <div className="flex items-start gap-2 mb-4">
-                      <RotateCcw className="h-4 w-4 text-[#717171] dark:text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-0.5">Audit Logs</h4>
-                        <p className="text-[10px] text-[#6A707C] dark:text-gray-400 leading-tight">Recent activity for template</p>
-                      </div>
-                    </div>
-                    
-                    {logsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <p className="text-[10px] text-center text-[#6A707C] dark:text-gray-400">Loading logs...</p>
-                      </div>
-                    ) : templateLogs.length === 0 ? (
-                      <div className="flex items-center justify-center py-8">
-                        <p className="text-[10px] text-center text-[#6A707C] dark:text-gray-400">No logs yet for this template.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                        {templateLogs.map((log: any, idx: number) => (
-                          <div key={idx} className="pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-[11px] font-medium text-[#2D2F34] dark:text-gray-100 line-clamp-2">
-                                {log.action || 'Contract Review'}
-                              </p>
-                              <span className="text-[9px] text-[#6A707C] dark:text-gray-400 whitespace-nowrap">
-                                {new Date(log.timestamp || log.createdAt).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  day: 'numeric' 
-                                })}
-                              </span>
+              {selectedTemplate && (
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      Audit Logs
+                    </CardTitle>
+                    <CardDescription>
+                      Recent activity for template "{selectedTemplate.name}"
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {logsLoading && (
+                      <div className="text-sm text-muted-foreground">Loading logs…</div>
+                    )}
+                    {!logsLoading && logsError && (
+                      <div className="text-sm text-red-600 dark:text-red-400">{logsError}</div>
+                    )}
+                    {!logsLoading && !logsError && templateLogs.filter(l => (l as any).action !== 'selected').length === 0 && (
+                      <div className="text-sm text-muted-foreground">No logs yet for this template.</div>
+                    )}
+                    {!logsLoading && !logsError && templateLogs.filter(l => (l as any).action !== 'selected').length > 0 && (
+                      <div className="space-y-3">
+                        {templateLogs.filter(l => (l as any).action !== 'selected').map((log) => (
+                          <div
+                            key={log._id}
+                            className="flex items-center justify-between border rounded-md p-3 bg-muted/40 dark:bg-muted/30 hover:bg-muted/60 transition-colors border-border dark:border-slate-700"
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="text-sm font-medium text-foreground">
+                                  {log.status ? `Result: ${log.status}` : ((log as any).action === 'analyzed' ? 'Analysis completed' : 'Event')}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(log.analysisDate).toLocaleString()} {log.fileName ? `• ${log.fileName}` : ''}
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-[10px] text-[#6A707C] dark:text-gray-400 line-clamp-2 mb-1">
-                              {log.details || log.description || 'Contract analysis completed'}
-                            </p>
-                            {log.userName && (
-                              <p className="text-[9px] text-[#8D8D8D] dark:text-gray-500">
-                                By: {log.userName}
-                              </p>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {typeof log.score === 'number' && (
+                                <Badge variant="outline" className="text-xs border-primary/40 text-primary">Score: {log.score}</Badge>
+                              )}
+                              {typeof log.gapsCount === 'number' && (
+                                <Badge variant="outline" className="text-xs border-blue-400/40 text-blue-700 dark:text-blue-300">Gaps: {log.gapsCount}</Badge>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-
-        {/* Steps 2-5: Use Card Layout */}
-        {currentStep >= 2 && (
-          <Card className="flex-1 overflow-auto">
-            <CardContent className="p-10">
-              {/* Navigation Buttons */}
-              {currentStep !== 4 && (
-                <div className="flex items-center justify-between -mt-4 mb-6">
-                  <Button
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={currentStep === 1}
-                    className="px-3"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Previous
-                  </Button>
-                  {currentStep < 5 && (
-                    <Button
-                      onClick={nextStep}
-                      disabled={
-                        (currentStep === 1 && !canProceedToStep2) ||
-                        (currentStep === 2 && !canProceedToStep3) ||
-                        (currentStep === 3 && !canProceedToStep4) ||
-                        (currentStep === 4 && !extractedDocument)
-                      }
-                      className="px-3"
-                    >
-                      {currentStep === 4 ? 'Proceed to Download' : 'Next'}
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  )}
-                  {currentStep === 5 && (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={analyzeNewContract}
-                        variant="outline"
-                        className="px-4"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Analyze New Contract
-                      </Button>
-                      <Button
-                        onClick={() => exportContractReport('text')}
-                        disabled={!extractedDocument || !uploadedFile}
-                        className="px-4"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Report (Text)
-                      </Button>
-                      <Button
-                        onClick={() => exportContractReport('pdf')}
-                        disabled={!extractedDocument || !uploadedFile}
-                        className="px-4 bg-red-600 hover:bg-red-700"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Report (PDF)
-                      </Button>
-                      <Button
-                        onClick={downloadContract}
-                        disabled={!uploadedFile}
-                        className="px-4 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Complete & Download
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Step 2: Template Boilerplate or Custom Template */}
-              {currentStep === 2 && (
-                <div className="space-y-8">
+          {/* Step 2: Template Boilerplate or Custom Template */}
+          {currentStep === 2 && (
+            <div className="space-y-8">
+              <Card>
+                <CardContent>
                   {/* Mode toggle centered */}
                   <div className="flex items-center justify-center gap-3 mb-6">
                     <Button
@@ -2273,15 +1816,15 @@ Report ID: ${Date.now()}
                         <>
                             <h4 className="text-base font-semibold mb-2">Key sections that will be checked</h4>
                             <ul className="space-y-2 text-sm">
-                              {selectedTemplate.requiredSections.slice(0, 6).map((s, index) => (
-                                <li key={index} className="flex items-center gap-2">
+                              {selectedTemplate.sections.slice(0, 6).map((s) => (
+                                <li key={s.id} className="flex items-center gap-2">
                                   <CheckCircle className="h-4 w-4 text-green-600" />
                                   <span>{s.title}</span>
                                   <Badge variant="outline" className="ml-auto text-xs">{s.priority}</Badge>
                                 </li>
                               ))}
-                              {selectedTemplate.requiredSections.length > 6 && (
-                                <li className="text-muted-foreground">+{selectedTemplate.requiredSections.length - 6} more…</li>
+                              {selectedTemplate.sections.length > 6 && (
+                                <li className="text-muted-foreground">+{selectedTemplate.sections.length - 6} more…</li>
                               )}
                             </ul>
 
@@ -2289,12 +1832,16 @@ Report ID: ${Date.now()}
                           <div className="space-y-2">
                             <h4 className="text-base font-semibold">Template format preview (brief)</h4>
                             <div className="prose dark:prose-invert max-w-none border rounded-md p-4 text-sm">
-                              {selectedTemplate.requiredSections.slice(0, 3).map((s, index) => (
-                                <div key={index} className="mb-3">
+                              {selectedTemplate.sections.slice(0, 3).map((s) => {
+                                const sec: any = s as any;
+                                const preview = sec?.snippet ?? sec?.content ?? '';
+                                return (
+                                <div key={s.id} className="mb-3">
                                   <div className="font-semibold">{s.title}</div>
-                                  <div className="text-muted-foreground">—</div>
+                                  <div className="text-muted-foreground">{preview || '—'}</div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
 
@@ -2417,11 +1964,13 @@ Report ID: ${Date.now()}
                       )}
                     </div>
                   )}
-                </div>
-              )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-              {/* Step 3: Upload Contract */}
-              {currentStep === 3 && (
+          {/* Step 3: Upload Contract */}
+          {currentStep === 3 && (
             <div className="space-y-8">
               {/* Upload Options */}
               <div className="grid md:grid-cols-2 gap-6">
@@ -2512,11 +2061,11 @@ Report ID: ${Date.now()}
                 </AlertDescription>
               </Alert>
             </div>
-              )}
+          )}
 
-              {/* Step 4: Canvas Review */}
-              {currentStep === 4 && (
-                <div className="space-y-6">
+          {/* Step 4: Canvas Review */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
               {/* Top inline controls */}
               <div className="flex items-center justify-between">
                 <Button variant="outline" onClick={prevStep}>
@@ -2567,12 +2116,12 @@ Report ID: ${Date.now()}
 
               {/* Canvas after analysis */}
               {extractedDocument && <ContractCanvas />}
-                </div>
-              )}
+            </div>
+          )}
 
-              {/* Step 5: Results */}
-              {currentStep === 5 && (
-                <div className="space-y-6">
+          {/* Step 5: Results */}
+          {currentStep === 5 && (
+            <div className="space-y-6">
               {/* Step 5 Subtitle under main title */}
               <div className="text-center -mt-4">
                 <p className="text-sm text-muted-foreground">
@@ -2739,11 +2288,11 @@ Report ID: ${Date.now()}
                 </div>
               )}
             </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Bottom navigation removed: controls are now at top of the panel */}
 
       {/* Asset Picker Modal */}
       <AssetPicker

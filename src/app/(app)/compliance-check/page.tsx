@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen } from "lucide-react";
+import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen, BarChart2, XOctagon, Coffee, Meh } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AssetPicker } from "@/components/AssetPicker";
@@ -881,145 +881,125 @@ export default function ComplianceCheckPage() {
   };
 
   return (
-    <div className="w-full mx-auto p-6 space-y-8 relative">
-      <a href="/how-to-use#compliance-check" className="absolute top-2 right-4 text-xs text-[var(--url-color)] hover:underline">
+    <div className="w-full h-full flex relative">
+      <a href="/how-to-use#compliance-check" className="absolute top-2 right-4 text-xs text-[var(--url-color)] hover:underline z-10">
         How to Use
       </a>
-      <div className={`flex gap-6 ${selectedStandards.length > 0 ? 'max-w-none' : 'max-w-6xl mx-auto'}`}>
-        {/* Main Content */}
-        <div className={`${selectedStandards.length > 0 ? 'flex-1' : 'w-full'} space-y-8`}>
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h1 className="font-h1 text-foreground flex items-center justify-center gap-2">
-          <Shield className="h-8 w-8" />
-          Compliance Check
-        </h1>
-        <p className="font-body-16 text-muted-foreground">
-          Analyze your documents against compliance standards using AI
-        </p>
-      </div>
 
-      {/* Stepper Indicator */}
-      <div className="flex items-center justify-center space-x-6">
-        {steps.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <div className={`flex items-center justify-center w-14 h-14 rounded-full border-3 transition-all shadow-sm ${currentStep >= step.id
-              ? 'bg-teal-600 border-teal-600 text-white shadow-teal-200'
-              : currentStep === step.id
-              ? 'bg-teal-50 border-teal-600 text-teal-700 shadow-teal-100'
-              : 'border-gray-300 text-gray-400 bg-white'
-              }`}>
-              {currentStep > step.id ? (
-                <CheckCircle className="h-6 w-6" />
-              ) : (
-                <span className="font-body-16-medium">{step.id}</span>
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Center Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Fixed Header Section */}
+          <div className="flex-shrink-0 p-8 pb-4">
+            {/* Header Section */}
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-12 h-12 text-[#3B43D6]" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground mb-1">
+                  Compliance Check
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Analyze your documents against compliance standards using AI
+                </p>
+              </div>
+            </div>
+
+            {/* Step Title */}
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-foreground dark:text-foreground mb-1">{steps[currentStep - 1]?.title}</h2>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">{steps[currentStep - 1]?.description}</p>
+            </div>
+
+            {/* Stepper Indicator */}
+            <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-0">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <div className={`flex items-center justify-center w-[39px] h-[39px] rounded-full transition-all ${
+                currentStep === step.id
+                  ? 'bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground'
+                  : 'bg-card dark:bg-card border-2 border-border dark:border-border text-muted-foreground dark:text-muted-foreground'
+                }`}>
+                <span className="text-sm font-medium">{String(step.id).padStart(2, '0')}</span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`w-[60px] h-[2px] ${
+                  currentStep > step.id ? 'bg-primary dark:bg-primary' : 'bg-border dark:bg-border'
+                }`} />
               )}
             </div>
-            {index < steps.length - 1 && (
-              <div className={`w-20 h-1 mx-3 rounded-full transition-all ${currentStep > step.id ? 'bg-teal-600' : 'bg-gray-200'
-                }`} />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Step Title */}
-      <div className="text-center">
-        <h2 className={`font-h2 ${currentStep === 1 ? 'text-teal-700' : 'text-gray-900'}`}>{steps[currentStep - 1]?.title}</h2>
-        <p className="font-body-16 text-muted-foreground">{steps[currentStep - 1]?.description}</p>
-      </div>
-
-      {/* Step Content */}
-      <Card>
-        <CardContent className="p-10">
-          {/* In-box navigation for all steps (hidden on Results page) */}
-          {currentStep !== 4 && (
-          <div className="flex justify-center gap-4 -mt-4 mb-8">
-            <Button
-              variant="outline"
-              size="default"
-              onClick={prevStep}
-              disabled={currentStep === 1 || isAnalyzing}
-              className="font-body-14-medium px-8 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50"
-            >
-              <ChevronLeft className="h-5 w-5 mr-2" />
-              Previous
-            </Button>
-            <Button
-              size="default"
-              onClick={() => {
-                if (currentStep === 3) {
-                  if (canAnalyze) {
-                    handleAnalyze();
-                  }
+          ))}
+        </div>
+        
+        {/* Select All Checkbox - Show only on step 1 */}
+        {currentStep === 1 && (
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="select-all-top"
+              checked={selectedStandards.length === complianceStandards.length}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedStandards(complianceStandards.map(s => s.id));
                 } else {
-                  nextStep();
+                  setSelectedStandards([]);
                 }
               }}
-              disabled={
-                (currentStep === 1 && !canProceedToStep2) ||
-                (currentStep === 2 && !canProceedToStep3) ||
-                (currentStep === 3 && !canAnalyze) ||
-                currentStep === 5 ||
-                isAnalyzing
-              }
-              className="font-body-14-medium px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white border-2 border-teal-600 hover:border-teal-700 transition-all duration-200 disabled:opacity-50 shadow-md hover:shadow-lg"
-            >
-              {currentStep === 3 ? 'Analyze' : 'Next'}
-              <ChevronRight className="h-5 w-5 ml-2" />
-            </Button>
+              className="w-5 h-5 rounded border-border dark:border-border text-primary focus:ring-primary cursor-pointer"
+            />
+            <label htmlFor="select-all-top" className="text-sm font-medium text-foreground dark:text-foreground cursor-pointer">
+              Select All
+            </label>
           </div>
-          )}
+        )}
+            </div>
+          </div>
+
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto px-8 pb-6 scrollbar-thin">{/* Step Content */}
           {/* Step 1: Select Compliance Standards */}
           {currentStep === 1 && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-body-16-medium text-center text-gray-700">
-                    {selectedStandards.length} of {complianceStandards.length} standards selected
-                  </p>
-                </div>
-                <div className="flex gap-3 items-center">
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="font-body-14-medium px-6 py-2.5 border-2 border-teal-200 text-teal-700 hover:bg-teal-50 hover:border-teal-300 transition-all duration-200"
-                    onClick={() => setSelectedStandards(complianceStandards.map(s => s.id))}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="font-body-14-medium px-6 py-2.5 border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
-                    onClick={() => setSelectedStandards([])}
-                  >
-                    Clear All
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[450px] overflow-y-auto p-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="space-y-8">
+              {/* Standards Grid - Responsive based on audit logs state */}
+              <div className={`grid gap-4 ${
+                selectedStandards.length > 0 
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3' 
+                  : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+              }`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {complianceStandards.map((standard) => (
-                  <Card
+                  <div
                     key={standard.id}
-                    className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 ${selectedStandards.includes(standard.id) 
-                      ? "ring-2 ring-teal-500 bg-teal-50 border-teal-200 shadow-md" 
-                      : "border-gray-200 hover:border-teal-200 shadow-sm"
-                      }`}
+                    className={`relative bg-card dark:bg-card rounded-[10px] p-4 cursor-pointer transition-all duration-200 hover:shadow-lg border ${
+                      selectedStandards.includes(standard.id) 
+                        ? "border-primary dark:border-primary shadow-md" 
+                        : "border-border dark:border-border hover:border-primary dark:hover:border-primary"
+                    }`}
+                    style={{ minHeight: '116px' }}
                     onClick={() => handleStandardToggle(standard.id)}
                   >
-                    <CardContent className="p-5 text-center relative min-h-[140px] flex flex-col justify-center">
-                      {selectedStandards.includes(standard.id) && (
-                        <div className="absolute top-3 right-3">
-                          <CheckCircle className="h-5 w-5 text-teal-600" />
+                    {/* Checkmark - Top Right */}
+                    {selectedStandards.includes(standard.id) && (
+                      <div className="absolute top-3 right-3">
+                        <CheckCircle className="h-5 w-5 text-primary dark:text-primary" fill="currentColor" />
+                      </div>
+                    )}
+                    
+                    {/* Icon and Content */}
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <div className={`w-[50px] h-[50px] rounded-lg flex items-center justify-center ${standard.color}`}>
+                          <standard.icon className="w-6 h-6" strokeWidth={1.5} />
                         </div>
-                      )}
-                      <standard.icon className={`h-8 w-8 mx-auto mb-4 ${selectedStandards.includes(standard.id) ? 'text-teal-600' : 'text-gray-600'}`} />
-                      <h3 className="font-body-14-medium mb-2 text-gray-900">{standard.name}</h3>
-                      <p className="font-body-12 text-gray-600 leading-relaxed">{standard.description}</p>
-                    </CardContent>
-                  </Card>
+                      </div>
+                      <div className="flex-1 min-w-0 pr-6">
+                        <h3 className="font-semibold text-foreground dark:text-foreground text-base mb-1 truncate" title={standard.name}>{standard.name}</h3>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground line-clamp-2 break-words" title={standard.description}>{standard.description}</p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1027,22 +1007,18 @@ export default function ComplianceCheckPage() {
 
           {/* Step 2: Upload Document */}
           {currentStep === 2 && (
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Upload New File */}
-                <Card className="border-2 border-dashed border-gray-300 hover:border-teal-400 transition-all duration-200 shadow-sm hover:shadow-md">
-                  <CardHeader className="text-center">
-                    <CardTitle className="font-h3 flex items-center justify-center gap-2 text-gray-900">
-                      <Upload className="h-5 w-5" />
-                      Upload New Document
-                    </CardTitle>
-                    <CardDescription className="font-body-14 text-gray-600">
-                      Upload a policy document for compliance analysis
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Upload className="h-8 w-8 text-primary" />
+            <div className="space-y-8">
+              {/* Two Column Upload Options */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Upload New Document */}
+                <div className="bg-card dark:bg-card border border-dashed border-border dark:border-border rounded-[10px] p-5 space-y-4">
+                  <h3 className="text-foreground dark:text-foreground font-semibold text-base">Upload New Document</h3>
+                  <p className="text-muted-foreground dark:text-muted-foreground text-xs font-medium">Upload a policy document for compliance analysis</p>
+                  
+                  {/* Upload Area */}
+                  <div className="bg-[#FAFAFA] dark:bg-gray-800 border border-[#E6E6E6] dark:border-gray-700 rounded-[5px] p-4 flex flex-col items-center justify-center gap-3">
+                    <div className="w-6 h-6 text-black dark:text-gray-300">
+                      <Upload className="w-full h-full" strokeWidth={2} />
                     </div>
                     <div>
                       <Input
@@ -1052,79 +1028,67 @@ export default function ComplianceCheckPage() {
                         className="hidden"
                         id="file-upload"
                       />
-                      <Button asChild variant="outline" className="w-full">
+                      <Button 
+                        asChild 
+                        className="bg-[#3B43D6] hover:bg-[#2F36B0] text-white h-9 px-4 rounded-[5px] text-xs font-semibold"
+                      >
                         <label htmlFor="file-upload" className="cursor-pointer">
                           Choose File
                         </label>
                       </Button>
                     </div>
-                    <p className="font-body-12 text-gray-500">
+                    <p className="text-[#595959] dark:text-gray-400 text-xs font-medium text-center">
                       Supported formats: PDF, DOC, DOCX, TXT
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 {/* Select from Assets */}
-                <Card className="border-2 border-dashed border-gray-300 hover:border-teal-400 transition-all duration-200 shadow-sm hover:shadow-md">
-                  <CardHeader className="text-center">
-                    <CardTitle className="font-h3 flex items-center justify-center gap-2 text-gray-900">
-                      <FolderOpen className="h-5 w-5" />
-                      Select from Assets
-                    </CardTitle>
-                    <CardDescription className="font-body-14 text-gray-600">
-                      Choose from your previously uploaded documents
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                      <FolderOpen className="h-8 w-8 text-primary" />
+                <div className="bg-card dark:bg-card border border-dashed border-border dark:border-border rounded-[10px] p-5 space-y-4">
+                  <h3 className="text-foreground dark:text-foreground font-semibold text-base">Select from Assets</h3>
+                  <p className="text-muted-foreground dark:text-muted-foreground text-xs font-medium">Choose from your previously uploaded documents</p>
+                  
+                  {/* Browse Area */}
+                  <div className="bg-[#FAFAFA] dark:bg-gray-800 border border-[#E6E6E6] dark:border-gray-700 rounded-[5px] p-4 flex flex-col items-center justify-center gap-3">
+                    <div className="w-6 h-6 text-black dark:text-gray-300">
+                      <FolderOpen className="w-full h-full" strokeWidth={2} />
                     </div>
                     <Button 
-                      variant="outline" 
-                      className="w-full"
                       onClick={() => setIsAssetPickerOpen(true)}
+                      className="bg-[#3B43D6] hover:bg-[#2F36B0] text-white h-9 px-4 rounded-[5px] text-xs font-semibold"
                     >
                       Browse Assets
                     </Button>
-                    <p className="font-body-12 text-gray-500">
+                    <p className="text-[#595959] dark:text-gray-400 text-xs font-medium text-center">
                       Select from your uploaded documents
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
               {/* File Selected Display */}
               {uploadedFile && (
-                <div className="mt-6">
-                  <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                            <FileText className="h-6 w-6 text-green-600 dark:text-green-400" />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-body-16-medium text-green-900 dark:text-green-100">File Selected Successfully</h3>
-                          <p className="font-body-14 text-green-700 dark:text-green-300 mt-1">
-                            <span className="font-body-14-medium">{uploadedFile.name}</span>
-                            <span className="font-body-12 ml-2">({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUploadedFile(null)}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-100"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Change File
-                          </Button>
-                        </div>
+                <div className="bg-card dark:bg-card border border-border dark:border-border rounded-[5px] p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-6 h-6 text-foreground dark:text-foreground flex-shrink-0">
+                      <FileText className="w-full h-full" strokeWidth={2} />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-foreground dark:text-foreground font-semibold text-base">File Selected Successfully</h3>
+                        <CheckCircle className="w-[18px] h-[18px] text-green-600 dark:text-green-400" strokeWidth={1.5} />
                       </div>
-                    </CardContent>
-                  </Card>
+                      <p className="text-muted-foreground dark:text-muted-foreground text-xs font-medium">
+                        {uploadedFile.name} ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setUploadedFile(null)}
+                    className="bg-[#3B43D6] hover:bg-[#2F36B0] text-white h-9 px-4 rounded-[5px] text-xs font-semibold"
+                  >
+                    Choose File
+                  </Button>
                 </div>
               )}
             </div>
@@ -1132,66 +1096,78 @@ export default function ComplianceCheckPage() {
 
           {/* Step 3: Review & Analyze */}
           {currentStep === 3 && (
-            <div className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="font-h3 text-gray-900">Analysis Options</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-body-16-medium text-gray-900">Apply RuleBase</div>
-                      <div className="font-body-14 text-gray-600">Use your custom company rules during analysis</div>
-                    </div>
-                    <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
-                  </div>
-                </CardContent>
-              </Card>
-              <div className="grid md:grid-cols-2 gap-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-h3 text-gray-900">Selected Standards</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {selectedStandards.map(standardId => {
-                        const standard = complianceStandards.find(s => s.id === standardId);
-                        return standard ? (
-                          <div key={standardId} className="flex items-center gap-2">
-                            <standard.icon className="h-4 w-4 text-primary" />
-                            <span className="font-body-14-medium text-gray-900">{standard.name}</span>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="space-y-[30px]">
+              {/* Analysis Options Card */}
+              <div className="w-full flex items-start gap-[15px] py-[15px] px-5 bg-card dark:bg-card border border-border dark:border-border rounded-[5px]">
+                <BarChart2 className="w-6 h-6 flex-shrink-0 mt-1" strokeWidth={2} />
+                <div className="flex flex-col gap-[7px] flex-1">
+                  <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                    Analysis Options
+                  </span>
+                  <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
+                    Apply RuleBase  |  Use your custom company rules during analysis
+                  </span>
+                </div>
+                <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} className="flex-shrink-0" />
+              </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-h3 text-gray-900">Document</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {uploadedFile ? (
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <div>
-                          <p className="font-body-14-medium text-gray-900">{uploadedFile.name}</p>
-                          <p className="font-body-12 text-gray-600">
-                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
+              {/* Selected Standards Card */}
+              <div className="w-full bg-card dark:bg-card border border-border dark:border-border rounded-[5px]">
+                <div className="flex items-center gap-[15px] py-[15px] px-[15px]">
+                  <div className="flex items-center justify-center px-2.5 h-[34px] bg-accent dark:bg-accent rounded-[3px]">
+                    <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                      Selected Standards
+                    </span>
+                  </div>
+                </div>
+                <div className="px-[15px] pb-[15px] space-y-2.5">
+                  {selectedStandards.map(standardId => {
+                    const standard = complianceStandards.find(s => s.id === standardId);
+                    return standard ? (
+                      <div key={standardId} className="flex items-center gap-2.5">
+                        <standard.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
+                        <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                          {standard.name}
+                        </span>
                       </div>
-                    ) : (
-                      <p className="font-body-14 text-gray-600">No file selected</p>
-                    )}
-                  </CardContent>
-                </Card>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+
+              {/* Document Card */}
+              <div className="w-full bg-card dark:bg-card border border-border dark:border-border rounded-[5px]">
+                <div className="flex items-center gap-[15px] py-[15px] px-[15px]">
+                  <div className="flex items-center justify-center px-2.5 h-[34px] bg-accent dark:bg-accent rounded-[3px]">
+                    <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                      Document
+                    </span>
+                  </div>
+                </div>
+                <div className="px-[15px] pb-[15px]">
+                  {uploadedFile ? (
+                    <div className="flex items-center gap-2.5">
+                      <Globe className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
+                      <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                        {uploadedFile.name}
+                      </span>
+                      <div className="flex items-center gap-2.5 px-2.5 py-[5px] bg-accent dark:bg-accent rounded-[30px] ml-auto">
+                        <span className="text-[14px] font-semibold leading-[16.94px] text-foreground dark:text-foreground">
+                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
+                      No file selected
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Analysis Progress */}
               {isAnalyzing && (
-                <div className="space-y-4">
+                <div className="w-full space-y-4">
                   <div className="text-center">
                     <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-full">
                       <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
@@ -1217,7 +1193,7 @@ export default function ComplianceCheckPage() {
 
           {/* Step 4: Results */}
           {currentStep === 4 && (
-            <div className="space-y-6">
+            <div className="space-y-[30px]">
               {results.length === 0 ? (
                 <div className="text-center py-12">
                   <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -1227,53 +1203,61 @@ export default function ComplianceCheckPage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-[30px]">
                   {results.map((result) => (
-                    <div key={result.id} className="space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-semibold flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            {result.fileName}
-                          </h3>
-                          <p className="text-muted-foreground">
-                            Analyzed against {result.standard} on {new Date(result.uploadDate).toLocaleDateString()}
-                            {analysisMethod && (
-                              <span className="text-xs ml-2">
-                                • Powered by {analysisMethod.includes('kroolo') ? 'Poligap AI' : 'Gemini AI'}
-                              </span>
-                            )}
-                            {appliedRuleBase && (
-                              <span className="inline-flex items-center gap-1 text-xs ml-2 px-2 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/5" title={`RuleBase applied (${rulebaseCount} rules)`}>
-                                <BookOpen className="h-3 w-3" /> RuleBase
-                                {typeof rulebaseCount === 'number' && rulebaseCount > 0 && (
-                                  <span className="opacity-80">({rulebaseCount})</span>
-                                )}
-                              </span>
-                            )}
-                          </p>
+                    <div key={result.id} className="space-y-[30px]">
+                      {/* Document Header Card */}
+                      <div className="bg-card dark:bg-card border border-border dark:border-border rounded-[5px] py-[15px] px-5">
+                        <div className="flex items-start gap-[15px]">
+                          <FileText className="w-6 h-6 flex-shrink-0" strokeWidth={2} />
+                          <div className="flex-1 space-y-[7px]">
+                            <h3 className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                              {result.fileName}
+                            </h3>
+                            <p className="text-[12px] font-semibold leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
+                              Analyzed against {result.standard} on {new Date(result.uploadDate).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(result.status)}>
-                            {getStatusIcon(result.status)}
-                            <span className="ml-1">{result.status.replace("-", " ")}</span>
-                          </Badge>
-                          <Badge variant="outline">{result.score}% Compliant</Badge>
+                        
+                        {/* Status and Score Badges */}
+                        <div className="mt-[15px] flex flex-col gap-[15px]">
+                          <div className="flex items-center justify-end gap-[7px]">
+                            <div className="flex items-center gap-[7px]">
+                              <div className="flex items-center justify-center gap-2.5 px-2.5 py-[5px] bg-[#FFEAED] dark:bg-red-900/30 rounded-[5px]">
+                                <span className="text-[12px] font-medium leading-[14.52px] text-[#FF0004] dark:text-red-400">
+                                  {result.status === 'non-compliant' ? 'Non Compliant' : result.status === 'compliant' ? 'Compliant' : result.status === 'partial' ? 'Partially Compliant' : 'Failed'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-center gap-2.5 px-2.5 py-[5px] bg-[#E8ECF4] dark:bg-gray-700 rounded-[5px]">
+                                <span className="text-[12px] font-medium leading-[14.52px] text-[#2D2F34] dark:text-gray-200">
+                                  {result.score}% Compliant
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Compliance Score Bar */}
+                          <div className="flex items-center gap-[7px]">
+                            <span className="text-[12px] font-normal leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
+                              Compliance Score
+                            </span>
+                            <div className="flex-1 h-[5px] bg-muted dark:bg-muted rounded-[30px] overflow-hidden">
+                              <div 
+                                className="h-full bg-green-600 dark:bg-green-400 rounded-[30px]" 
+                                style={{ width: `${result.score}%` }}
+                              />
+                            </div>
+                            <span className="text-[12px] font-bold leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
+                              {result.score}%
+                            </span>
+                          </div>
                         </div>
                       </div>
 
+                      {/* Compliance Issues Overview */}
                       <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span>Compliance Score</span>
-                          <span>{result.score}%</span>
-                        </div>
-                        <Progress value={result.score} className="h-3" />
-                      </div>
-
-                      {/* Issues Summary with Counts */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold flex items-center gap-2 mb-4">
-                          <AlertTriangle className="h-5 w-5 text-orange-600" />
+                        <h4 className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground mb-[30px]">
                           Compliance Issues Overview
                         </h4>
                         
@@ -1283,25 +1267,93 @@ export default function ComplianceCheckPage() {
                             return acc;
                           }, {} as Record<string, number>);
                           
+                          const issueCards = [
+                            {
+                              priority: 'critical',
+                              label: 'Critical Issue',
+                              count: issueCounts['critical'] || 0,
+                              bgColor: '#FFEAE4',
+                              borderColor: '#BA0003',
+                              textColor: '#BA0003',
+                              icon: XOctagon,
+                              iconBg: 'rgba(255, 143, 107, 0.1)'
+                            },
+                            {
+                              priority: 'high',
+                              label: 'High Issue',
+                              count: issueCounts['high'] || 0,
+                              bgColor: '#FFFFFF',
+                              borderColor: '#FF5E00',
+                              textColor: '#FF5E00',
+                              icon: Info,
+                              iconBg: 'rgba(255, 143, 107, 0.1)'
+                            },
+                            {
+                              priority: 'medium',
+                              label: 'Medium Issue',
+                              count: issueCounts['medium'] || 0,
+                              bgColor: '#FFFFFF',
+                              borderColor: '#FFD66B',
+                              textColor: '#F99100',
+                              icon: Coffee,
+                              iconBg: 'rgba(255, 214, 107, 0.1)'
+                            },
+                            {
+                              priority: 'low',
+                              label: 'Low Issue',
+                              count: issueCounts['low'] || 0,
+                              bgColor: '#FFFFFF',
+                              borderColor: '#7DCE61',
+                              textColor: '#5AC736',
+                              icon: Meh,
+                              iconBg: 'rgba(168, 245, 141, 0.1)'
+                            }
+                          ];
+                          
                           return (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                              {Object.entries(priorityConfig).map(([priority, config]) => {
-                                const count = issueCounts[priority] || 0;
-                                const IconComponent = config.icon;
-                                
+                            <div className="flex gap-[30px] mb-[30px] overflow-x-auto">
+                              {issueCards.map((card) => {
+                                const IconComponent = card.icon;
+                                const darkBgColor = card.priority === 'critical' ? 'dark:bg-red-900/20' : 
+                                                   card.priority === 'high' ? 'dark:bg-orange-900/20' : 
+                                                   card.priority === 'medium' ? 'dark:bg-yellow-900/20' : 
+                                                   'dark:bg-green-900/20';
+                                const darkBorderColor = card.priority === 'critical' ? 'dark:border-red-500' : 
+                                                       card.priority === 'high' ? 'dark:border-orange-500' : 
+                                                       card.priority === 'medium' ? 'dark:border-yellow-500' : 
+                                                       'dark:border-green-500';
                                 return (
-                                  <Card key={priority} className={`${config.color} border-2`}>
-                                    <CardContent className="p-4 text-center">
-                                      <div className="flex items-center justify-center gap-2 mb-2">
-                                        <IconComponent className={`h-6 w-6 ${config.iconColor}`} />
-                                        <span className="text-2xl font-bold">{count}</span>
+                                  <div
+                                    key={card.priority}
+                                    className={`relative flex-shrink-0 w-[300px] h-[76px] rounded-[10px] border-2 ${darkBgColor} ${darkBorderColor}`}
+                                    style={{ 
+                                      backgroundColor: card.bgColor,
+                                      borderColor: card.borderColor
+                                    }}
+                                  >
+                                    {/* Icon Circle */}
+                                    <div 
+                                      className="absolute left-[17px] top-[16px] w-[44px] h-[44px] rounded-[38px] flex items-center justify-center"
+                                      style={{ backgroundColor: card.iconBg }}
+                                    >
+                                      <IconComponent className="w-6 h-6" strokeWidth={2} style={{ color: card.borderColor }} />
+                                    </div>
+                                    
+                                    {/* Text Content */}
+                                    <div className="absolute left-[72px] top-[13px]">
+                                      <div className="text-[18px] font-semibold leading-[21.78px] dark:text-white" style={{ color: card.textColor, opacity: 0.7 }}>
+                                        {String(card.count).padStart(2, '0')}
                                       </div>
-                                      <h5 className="font-semibold text-sm">{config.label}</h5>
-                                      <p className="text-xs opacity-75 mt-1">
-                                        {count === 1 ? 'Issue' : 'Issues'}
-                                      </p>
-                                    </CardContent>
-                                  </Card>
+                                      <div className="text-[14px] font-medium leading-[16.94px] opacity-70 text-[#030229] dark:text-gray-300">
+                                        {card.label}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Chevron */}
+                                    <div className="absolute right-[15px] top-[26px]">
+                                      <ChevronRight className="w-6 h-6 text-white dark:text-gray-400" strokeWidth={1.5} />
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -1310,14 +1362,14 @@ export default function ComplianceCheckPage() {
                         }
                         
                         {/* Priority Filter */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
+                        <div className="flex items-center justify-between mb-[30px]">
+                          <span className="text-sm text-muted-foreground dark:text-muted-foreground">
                             Total Issues: {result.gaps.length}
                           </span>
                           <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <Filter className="h-4 w-4 text-muted-foreground dark:text-muted-foreground" />
                             <Select value={selectedPriorityFilter} onValueChange={setSelectedPriorityFilter}>
-                              <SelectTrigger className="w-40">
+                              <SelectTrigger className="w-40 h-9 text-sm">
                                 <SelectValue placeholder="Filter by priority" />
                               </SelectTrigger>
                               <SelectContent>
@@ -1342,8 +1394,8 @@ export default function ComplianceCheckPage() {
                         </div>
                       </div>
 
-                      {/* Issues organized by priority */}
-                      <div className="space-y-6">
+                      {/* Issues organized by priority with Figma styling */}
+                      <div className="space-y-[30px]">
                         {result.gaps.length > 0 ? (
                           (() => {
                             const filteredGaps = selectedPriorityFilter === "all" 
@@ -1358,52 +1410,140 @@ export default function ComplianceCheckPage() {
                             
                             const priorityOrder = ['critical', 'high', 'medium', 'low'];
                             
+                            // Figma priority styling config
+                            const figmaPriorityStyles = {
+                              critical: {
+                                bgColor: '#FFEAED',
+                                borderColor: '#BA0003',
+                                textColor: '#BA0003',
+                                icon: XOctagon
+                              },
+                              high: {
+                                bgColor: '#FFF5EB',
+                                borderColor: '#FF5E00',
+                                textColor: '#FF5E00',
+                                icon: Info
+                              },
+                              medium: {
+                                bgColor: '#FFFBEB',
+                                borderColor: '#F99100',
+                                textColor: '#F99100',
+                                icon: Coffee
+                              },
+                              low: {
+                                bgColor: '#F0FDF4',
+                                borderColor: '#7DCE61',
+                                textColor: '#5AC736',
+                                icon: Meh
+                              }
+                            };
+                            
                             return (
-                              <div className="space-y-6">
+                              <div className="space-y-[30px]">
                                 {priorityOrder.map(priority => {
                                   const gaps = gapsByPriority[priority];
                                   if (!gaps || gaps.length === 0) return null;
                                   
                                   const config = priorityConfig[priority as keyof typeof priorityConfig];
-                                  const IconComponent = config.icon;
+                                  const figmaStyle = figmaPriorityStyles[priority as keyof typeof figmaPriorityStyles];
+                                  const IconComponent = figmaStyle.icon;
                                   
                                   return (
-                                    <div key={priority} className="space-y-4">
-                                      <div className="flex items-center gap-3 mb-4">
-                                        <IconComponent className={`h-6 w-6 ${config.iconColor}`} />
-                                        <h5 className="font-bold text-xl">{config.label} Priority Issues</h5>
-                                        <Badge className={`${config.badgeColor} text-sm px-3 py-1`}>{gaps.length}</Badge>
+                                    <div key={priority} className="bg-card dark:bg-card border border-border dark:border-border rounded-[5px] p-[15px]">
+                                      {/* Priority Header */}
+                                      <div className="flex items-center gap-2.5 mb-2.5 px-2.5 py-0 bg-accent dark:bg-accent rounded-[3px] h-[34px]">
+                                        <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
+                                          {config.label} Priority Issues
+                                        </span>
                                       </div>
                                       
-                                      <div className="space-y-3">
-                                        {gaps.map((gap) => (
-                                          <Card key={gap.id} className={`${config.color} border-l-8 shadow-sm hover:shadow-md transition-shadow`}>
-                                            <CardContent className="p-6">
-                                              <div className="space-y-3">
-                                                <div className="flex items-start justify-between gap-2">
-                                                  <div className="flex-1">
-                                                    {/* Compact: only show description as the item */}
-                                                    <p className="text-sm leading-relaxed">{gap.description}</p>
-                                                  </div>
-                                                  <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                                      {gap.category}
-                                                    </Badge>
-                                                    <Button
-                                                      variant="outline"
-                                                      size="sm"
-                                                      className="flex items-center gap-1"
-                                                      title="Add to My Tasks"
-                                                      disabled={addingTaskKeys.has(`gap:${result.id}:${gap.id}`) || addedTaskKeys.has(`gap:${result.id}:${gap.id}`)}
-                                                      onClick={() => addTask({
-                                                        title: gap.description.substring(0, 60),
-                                                        description: gap.description,
-                                                        priority: gap.priority,
-                                                        category: gap.category,
-                                                        sourceRef: { resultId: result.id, gapId: gap.id, fileName: result.fileName, standard: result.standard }
-                                                      }, { dedupeKey: `gap:${result.id}:${gap.id}` })}
-                                                    >
-                                                      {addingTaskKeys.has(`gap:${result.id}:${gap.id}`) ? (
+                                      {/* Errors/Issues Header Row */}
+                                      {result.failureReason && priority === 'critical' && (
+                                        <div className="flex items-center gap-2.5 mb-2.5 px-2.5 py-0 bg-[#FFEAED] dark:bg-red-900/30 rounded-[3px] h-auto py-2">
+                                          <div className="flex items-center gap-2.5 flex-1">
+                                            <span className="text-[14px] font-semibold leading-[16.94px] text-[#202020] dark:text-gray-200">
+                                              Analysis failed: {result.failureReason}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2.5">
+                                            <div className="flex items-center justify-center gap-2.5 px-2.5 py-[7px] bg-[#E8ECF4] dark:bg-gray-700 rounded-[5px]">
+                                              <span className="text-[12px] font-medium leading-[14.52px] text-[#2D2F34] dark:text-gray-200">
+                                                System
+                                              </span>
+                                            </div>
+                                            <button className="flex items-center justify-center gap-2.5 px-[15px] py-0 h-[30px] bg-[#3B43D6] rounded-[5px]">
+                                              <span className="text-[12px] font-semibold leading-[14.52px] text-center text-white">
+                                                + Add Task
+                                              </span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Error/Issue Items */}
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="flex gap-2.5 flex-1">
+                                          <div className="flex items-center gap-2.5">
+                                            <Info className="w-4 h-4 text-orange-600 dark:text-orange-400" strokeWidth={1.33} />
+                                            <span className="text-[16px] font-semibold leading-[19.36px] text-[#202020] dark:text-gray-200">
+                                              Error
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="flex gap-2.5">
+                                          <div className="flex items-center gap-2.5">
+                                            <XOctagon className="w-4 h-4 text-red-600 dark:text-red-400" strokeWidth={1.33} />
+                                            <span className="text-[16px] font-semibold leading-[19.36px] text-[#202020] dark:text-gray-200">
+                                              Critical Priority
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Issue Cards */}
+                                      <div className="space-y-3 mt-4">
+                                        {gaps.map((gap) => {
+                                          const darkBgClass = priority === 'critical' ? 'dark:bg-red-900/20' : 
+                                                             priority === 'high' ? 'dark:bg-orange-900/20' : 
+                                                             priority === 'medium' ? 'dark:bg-yellow-900/20' : 
+                                                             'dark:bg-green-900/20';
+                                          const darkBorderClass = priority === 'critical' ? 'dark:border-l-red-500' : 
+                                                                  priority === 'high' ? 'dark:border-l-orange-500' : 
+                                                                  priority === 'medium' ? 'dark:border-l-yellow-500' : 
+                                                                  'dark:border-l-green-500';
+                                          return (
+                                          <div 
+                                            key={gap.id} 
+                                            className={`border-l-4 shadow-sm p-4 rounded ${darkBgClass} ${darkBorderClass}`}
+                                            style={{ 
+                                              borderLeftColor: figmaStyle.borderColor,
+                                              backgroundColor: figmaStyle.bgColor 
+                                            }}
+                                          >
+                                            <div className="space-y-3">
+                                              <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1">
+                                                  <p className="text-sm leading-relaxed text-foreground dark:text-foreground">{gap.description}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                  <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                                    {gap.category}
+                                                  </Badge>
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex items-center gap-1"
+                                                    title="Add to My Tasks"
+                                                    disabled={addingTaskKeys.has(`gap:${result.id}:${gap.id}`) || addedTaskKeys.has(`gap:${result.id}:${gap.id}`)}
+                                                    onClick={() => addTask({
+                                                      title: gap.description.substring(0, 60),
+                                                      description: gap.description,
+                                                      priority: gap.priority,
+                                                      category: gap.category,
+                                                      sourceRef: { resultId: result.id, gapId: gap.id, fileName: result.fileName, standard: result.standard }
+                                                    }, { dedupeKey: `gap:${result.id}:${gap.id}` })}
+                                                  >
+                                                    {addingTaskKeys.has(`gap:${result.id}:${gap.id}`) ? (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
                                                       ) : addedTaskKeys.has(`gap:${result.id}:${gap.id}`) ? (
                                                         <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1417,7 +1557,7 @@ export default function ComplianceCheckPage() {
                                                   </div>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-6 text-xs opacity-80">
+                                                <div className="flex items-center gap-6 text-xs opacity-80 text-muted-foreground dark:text-muted-foreground">
                                                   <span className="flex items-center gap-1">
                                                     <FileText className="h-3 w-3" />
                                                     {gap.section}
@@ -1427,16 +1567,14 @@ export default function ComplianceCheckPage() {
                                                     {config.label} Priority
                                                   </span>
                                                 </div>
-                                                
-                                                {/* Justification box removed per requirement: avoid hypothetical data */}
                                               </div>
-                                            </CardContent>
-                                          </Card>
-                                        ))}
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     </div>
                                   );
-                                }).filter(Boolean)}
+                                })}
                               </div>
                             );
                           })()
@@ -1493,23 +1631,81 @@ export default function ComplianceCheckPage() {
                       )}
                     </div>
                   ))}
-                  {/* Save & Exit CTA */}
-                  <div className="pt-6 mt-4 border-t flex justify-end">
-                    <Button size="lg" onClick={handleSaveAndExit} disabled={isAnalyzing || results.length === 0}>
-                      Save & Exit
-                    </Button>
-                  </div>
                 </div>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+          </div>
+
+          {/* Fixed Navigation Buttons - Bottom Right */}
+          {currentStep === 4 ? (
+            <div className="flex-shrink-0 p-8 pt-0">
+              <div className="flex justify-end gap-[15px]">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center gap-[5px] px-2.5 py-0 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-[5px] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4 text-[#717171] dark:text-gray-400" strokeWidth={1.33} />
+                  <span className="text-[12px] font-semibold leading-[14.52px] text-center text-[#717171] dark:text-gray-400">
+                    Previous
+                  </span>
+                </button>
+                <button
+                  onClick={handleSaveAndExit}
+                  disabled={isAnalyzing || results.length === 0}
+                  className="flex items-center gap-[5px] px-[15px] py-0 h-9 bg-[#3B43D6] rounded-[5px] hover:bg-[#2F36B0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="text-[12px] font-semibold leading-[14.52px] text-center text-white">
+                    Save & Exit
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-white" strokeWidth={1.33} />
+                </button>
+              </div>
+            </div>
+          ) : currentStep !== 4 && (
+            <div className="flex-shrink-0 p-8 pt-0">
+              <div className="flex justify-end gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={prevStep}
+                  disabled={currentStep === 1 || isAnalyzing}
+                  className="h-[36px] px-6 rounded-[5px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Previous</span>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (currentStep === 3) {
+                      if (canAnalyze) {
+                        handleAnalyze();
+                      }
+                    } else {
+                      nextStep();
+                    }
+                  }}
+                  disabled={
+                    (currentStep === 1 && !canProceedToStep2) ||
+                    (currentStep === 2 && !canProceedToStep3) ||
+                    (currentStep === 3 && !canAnalyze) ||
+                    currentStep === 5 ||
+                    isAnalyzing
+                  }
+                  className="h-[36px] px-6 rounded-[5px] bg-primary dark:bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 text-primary-foreground dark:text-primary-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                >
+                  <span className="text-sm font-medium">{currentStep === 3 ? 'Analyze' : 'Next'}</span>
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Audit Logs Sidebar */}
         {selectedStandards.length > 0 && (
-          <div className={`relative ${isLogsCollapsed ? 'w-6' : 'w-72'} flex-shrink-0 transition-all duration-300`}>
+          <div className={`relative ${isLogsCollapsed ? 'w-6' : 'w-[322px]'} flex-shrink-0 transition-all duration-300`}>
             {/* Drawer Toggle */}
             <Button
               variant="secondary"
@@ -1523,37 +1719,63 @@ export default function ComplianceCheckPage() {
             </Button>
 
             {!isLogsCollapsed && (
-            <Card className="h-fit sticky top-6 shadow-lg border-2 border-gray-200">
-              <CardHeader className="pb-3 relative">
+            <Card className="bg-card dark:bg-card rounded-[10px] shadow-md border border-border dark:border-border h-[675px] flex flex-col sticky top-6">
+              <CardHeader className="pb-3 relative border-b border-border dark:border-border">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-2 right-2 h-6 w-6 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                  className="absolute top-3 right-3 h-6 w-6"
                   onClick={() => setIsLogsCollapsed(true)}
                   title="Close panel"
                 >
                   <X className="h-4 w-4" />
                 </Button>
-                <CardTitle className="font-h3 flex items-center gap-2 text-gray-900">
-                  <History className="h-5 w-5" />
-                  Audit Logs
-                </CardTitle>
-                <CardDescription className="font-body-14 text-gray-600">
-                  Historical analyses for selected standards
+                <div className="flex items-center justify-between pr-8">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground dark:text-foreground">
+                    <History className="h-5 w-5 text-primary dark:text-primary" />
+                    Audit Logs
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const userId = getUserId();
+                      if (userId) {
+                        fetchAuditLogsFromStore(userId, true);
+                      }
+                    }}
+                    title="Refresh"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
+                </div>
+                <CardDescription className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
+                  Historical analyses
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="flex-1 overflow-hidden flex flex-col p-4">
                 {isLoadingLogs ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-primary mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Loading audit logs...</p>
+                    </div>
                   </div>
                 ) : filteredAuditLogs.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No previous analyses found for selected standards</p>
+                  <div className="flex-1 flex items-center justify-center text-center py-8 text-muted-foreground">
+                    <div>
+                      <div className="w-20 h-20 mx-auto mb-4 bg-muted dark:bg-muted rounded-full flex items-center justify-center">
+                        <FileText className="h-10 w-10 text-muted-foreground dark:text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground dark:text-foreground mb-1">No Audit Logs Yet</p>
+                      <p className="text-xs text-muted-foreground dark:text-muted-foreground max-w-[200px] mx-auto">
+                        Complete an analysis to see your history here
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2">
                     {filteredAuditLogs.map((log) => {
                       const logDate = new Date(log.analysisDate);
                       const isRecent = Date.now() - logDate.getTime() < 24 * 60 * 60 * 1000;
@@ -1561,17 +1783,17 @@ export default function ComplianceCheckPage() {
                       return (
                         <Card
                           key={log._id}
-                          className={`p-4 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+                          className={`p-3 cursor-pointer hover:shadow-md transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:focus-visible:ring-primary rounded-lg ${
                             isRecent
-                              ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
-                              : 'hover:bg-gray-50 border-gray-200 hover:border-gray-300'
+                              ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
+                              : 'hover:bg-accent dark:hover:bg-accent border-border dark:border-border hover:border-primary dark:hover:border-primary'
                           }`}
                           onClick={() => { setSelectedAuditLog(log); setIsLogDialogOpen(true); }}
                         >
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
-                                <p className="font-body-14-medium truncate text-gray-900 mb-2" title={log.fileName}>
+                                <p className="font-body-14-medium truncate text-foreground dark:text-foreground mb-2" title={log.fileName}>
                                   {log.fileName}
                                 </p>
                                 <div className="flex items-center gap-2">
@@ -1599,7 +1821,7 @@ export default function ComplianceCheckPage() {
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-3 font-body-12 text-gray-500">
+                            <div className="flex items-center gap-3 font-body-12 text-muted-foreground dark:text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 {logDate.toLocaleDateString()}
@@ -1610,7 +1832,7 @@ export default function ComplianceCheckPage() {
                               </span>
                               {log?.analysisMethod?.includes('+rulebase') && (
                                 <span className="flex items-center gap-1" title="RuleBase applied">
-                                  <BookOpen className="h-3 w-3 text-teal-600" />
+                                  <BookOpen className="h-3 w-3 text-teal-600 dark:text-teal-400" />
                                   RB
                                 </span>
                               )}
@@ -1618,12 +1840,12 @@ export default function ComplianceCheckPage() {
                             
                             <div className="flex flex-wrap gap-1">
                               {log.standards.slice(0, 2).map((standard) => (
-                                <Badge key={standard} variant="outline" className="font-body-12 border-gray-300 text-gray-600">
+                                <Badge key={standard} variant="outline" className="font-body-12">
                                   {standard.toUpperCase()}
                                 </Badge>
                               ))}
                               {log.standards.length > 2 && (
-                                <Badge variant="outline" className="font-body-12 border-gray-300 text-gray-600">
+                                <Badge variant="outline" className="font-body-12">
                                   +{log.standards.length - 2}
                                 </Badge>
                               )}
@@ -1636,15 +1858,17 @@ export default function ComplianceCheckPage() {
                 )}
                 
                 {filteredAuditLogs.length > 0 && (
-                  <div className="pt-4 border-t border-gray-200 text-center">
-                    <Button 
-                      variant="outline" 
-                      size="default" 
-                      className="w-full font-body-14-medium px-6 py-3 border-2 border-teal-200 text-teal-700 hover:bg-teal-50 hover:border-teal-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View All History
-                    </Button>
+                  <div className="pt-3 border-t border-border dark:border-border">
+                    <Link href="/history">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full text-sm font-medium px-4 py-2 border border-primary dark:border-primary text-primary dark:text-primary hover:bg-primary dark:hover:bg-primary hover:text-primary-foreground dark:hover:text-primary-foreground transition-all duration-200 rounded-lg"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View All History
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </CardContent>
@@ -1653,7 +1877,7 @@ export default function ComplianceCheckPage() {
           </div>
         )}
       </div>
-
+      
       {/* Asset Picker Modal */}
       <AssetPicker
         isOpen={isAssetPickerOpen}

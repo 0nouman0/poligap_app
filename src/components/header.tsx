@@ -41,16 +41,16 @@ const CompanyDropdown = memo(() => {
   return (
     <DropdownMenu onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className="px-3 py-1 h-[26px] rounded border bg-filter-menu dark:hover:bg-accent flex items-center gap-2 border-gray-200 dark:border-gray-600 cursor-pointer">
-          <div className="flex flex-col items-start">
-            <span className="text-13 font-medium text-gray-900 dark:text-gray-100">
+        <button className="px-2 sm:px-3 py-1 h-[26px] rounded border bg-filter-menu dark:hover:bg-accent flex items-center gap-1.5 sm:gap-2 border-gray-200 dark:border-gray-600 cursor-pointer whitespace-nowrap">
+          <div className="flex flex-col items-start min-w-0">
+            <span className="text-xs sm:text-13 font-medium text-gray-900 dark:text-gray-100 truncate max-w-[120px] sm:max-w-none">
               {selectedCompany ? selectedCompany.name : "Select Company"}
             </span>
           </div>
           {isOpen ? (
-            <ChevronUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
           )}
         </button>
       </DropdownMenuTrigger>
@@ -198,56 +198,45 @@ export const Header = memo(function Header() {
   }, [searchText, router]);
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container grid grid-cols-[auto_1fr_auto] h-[44px] max-w-screen items-center px-6 gap-4">
+    <header className="bg-[#FAFAFB] dark:bg-background shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] sticky top-0 z-50 mx-[17px] mt-[15px] rounded-[10px]">
+      <div className="w-full flex items-center justify-between h-14 px-3 sm:px-4 md:px-6 lg:px-8">
         {/* Logo Section */}
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0 min-w-0">
           <img
             src={headerImageSrc}
             alt="Poligap"
-            width={56}
-            height={56}
-            className="h-10 w-10 md:h-11 md:w-11 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+            className="h-6 sm:h-7 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto"
             onClick={handleLogoClick}
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
           />
         </div>
 
-        {/* Center Search (hidden until Elasticsearch is enabled) */}
-        <div className="flex items-center justify-center">
-          {searchEnabled ? (
-            <form
-              onSubmit={handleSearchSubmit}
-              className="w-full max-w-xl"
-            >
-              <Input
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search across Poligap • Press Enter to search"
-                className="w-full"
-              />
-            </form>
-          ) : (
-            <div className="w-full" />
-          )}
-        </div>
+        {/* Center - Empty for now (matches Figma design) */}
+        <div className="flex-1 min-w-0" />
 
-        {/* Right Section - Theme Switcher and Profile */}
-        <div className="flex items-center space-x-3">
+        {/* Right Section - Profile */}
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">
           {/* Companies Drop Down */}
-          <CompanyDropdown />
+          <div className="hidden sm:block">
+            <CompanyDropdown />
+          </div>
+
           {/* Theme Switcher */}
-          <ThemeToggle />
+          <div className="flex-shrink-0">
+            <ThemeToggle />
+          </div>
 
           {/* Profile Picture */}
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="relative h-7 w-5 rounded-full cursor-pointer"
+                className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-full cursor-pointer p-0 hover:bg-transparent flex-shrink-0"
               >
-                <Avatar className="h-7 w-7">
+                <Avatar className="h-full w-full ring-0 border-0">
                   <AvatarImage src={profilePictureUrl} alt="Profile" />
-                  <AvatarFallback>
+                  <AvatarFallback className="bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 text-xs sm:text-sm">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>

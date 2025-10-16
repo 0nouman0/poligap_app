@@ -19,13 +19,13 @@ export default async function AppPagesLayout({
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-[#FAFAFB] dark:bg-background">
       <UserInitializer />
       <NavigationProgress />
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar />
-        <main className="flex-1 overflow-y-auto p-0">{children}</main>
+        <main className="flex-1 overflow-y-auto p-0 mr-[17px] ml-2">{children}</main>
       </div>
     </div>
   );

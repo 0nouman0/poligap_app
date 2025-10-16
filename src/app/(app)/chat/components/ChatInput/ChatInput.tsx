@@ -259,7 +259,7 @@ const ChatInput = ({
   const mentionChips = useMemo(() => parseMentions(inputMessage || ""), [inputMessage]);
 
   return (
-    <div className="font-inter mx-auto flex w-full max-w-6xl flex-col rounded-xl border p-3 bg-background">
+    <div className="font-inter mx-auto flex w-full max-w-6xl flex-col rounded-[10px] border border-border dark:border-border p-[18.67px] bg-card dark:bg-card shadow-sm dark:shadow-lg">
       <div className="flex">
         {isLoadingUploadFile && <MediaCardSkeleton />}
         {selectedMedia.length > 0 && (
@@ -300,7 +300,7 @@ const ChatInput = ({
 
       <div className="relative flex w-full">
         <textarea
-          placeholder="Ask anything..."
+          placeholder="Ask Anything..."
           value={inputMessage || ""}
           onChange={(e) => {
             const val = e.target.value;
@@ -325,15 +325,15 @@ const ChatInput = ({
               return handleSubmit();
             }
           }}
-          className="max-h-24 min-h-16 flex-1 border-none bg-transparent px-0.5 text-[13px] text-[var(--text-color)] outline-none placeholder:text-[var(--secondary-text-color)]"
+          className="max-h-24 min-h-16 flex-1 border-none bg-transparent px-0.5 text-sm text-foreground dark:text-foreground outline-none placeholder:text-muted-foreground dark:placeholder:text-muted-foreground font-medium resize-none"
           disabled={!agent_id || isStreamingResponse}
           ref={chatInputRef}
         />
 
         {/* Suggestions dropdown */}
         {mentionOpen && mentionSuggestions.length > 0 && (
-          <div className="absolute bottom-10 left-0 z-[1600] w-80 max-w-[90%] rounded-md border bg-popover p-2 shadow-md">
-            <div className="mb-1 text-xs text-muted-foreground">Insert asset mention</div>
+          <div className="absolute bottom-10 left-0 z-[1600] w-80 max-w-[90%] rounded-md border border-border bg-popover dark:bg-popover p-2 shadow-md dark:shadow-2xl">
+            <div className="mb-1 text-xs text-muted-foreground dark:text-muted-foreground">Insert asset mention</div>
             <ul className="max-h-64 overflow-auto">
               {mentionSuggestions.map((a) => {
                 const display = a.originalName || a.filename || a.url;
@@ -356,29 +356,31 @@ const ChatInput = ({
           </div>
         )}
       </div>
-      <div className="mt-2 flex flex-row justify-between">
-        <div className="flex gap-2">
-          <SelectMetaProperties
-            options={selectedOptions}
-            onChange={handleChange}
+      <div className="mt-2 flex flex-row justify-between items-center">
+        <div className="flex gap-2 items-center">
+          <LlmButton
+            value={selectedLlmModel}
             disabled={isStreamingResponse}
+            onSelect={handleModelSelect}
           />
+          
+          <SelectLanguageButton
+            value={selectedLanguage}
+            disabled={isStreamingResponse}
+            onSelect={handleLanguageSelect}
+          />
+          
           {selectedOptionIds.includes("file-attach") && (
             <AddMediaButton
               agent_id={agent_id}
               disabled={isStreamingResponse}
             />
           )}
-
-          <SelectLanguageButton
-            value={selectedLanguage}
+          
+          <SelectMetaProperties
+            options={selectedOptions}
+            onChange={handleChange}
             disabled={isStreamingResponse}
-            onSelect={handleLanguageSelect}
-          />
-          <LlmButton
-            value={selectedLlmModel}
-            disabled={isStreamingResponse}
-            onSelect={handleModelSelect}
           />
         </div>
 
@@ -397,15 +399,15 @@ const ChatInput = ({
                   (inputMessage || "").trim().length > 0 ? "default" : "outline"
                 }
                 className={cn(
-                  "size-7 p-1 transition-colors",
+                  "h-9 w-9 p-2 rounded-[3px] transition-colors",
                   "cursor-pointer disabled:cursor-not-allowed",
                   (inputMessage || "").trim().length > 0
-                    ? "bg-[var(--text-color)] text-white dark:text-black"
-                    : "bg-transparent border border-input text-muted-foreground dark:text-muted-foreground",
-                  "disabled:bg-transparent disabled:text-muted-foreground"
+                    ? "bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 text-primary-foreground"
+                    : "bg-card dark:bg-card border border-border dark:border-border text-muted-foreground hover:bg-accent dark:hover:bg-accent",
+                  "disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
                 )}
               >
-                <LucideSendHorizontal className="size-4" />
+                <LucideSendHorizontal className="w-5 h-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent style={{ zIndex: 1600 }}>Send</TooltipContent>

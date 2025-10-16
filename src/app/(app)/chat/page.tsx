@@ -125,8 +125,7 @@ const AgentChat = () => {
     if (q) {
       setInputMessage(q);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, setInputMessage]);
 
   const toggleRecentChats = () => {
     setRecentChatsOpen(!recentChatsOpen);
@@ -145,17 +144,18 @@ const AgentChat = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-[calc(100vh-64px)] bg-background">
       <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+        {/* Toggle button for recent chats */}
         <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
           {(!recentChatsOpen || isMobile) && (
             <Button
               variant="outline"
               size="sm"
               onClick={toggleRecentChats}
-              className="shadow-lg cursor-pointer"
+              className="shadow-lg cursor-pointer bg-card hover:bg-accent"
             >
-              <RecentChatIcon />
+              <RecentChatIcon className="dark:invert" />
             </Button>
           )}
         </div>

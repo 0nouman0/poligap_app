@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import RecentChatIcon from "@/assets/icons/doc-comment-icon.svg";
 import { Button } from "@/components/ui/button";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, MessageCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -27,12 +27,12 @@ interface ChatItem {
 
 // Skeleton loader for chat card
 const ChatSkeleton = () => (
-  <div className="flex items-center justify-between p-2 rounded-lg border bg-muted animate-pulse mb-2">
+  <div className="flex items-center justify-between p-2 rounded-lg border border-border bg-muted animate-pulse mb-2">
     <div className="flex-1">
-      <div className="h-4 bg-gray-300 rounded w-3/4 mb-1"></div>
-      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+      <div className="h-4 bg-muted-foreground/20 dark:bg-muted-foreground/10 rounded w-3/4 mb-1"></div>
+      <div className="h-3 bg-muted-foreground/10 dark:bg-muted-foreground/5 rounded w-1/2"></div>
     </div>
-    <div className="h-4 w-4 bg-gray-300 rounded"></div>
+    <div className="h-4 w-4 bg-muted-foreground/20 dark:bg-muted-foreground/10 rounded"></div>
   </div>
 );
 
@@ -145,35 +145,39 @@ const RecentChats = ({
         />
       )}
 
-      {/* Right Sidebar - Recent Chats */}
+      {/* Right Sidebar - Recent Chats - Figma Design */}
       <div
         className={`
           ${
             isMobile ? "fixed" : "sticky"
-          } inset-y-0 right-0 z-50 w-80 bg-background border-l border-border
+          } ${isMobile ? "inset-y-0" : "top-[15px]"} right-0 z-50 w-[280px] ${isMobile ? "h-full" : "max-h-[calc(100vh-100px)]"} bg-card dark:bg-card border border-border dark:border-border rounded-[20px] shadow-lg dark:shadow-2xl
           transform transition-transform duration-300 ease-in-out
           ${recentChatsOpen ? "translate-x-0" : "translate-x-full"}
           ${!isMobile && !recentChatsOpen ? "hidden" : ""}
         `}
       >
-        <div className="flex flex-col h-full">
-          <div className="p-2 border-b border-border">
+        <div className="flex flex-col h-full rounded-[20px] overflow-hidden">
+          {/* Header with Recent Chats title */}
+          <div className="px-3 py-2.5 border-b border-border rounded-t-[20px] select-none bg-card/50 dark:bg-card/30">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 ml-3">
-                <RecentChatIcon />
-                <h2 className="text-foreground text-sm">Recent Chats</h2>
+              <div className="flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" strokeWidth={1.67} />
+                <h2 className="text-foreground dark:text-foreground text-xs font-semibold">Recent Chats</h2>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setRecentChatsOpen(false)}
-                className="cursor-pointer"
+                className="cursor-pointer h-6 w-6 p-0 hover:bg-accent dark:hover:bg-accent"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5 text-foreground dark:text-foreground" />
               </Button>
             </div>
+            <p className="text-[9px] text-muted-foreground dark:text-muted-foreground mt-0.5">Historical analyses for selected standards</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+
+          {/* Chat list with sections */}
+          <div className="flex-1 overflow-y-auto px-3 pt-[15px] pb-2 space-y-3 scrollbar-hide">
             {isLoadingFetchingConvoList ? (
               // Show 5 skeletons as a placeholder
               <>
@@ -184,57 +188,60 @@ const RecentChats = ({
             ) : (
               <>
                 {Object.entries(groupedChats).map(([sectionTitle, chats]) => (
-                  <div key={sectionTitle}>
-                    <h3 className="text-13 font-medium text-muted-foreground mb-1">
-                      {sectionTitle}
-                    </h3>
-                    <div className="space-y-2">
+                  <div key={sectionTitle} className="space-y-1.5">
+                    {/* Section header with Yesterday/Previous 7 days */}
+                    <div className="flex items-center gap-1.5 mb-1.5 select-none">
+                      <div className="px-1.5 py-0.5 bg-muted dark:bg-muted rounded-[3px]">
+                        <span className="text-[9px] text-muted-foreground dark:text-muted-foreground font-normal">{sectionTitle}</span>
+                      </div>
+                      <div className="flex-1 h-[1px] bg-border dark:bg-border"></div>
+                    </div>
+
+                    {/* Chat items */}
+                    <div className="space-y-1">
                       {chats.map((chat, idx) => (
-                        <div
-                          key={chat._id || `chat-${idx}`}
-                          onClick={() => handleGoToChat(chat)}
-                          className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors group
-                            ${
-                              selectedConversation?._id === chat._id
-                                ? "bg-primary/5 border-primary"
-                                : "hover:bg-muted"
-                            }`}
-                        >
-                          {/* <Tooltip>
-                            <TooltipTrigger asChild> */}
-                          <span>
-                            <h4 className="text-sm font-medium text-foreground truncate mb-1">
-                              {chat.chatName}
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(chat.createdAt).toLocaleString("en-US", {
-                                weekday: "long",
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </p>
-                          </span>
-                          {/* </TooltipTrigger> */}
-                          {/* <TooltipContent side="top">
-                               <p>{chat.chatName}</p>
-                             </TooltipContent> */}
-                          {/* </Tooltip> */}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(event) =>
-                                  handleDeleteConversation(event, chat._id)
-                                }
-                                className="cursor-pointer hidden group-hover:block text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" sideOffset={5}>
-                              <p>Delete</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <div key={chat._id || `chat-${idx}`} className="relative">
+                          {/* Active indicator line */}
+                          {selectedConversation?._id === chat._id && (
+                            <div className="absolute left-[-12px] top-0 bottom-0 w-[2px] bg-primary dark:bg-primary rounded-r"></div>
+                          )}
+                          <div
+                            onClick={() => handleGoToChat(chat)}
+                            className={`flex items-start justify-between px-2 py-1.5 rounded-[4px] cursor-pointer transition-colors group select-none
+                              ${
+                                selectedConversation?._id === chat._id
+                                  ? "bg-accent dark:bg-accent"
+                                  : "hover:bg-accent/50 dark:hover:bg-accent/50"
+                              }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-semibold text-foreground dark:text-foreground truncate mb-0.5 select-none">
+                                {chat.chatName}
+                              </h4>
+                              <p className="text-[9px] text-muted-foreground dark:text-muted-foreground font-normal leading-tight select-none">
+                                {new Date(chat.createdAt).toLocaleString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(event) =>
+                                    handleDeleteConversation(event, chat._id)
+                                  }
+                                  className="cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive dark:hover:text-destructive ml-1.5 flex-shrink-0"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive dark:text-destructive" strokeWidth={1.33} />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" sideOffset={5}>
+                                <p>Delete</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
                       ))}
                     </div>

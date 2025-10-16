@@ -7,7 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // Add tags to assets in Supabase
 export async function POST(request: NextRequest) {
   try {
-    const { assetIds, tags } = await request.json();1 
+    const { assetIds, tags } = await request.json();
 
     if (!assetIds || !Array.isArray(assetIds) || !tags || !Array.isArray(tags)) {
       return NextResponse.json(

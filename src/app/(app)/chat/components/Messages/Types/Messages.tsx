@@ -15,10 +15,8 @@ const AgentMessageWrapper = ({
   handleCreateDoc,
 }: MessageWrapperProps) => {
   return (
-    <div className="flex flex-col">
-      <div className="sticky top-0 z-10 bg-[var(--modal-color)] border-b border-[var(--card-border-color)] px-3 pt-2">
-        <UserMessage message={message} />
-      </div>
+    <div className="flex flex-col gap-4 py-4">
+      <UserMessage message={message} />
       <AgentMessage
         message={message}
         exportReactComponentAsPDF={exportReactComponentAsPDF}
@@ -46,7 +44,7 @@ const Messages = ({
   const messagesArray = Array.isArray(messages) ? messages : [];
 
   if (messagesArray.length === 0) {
-    return <div></div>;
+    return <ChatBlankState isGlobalAgent={isGlobalAgent} />;
   }
 
   return (

@@ -27,40 +27,31 @@ export const SelectLanguageButton = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger>
-          <DropdownMenu>
-            <div className="flex h-full flex-row items-center gap-1">
-              <p className="w-[105px] text-[12px] text-[var(--text-color)]">
-                Output in -
-              </p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground dark:text-muted-foreground font-medium whitespace-nowrap">Output in -</span>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   suffixIcon={
-                    <ChevronDown className="text-foreground/50 -mr-1 ml-auto size-4" />
+                    <ChevronDown className="text-muted-foreground dark:text-muted-foreground -mr-1 ml-auto size-4 opacity-50" />
                   }
                   variant="outline"
-                  style={{ width: "100%", padding: "0 8px", height: "100%" }}
+                  className="w-full h-6 px-2 bg-card dark:bg-card border border-border dark:border-border rounded-[3px] text-xs font-medium text-muted-foreground dark:text-muted-foreground hover:bg-accent dark:hover:bg-accent"
                   size="sm"
                   disabled={disabled}
                 >
                   {value?.name ?? "Select Language"}
                 </Button>
               </DropdownMenuTrigger>
-            </div>
             <DropdownMenuContent
-              className="z-[1500]"
-              style={{ maxHeight: "200px", overflowY: "auto" }}
+              className="z-[1500] max-h-[200px] overflow-y-auto bg-popover dark:bg-popover border-border dark:border-border"
             >
               {LanguagesList.map((type) => {
                 const isSelected = value?.code === type.code;
                 return (
                   <DropdownMenuItem
                     key={type.name}
-                    style={{
-                      backgroundColor: isSelected
-                        ? "var(--agent-background-color)"
-                        : "transparent",
-                    }}
-                    className="text-[12px]"
+                    className={`text-xs ${isSelected ? 'bg-accent dark:bg-accent' : ''}`}
                     onSelect={() => onSelect(type)}
                   >
                     <div
@@ -71,18 +62,13 @@ export const SelectLanguageButton = ({
                         width: "100%",
                       }}
                     >
-                      <p className="text-[12px] text-[var(--text-color)]">
+                      <p className="text-xs text-foreground dark:text-foreground">
                         {" "}
                         {type.name}
                       </p>
                       {isSelected && (
                         <Check
-                          style={{
-                            width: "14px",
-                            height: "14px",
-                            color: "var(--text-color)",
-                            marginLeft: "auto",
-                          }}
+                          className="w-3.5 h-3.5 text-foreground dark:text-foreground ml-auto"
                         />
                       )}
                     </div>
@@ -90,7 +76,8 @@ export const SelectLanguageButton = ({
                 );
               })}
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </TooltipTrigger>
         <TooltipContent style={{ zIndex: 1600 }}>
           Select language
