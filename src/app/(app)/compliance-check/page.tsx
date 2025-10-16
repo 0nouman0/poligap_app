@@ -907,73 +907,75 @@ export default function ComplianceCheckPage() {
               </div>
             </div>
 
-            {/* Step Title - Figma Design */}
+            {/* Step Title and Controls */}
             <div className="mb-4">
-              <h2 className="text-base font-semibold text-[#2D2F34] dark:text-foreground mb-1">{steps[currentStep - 1]?.title}</h2>
-              <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground">{steps[currentStep - 1]?.description === "Choose compliance standards" ? "0 of 40 standards selected" : steps[currentStep - 1]?.description}</p>
+              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
+                {/* Left: Title */}
+                <h2 className="text-base font-semibold text-[#2D2F34] dark:text-foreground">{steps[currentStep - 1]?.title}</h2>
+                {/* Center: Stepper (centered horizontally) */}
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center gap-4">
+                    {steps.map((step, index) => (
+                      <React.Fragment key={step.id}>
+                        <div className={`flex items-center justify-center w-[39px] h-[39px] rounded-full transition-all border ${
+                          currentStep === step.id
+                            ? 'bg-[#3B43D6] text-white border-[#3B43D6]'
+                            : 'bg-white dark:bg-card text-[#717171] border-[#D9D9D9] dark:border-border'
+                          }`}>
+                          <span className="text-base font-semibold">{String(step.id).padStart(2, '0')}</span>
+                        </div>
+                        {index < steps.length - 1 && (
+                          <svg width="62" height="39" viewBox="0 0 62 39" fill="none" className="flex-shrink-0">
+                            <line 
+                              x1="0" 
+                              y1="20" 
+                              x2="62" 
+                              y2="20" 
+                              stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} 
+                              strokeWidth="1" 
+                              strokeDasharray="2 2"
+                            />
+                          </svg>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+                {/* Right: Select All (only on step 1) */}
+                {currentStep === 1 && (
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        id="select-all-top"
+                        checked={selectedStandards.length === complianceStandards.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStandards(complianceStandards.map(s => s.id));
+                          } else {
+                            setSelectedStandards([]);
+                          }
+                        }}
+                        className="peer sr-only"
+                      />
+                      <label 
+                        htmlFor="select-all-top" 
+                        className="flex items-center justify-center w-6 h-6 border-2 border-[#717171] rounded cursor-pointer peer-checked:bg-white peer-checked:border-[#717171]"
+                      >
+                        {selectedStandards.length === complianceStandards.length && (
+                          <CheckCircle className="w-4 h-4 text-[#717171]" strokeWidth={2} />
+                        )}
+                      </label>
+                    </div>
+                    <label htmlFor="select-all-top" className="text-base font-semibold text-[#2D2F34] dark:text-foreground cursor-pointer">
+                      Select All
+                    </label>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground mt-1">{steps[currentStep - 1]?.description === "Choose compliance standards" ? "0 of 40 standards selected" : steps[currentStep - 1]?.description}</p>
             </div>
 
-            {/* Stepper Indicator - Figma Design */}
-            <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          {steps.map((step, index) => (
-            <React.Fragment key={step.id}>
-              <div className={`flex items-center justify-center w-[39px] h-[39px] rounded-full transition-all border ${
-                currentStep === step.id
-                  ? 'bg-[#3B43D6] text-white border-[#3B43D6]'
-                  : 'bg-white dark:bg-card text-[#717171] border-[#D9D9D9] dark:border-border'
-                }`}>
-                <span className="text-base font-semibold">{String(step.id).padStart(2, '0')}</span>
-              </div>
-              {index < steps.length - 1 && (
-                <svg width="62" height="39" viewBox="0 0 62 39" fill="none" className="flex-shrink-0">
-                  <line 
-                    x1="0" 
-                    y1="20" 
-                    x2="62" 
-                    y2="20" 
-                    stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} 
-                    strokeWidth="1" 
-                    strokeDasharray="2 2"
-                  />
-                </svg>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-        
-        {/* Select All Checkbox - Show only on step 1 - Figma Design */}
-        {currentStep === 1 && (
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <input
-                type="checkbox"
-                id="select-all-top"
-                checked={selectedStandards.length === complianceStandards.length}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedStandards(complianceStandards.map(s => s.id));
-                  } else {
-                    setSelectedStandards([]);
-                  }
-                }}
-                className="peer sr-only"
-              />
-              <label 
-                htmlFor="select-all-top" 
-                className="flex items-center justify-center w-6 h-6 border-2 border-[#717171] rounded cursor-pointer peer-checked:bg-white peer-checked:border-[#717171]"
-              >
-                {selectedStandards.length === complianceStandards.length && (
-                  <CheckCircle className="w-4 h-4 text-[#717171]" strokeWidth={2} />
-                )}
-              </label>
-            </div>
-            <label htmlFor="select-all-top" className="text-base font-semibold text-[#2D2F34] dark:text-foreground cursor-pointer">
-              Select All
-            </label>
-          </div>
-        )}
-            </div>
           </div>
 
           {/* Scrollable Content Area */}
@@ -1131,55 +1133,57 @@ export default function ComplianceCheckPage() {
 
               {/* Selected Standards Card */}
               <div className="w-full bg-card dark:bg-card border border-border dark:border-border rounded-[5px]">
-                <div className="flex items-center gap-[15px] py-[15px] px-[15px]">
+                <div className="flex items-center gap-[15px] py-[15px] px-[15px] flex-wrap">
                   <div className="flex items-center justify-center px-2.5 h-[34px] bg-accent dark:bg-accent rounded-[3px]">
                     <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
                       Selected Standards
                     </span>
                   </div>
-                </div>
-                <div className="px-[15px] pb-[15px] space-y-2.5">
-                  {selectedStandards.map(standardId => {
-                    const standard = complianceStandards.find(s => s.id === standardId);
-                    return standard ? (
-                      <div key={standardId} className="flex items-center gap-2.5">
-                        <standard.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
-                        <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
-                          {standard.name}
-                        </span>
-                      </div>
-                    ) : null;
-                  })}
+                  <div className="flex flex-wrap items-center gap-3 min-h-[34px]">
+                    {selectedStandards.length > 0 ? (
+                      selectedStandards.map(standardId => {
+                        const standard = complianceStandards.find(s => s.id === standardId);
+                        return standard ? (
+                          <div key={standardId} className="flex items-center gap-1.5">
+                            <standard.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
+                            <span className="text-[14px] font-semibold leading-[16.94px] text-foreground dark:text-foreground">
+                              {standard.name}
+                            </span>
+                          </div>
+                        ) : null;
+                      })
+                    ) : (
+                      <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">None selected</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Document Card */}
               <div className="w-full bg-card dark:bg-card border border-border dark:border-border rounded-[5px]">
-                <div className="flex items-center gap-[15px] py-[15px] px-[15px]">
+                <div className="flex items-center gap-[15px] py-[15px] px-[15px] flex-wrap">
                   <div className="flex items-center justify-center px-2.5 h-[34px] bg-accent dark:bg-accent rounded-[3px]">
                     <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
                       Document
                     </span>
                   </div>
-                </div>
-                <div className="px-[15px] pb-[15px]">
-                  {uploadedFile ? (
-                    <div className="flex items-center gap-2.5">
-                      <Globe className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
-                      <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
-                        {uploadedFile.name}
-                      </span>
-                      <div className="flex items-center gap-2.5 px-2.5 py-[5px] bg-accent dark:bg-accent rounded-[30px] ml-auto">
-                        <span className="text-[14px] font-semibold leading-[16.94px] text-foreground dark:text-foreground">
-                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                  <div className="flex items-center gap-2.5 min-h-[34px]">
+                    {uploadedFile ? (
+                      <>
+                        <Globe className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
+                        <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground truncate max-w-[50vw]">
+                          {uploadedFile.name}
                         </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
-                      No file selected
-                    </span>
-                  )}
+                        <div className="flex items-center gap-2.5 px-2.5 py-[5px] bg-accent dark:bg-accent rounded-[30px]">
+                          <span className="text-[14px] font-semibold leading-[16.94px] text-foreground dark:text-foreground">
+                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">No file selected</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1329,7 +1333,7 @@ export default function ComplianceCheckPage() {
                           ];
                           
                           return (
-                            <div className="flex gap-[30px] mb-[30px] overflow-x-auto">
+                            <div className="flex flex-wrap gap-[20px] mb-[30px]">
                               {issueCards.map((card) => {
                                 const IconComponent = card.icon;
                                 const darkBgColor = card.priority === 'critical' ? 'dark:bg-red-900/20' : 
@@ -1343,33 +1347,36 @@ export default function ComplianceCheckPage() {
                                 return (
                                   <div
                                     key={card.priority}
-                                    className={`relative flex-shrink-0 w-[300px] h-[76px] rounded-[10px] border-2 ${darkBgColor} ${darkBorderColor}`}
+                                    className={`relative rounded-[10px] border-2 ${darkBgColor} ${darkBorderColor}`}
                                     style={{ 
                                       backgroundColor: card.bgColor,
-                                      borderColor: card.borderColor
+                                      borderColor: card.borderColor,
+                                      flex: '1 1 0',
+                                      minWidth: '260px',
+                                      height: '68px'
                                     }}
                                   >
                                     {/* Icon Circle */}
                                     <div 
-                                      className="absolute left-[17px] top-[16px] w-[44px] h-[44px] rounded-[38px] flex items-center justify-center"
+                                      className="absolute left-[12px] top-[14px] w-[36px] h-[36px] rounded-[36px] flex items-center justify-center"
                                       style={{ backgroundColor: card.iconBg }}
                                     >
-                                      <IconComponent className="w-6 h-6" strokeWidth={2} style={{ color: card.borderColor }} />
+                                      <IconComponent className="w-5 h-5" strokeWidth={2} style={{ color: card.borderColor }} />
                                     </div>
                                     
                                     {/* Text Content */}
-                                    <div className="absolute left-[72px] top-[13px]">
-                                      <div className="text-[18px] font-semibold leading-[21.78px] dark:text-white" style={{ color: card.textColor, opacity: 0.7 }}>
+                                    <div className="absolute left-[58px] top-[10px]">
+                                      <div className="text-[16px] font-semibold leading-[19px] dark:text-white" style={{ color: card.textColor, opacity: 0.7 }}>
                                         {String(card.count).padStart(2, '0')}
                                       </div>
-                                      <div className="text-[14px] font-medium leading-[16.94px] opacity-70 text-[#030229] dark:text-gray-300">
+                                      <div className="text-[12px] font-medium leading-[15px] opacity-70 text-[#030229] dark:text-gray-300">
                                         {card.label}
                                       </div>
                                     </div>
                                     
                                     {/* Chevron */}
-                                    <div className="absolute right-[15px] top-[26px]">
-                                      <ChevronRight className="w-6 h-6 text-white dark:text-gray-400" strokeWidth={1.5} />
+                                    <div className="absolute right-[12px] top-[22px]">
+                                      <ChevronRight className="w-5 h-5 text-white dark:text-gray-400" strokeWidth={1.5} />
                                     </div>
                                   </div>
                                 );

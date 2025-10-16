@@ -51,7 +51,7 @@ const ChatBlankState = ({ isGlobalAgent }: { isGlobalAgent: boolean }) => {
         </svg>
         
         {/* Message text */}
-        <p className='text-sm text-muted-foreground dark:text-muted-foreground font-normal'>Not any conversation found</p>
+        <p className='text-sm text-muted-foreground dark:text-muted-foreground font-normal'>Begin a new conversation</p>
       </motion.div>
     </section>
   );

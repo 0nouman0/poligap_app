@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CheckSquare, Plus, Filter, Check, RotateCcw, Trash2, Shield, FileText, Info, ChevronDown, MoreHorizontal, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,38 @@ export default function MyTasksPage() {
   const [infoTask, setInfoTask] = useState<Task | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+
+  // Tabs underline indicator positioning
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const allTabRef = useRef<HTMLButtonElement>(null);
+  const pendingTabRef = useRef<HTMLButtonElement>(null);
+  const completedTabRef = useRef<HTMLButtonElement>(null);
+  const [indicatorLeft, setIndicatorLeft] = useState(0);
+  const [indicatorWidth, setIndicatorWidth] = useState(0);
+
+  const updateIndicator = () => {
+    const container = tabsContainerRef.current;
+    const btn = activeTab === 'all' ? allTabRef.current : activeTab === 'pending' ? pendingTabRef.current : completedTabRef.current;
+    if (!container || !btn) return;
+    const cRect = container.getBoundingClientRect();
+    const bRect = btn.getBoundingClientRect();
+    let left = bRect.left - cRect.left;
+    let width = btn.offsetWidth;
+    // Clamp to avoid overflow
+    const maxWidth = Math.max(0, cRect.width - left);
+    width = Math.min(width, maxWidth);
+    setIndicatorLeft(Math.max(0, left));
+    setIndicatorWidth(width);
+  };
+
+  useEffect(() => {
+    updateIndicator();
+    // Recalculate on resize for responsiveness
+    const onResize = () => updateIndicator();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const loadTasks = async (force = false) => {
     const userId = getUserId();
@@ -259,7 +291,8 @@ export default function MyTasksPage() {
           {/* New Task Button */}
           <button
             onClick={() => setShowNewTaskForm(true)}
-            className="bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-[5px] px-4 h-9 shadow-sm transition-all duration-200"
+            className="text-white text-xs font-semibold rounded-[5px] px-4 h-9 shadow-sm transition-all duration-200 hover:bg-[#2F36B0]"
+            style={{ backgroundColor: '#3B43D6' }}
           >
             + New Task
           </button>
@@ -269,8 +302,9 @@ export default function MyTasksPage() {
         <div className="bg-card dark:bg-card rounded-[10px] shadow-sm mb-[30px] border border-border dark:border-border">
           <div className="flex items-center justify-between px-4 h-[42px]">
             {/* Tabs */}
-            <div className="flex items-center gap-12 relative">
+            <div ref={tabsContainerRef} className="flex items-center gap-12 relative">
               <button
+                ref={allTabRef}
                 onClick={() => setActiveTab('all')}
                 className={`text-xs font-medium transition-colors duration-200 ${
                   activeTab === 'all' ? 'text-foreground dark:text-foreground' : 'text-muted-foreground dark:text-muted-foreground'
@@ -279,6 +313,7 @@ export default function MyTasksPage() {
                 All Tasks
               </button>
               <button
+                ref={pendingTabRef}
                 onClick={() => setActiveTab('pending')}
                 className={`text-xs font-medium transition-colors duration-200 ${
                   activeTab === 'pending' ? 'text-foreground dark:text-foreground' : 'text-muted-foreground dark:text-muted-foreground'
@@ -287,6 +322,7 @@ export default function MyTasksPage() {
                 Pending
               </button>
               <button
+                ref={completedTabRef}
                 onClick={() => setActiveTab('completed')}
                 className={`text-xs font-medium transition-colors duration-200 ${
                   activeTab === 'completed' ? 'text-foreground dark:text-foreground' : 'text-muted-foreground dark:text-muted-foreground'
@@ -298,8 +334,8 @@ export default function MyTasksPage() {
               <div 
                 className="absolute bottom-[-10px] h-[2px] bg-primary dark:bg-primary transition-all duration-300"
                 style={{
-                  width: '82px',
-                  left: activeTab === 'all' ? '0px' : activeTab === 'pending' ? '120px' : '240px'
+                  width: `${indicatorWidth}px`,
+                  left: `${indicatorLeft}px`
                 }}
               />
             </div>
@@ -330,7 +366,7 @@ export default function MyTasksPage() {
               </button>
               
               {/* Apply Button */}
-              <button className="h-8 px-4 text-xs font-semibold text-primary-foreground bg-primary rounded-[5px] hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 transition-colors">
+              <button className="h-8 px-4 text-xs font-semibold text-white rounded-[5px] transition-colors hover:bg-[#2F36B0]" style={{ backgroundColor: '#3B43D6' }}>
                 Apply
               </button>
             </div>
@@ -404,7 +440,8 @@ export default function MyTasksPage() {
                 <button
                   onClick={createTask}
                   disabled={!newTaskTitle.trim()}
-                  className="bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-xs font-semibold rounded-[5px] px-4 h-[35px] transition-colors whitespace-nowrap"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-[5px] px-4 h-[35px] transition-colors whitespace-nowrap hover:bg-[#2F36B0]"
+                  style={{ backgroundColor: '#3B43D6' }}
                 >
                   Create Task
                 </button>

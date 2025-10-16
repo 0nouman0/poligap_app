@@ -1392,6 +1392,11 @@ export default function ContractReview() {
   ];
 
   const handleTemplateSelect = (template: ContractTemplate) => {
+    // Toggle selection: clicking the same tile again will deselect and hide sidebar
+    if (selectedTemplate?.id === template.id) {
+      setSelectedTemplate(null);
+      return;
+    }
     setSelectedTemplate(template);
     // Log selection and let the effect reload the history
     void saveTemplateSelectedLog(template);
@@ -1632,11 +1637,6 @@ export default function ContractReview() {
           </head>
           <body>
             <div class="header">Contract Analysis Details</div>
-            <div class="section">
-              <h3>Overall Score: ${extractedDocument.overallScore}%</h3>
-              <p>File: ${uploadedFile?.name}</p>
-              <p>Analysis Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
-            </div>
             <div class="section">
               <h3>Issues Found (${extractedDocument.gaps.length})</h3>
               ${extractedDocument.gaps.map(gap => `
@@ -1977,27 +1977,6 @@ Report ID: ${Date.now()}
                   <path d="M10.5 10.5L8.5 8.5" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              
-              {/* Navigation Buttons */}
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="h-9 px-4 text-xs"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  disabled={!canProceedToStep2}
-                  className="h-9 px-4 text-xs bg-[#3B43D6] hover:bg-[#2D35B8]"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
             </div>
 
             {/* Main Content Grid */}
@@ -2012,8 +1991,8 @@ Report ID: ${Date.now()}
                 </div>
                 
                 {/* Template Cards Grid */}
-                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-                  <div className="grid grid-cols-4 gap-4 pr-1">
+                <div className="flex-1 overflow-y-auto scrollbar-hide">
+                  <div className={`grid ${selectedTemplate ? 'grid-cols-3' : 'grid-cols-4'} gap-4 p-1`}>
                     {knowledgeBaseTemplates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase())).map((template) => {
                       const isSelected = selectedTemplate?.id === template.id;
                       return (
@@ -2171,6 +2150,30 @@ Report ID: ${Date.now()}
                 </div>
               )}
             </div>
+            {/* Step 1 Footer Navigation (sticky bottom-right) */}
+            <div className="sticky bottom-0 left-0 right-0 pt-1 mt-1">
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                  className="px-3 hover:bg-[#E8E9FF]"
+                  style={{ borderColor: '#3B43D6', color: '#3B43D6' }}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  onClick={nextStep}
+                  disabled={!canProceedToStep2}
+                  className="px-4 text-white hover:bg-[#2F36B0]"
+                  style={{ backgroundColor: '#3B43D6' }}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -2179,72 +2182,6 @@ Report ID: ${Date.now()}
         {currentStep >= 2 && (
           <Card className="flex-1 overflow-auto">
             <CardContent className="p-10">
-              {/* Navigation Buttons */}
-              {currentStep !== 4 && (
-                <div className="flex items-center justify-between -mt-4 mb-6">
-                  <Button
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={currentStep === 1}
-                    className="px-3"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Previous
-                  </Button>
-                  {currentStep < 5 && (
-                    <Button
-                      onClick={nextStep}
-                      disabled={
-                        (currentStep === 1 && !canProceedToStep2) ||
-                        (currentStep === 2 && !canProceedToStep3) ||
-                        (currentStep === 3 && !canProceedToStep4) ||
-                        (currentStep === 4 && !extractedDocument)
-                      }
-                      className="px-3"
-                    >
-                      {currentStep === 4 ? 'Proceed to Download' : 'Next'}
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  )}
-                  {currentStep === 5 && (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={analyzeNewContract}
-                        variant="outline"
-                        className="px-4"
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Analyze New Contract
-                      </Button>
-                      <Button
-                        onClick={() => exportContractReport('text')}
-                        disabled={!extractedDocument || !uploadedFile}
-                        className="px-4"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Report (Text)
-                      </Button>
-                      <Button
-                        onClick={() => exportContractReport('pdf')}
-                        disabled={!extractedDocument || !uploadedFile}
-                        className="px-4 bg-red-600 hover:bg-red-700"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Report (PDF)
-                      </Button>
-                      <Button
-                        onClick={downloadContract}
-                        disabled={!uploadedFile}
-                        className="px-4 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Complete & Download
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Step 2: Template Boilerplate or Custom Template */}
               {currentStep === 2 && (
                 <div className="space-y-8">
@@ -2270,49 +2207,74 @@ Report ID: ${Date.now()}
                   {templateMode === 'standard' ? (
                     <div className="space-y-6">
                       {selectedTemplate ? (
-                        <>
-                            <h4 className="text-base font-semibold mb-2">Key sections that will be checked</h4>
-                            <ul className="space-y-2 text-sm">
-                              {selectedTemplate.requiredSections.slice(0, 6).map((s, index) => (
-                                <li key={index} className="flex items-center gap-2">
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                  <span>{s.title}</span>
-                                  <Badge variant="outline" className="ml-auto text-xs">{s.priority}</Badge>
-                                </li>
-                              ))}
-                              {selectedTemplate.requiredSections.length > 6 && (
-                                <li className="text-muted-foreground">+{selectedTemplate.requiredSections.length - 6} more…</li>
-                              )}
-                            </ul>
-
-                          {/* Brief template format preview */}
-                          <div className="space-y-2">
-                            <h4 className="text-base font-semibold">Template format preview (brief)</h4>
-                            <div className="prose dark:prose-invert max-w-none border rounded-md p-4 text-sm">
-                              {selectedTemplate.requiredSections.slice(0, 3).map((s, index) => (
-                                <div key={index} className="mb-3">
-                                  <div className="font-semibold">{s.title}</div>
-                                  <div className="text-muted-foreground">—</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Sources */}
-                          {(() => {
-                            const sources = (selectedTemplate as any)?.sources as string[] | undefined;
-                            return sources && sources.length > 0;
-                          })() && (
-                            <div className="space-y-2">
-                              <h4 className="text-base font-semibold">Sources</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {((selectedTemplate as any)?.sources as string[]).map((src) => (
-                                  <Badge key={src} variant="outline">{src}</Badge>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {/* Left: Selected Template details */}
+                          <div className="bg-card dark:bg-card rounded-[10px] border border-border dark:border-border p-5">
+                            <h4 className="text-sm font-semibold text-foreground dark:text-foreground mb-4 leading-tight">
+                              Selected Template: {selectedTemplate.name}
+                            </h4>
+                            <div className="mb-3">
+                              <h5 className="text-xs font-semibold text-foreground dark:text-foreground mb-2">Required Sections:</h5>
+                              <div className="space-y-2.5">
+                                {selectedTemplate.requiredSections.slice(0, 5).map((section, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
+                                    <span className="text-xs font-medium text-foreground dark:text-foreground flex-1 leading-tight">{section.title}</span>
+                                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium whitespace-nowrap ${
+                                      section.priority === 'critical' ? 'bg-[#EDDBDB] text-[#BA0003]' :
+                                      section.priority === 'high' ? 'bg-[#FFE7E0] text-[#E55400]' :
+                                      section.priority === 'medium' ? 'bg-[#FFF8CB] text-[#BF6D0A]' :
+                                      'bg-[#E8E9FF] text-[#6E72FF]'
+                                    }`}>
+                                      {section.priority.charAt(0).toUpperCase() + section.priority.slice(1)}
+                                    </span>
+                                  </div>
                                 ))}
                               </div>
                             </div>
-                          )}
-                        </>
+                          </div>
+
+                          {/* Center: Template format preview (brief) */}
+                          <div className="bg-card dark:bg-card rounded-[10px] border border-border dark:border-border p-5">
+                            <h4 className="text-sm font-semibold text-foreground dark:text-foreground mb-4 leading-tight">Template format preview (brief)</h4>
+                            <div className="space-y-4 text-sm">
+                              <div>
+                                <div className="font-semibold text-foreground dark:text-foreground mb-1">Parties</div>
+                                <div className="text-[13px] text-muted-foreground dark:text-muted-foreground">This Agreement is entered between [Company Name] and [Service Provider].</div>
+                              </div>
+                              <div>
+                                <div className="font-semibold text-foreground dark:text-foreground mb-1">Scope of Services</div>
+                                <div className="text-[13px] text-muted-foreground dark:text-muted-foreground">Detailed description of services to be provided.</div>
+                              </div>
+                              <div>
+                                <div className="font-semibold text-foreground dark:text-foreground mb-1">Payment Terms</div>
+                                <div className="text-[13px] text-muted-foreground dark:text-muted-foreground">Payment schedules, amounts, and terms.</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Sources */}
+                          <div className="bg-card dark:bg-card rounded-[10px] border border-border dark:border-border p-5">
+                            <h4 className="text-sm font-semibold text-foreground dark:text-foreground mb-4 leading-tight">Sources</h4>
+                            {Array.isArray((selectedTemplate as any)?.sources) && (selectedTemplate as any).sources.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {((selectedTemplate as any).sources as string[]).map((src) => (
+                                  <Badge key={src} variant="outline">{src}</Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center h-[180px] gap-3 text-center">
+                                <svg width="120" height="60" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
+                                  <rect x="10" y="20" width="70" height="30" rx="6" fill="#EAEAFB" />
+                                  <rect x="120" y="15" width="68" height="35" rx="8" fill="#D9D8FF" />
+                                  <circle cx="55" cy="70" r="4" fill="#C8C6FF" />
+                                  <circle cx="150" cy="75" r="4" fill="#BDBBFF" />
+                                </svg>
+                                <div className="text-xs text-muted-foreground dark:text-muted-foreground">No sources available.</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       ) : (
                         <div className="text-sm text-muted-foreground">No template selected. Go back to Step 1 to choose a template.</div>
                       )}
@@ -2437,7 +2399,10 @@ Report ID: ${Date.now()}
                         <Input key={deviceInputKey} ref={deviceFileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
                         {uploadedFile && (
                           <div className="mt-2 flex items-center justify-center gap-2 text-sm">
-                            <span className="text-muted-foreground truncate max-w-[260px]" title={uploadedFile.name}>
+                            <span
+                              className="truncate max-w-[260px] text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded px-2 py-0.5"
+                              title={uploadedFile.name}
+                            >
                               Selected: {uploadedFile.name}
                             </span>
                             <Button
@@ -2489,14 +2454,10 @@ Report ID: ${Date.now()}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Rules</CardTitle>
-                    <CardDescription>Configure how your contract will be analyzed</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Rules</div>
-                        <div className="text-sm text-muted-foreground">Use your custom company rules during analysis</div>
-                      </div>
+                      <div className="text-sm text-muted-foreground">Apply your company rulebase during analysis</div>
                       <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
                     </div>
                   </CardContent>
@@ -2514,12 +2475,38 @@ Report ID: ${Date.now()}
             </div>
               )}
 
+              {/* Footer nav for Steps 2 & 3 (consistent bottom-right) */}
+              {(currentStep === 2 || currentStep === 3) && (
+                <div className="sticky bottom-0 left-0 right-0 pt-1 mt-1">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={prevStep}
+                      className="px-3 hover:bg-[#E8E9FF]"
+                      style={{ borderColor: '#3B43D6', color: '#3B43D6' }}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Previous
+                    </Button>
+                    <Button
+                      onClick={nextStep}
+                      disabled={(currentStep === 2 && !canProceedToStep3) || (currentStep === 3 && !canProceedToStep4)}
+                      className="px-4 text-white hover:bg-[#2F36B0]"
+                      style={{ backgroundColor: '#3B43D6' }}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Step 4: Canvas Review */}
               {currentStep === 4 && (
                 <div className="space-y-6">
               {/* Top inline controls */}
               <div className="flex items-center justify-between">
-                <Button variant="outline" onClick={prevStep}>
+                <Button variant="outline" onClick={prevStep} className="hover:bg-[#E8E9FF]" style={{ borderColor: '#3B43D6', color: '#3B43D6' }}>
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
@@ -2528,7 +2515,8 @@ Report ID: ${Date.now()}
                     <Button
                       onClick={handleDocumentExtraction}
                       disabled={!uploadedFile || isAnalyzing || !(templateMode === 'standard' ? !!selectedTemplate : (!!customTemplateName || !!customTemplateText))}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 text-white hover:bg-[#2F36B0]"
+                      style={{ backgroundColor: '#3B43D6' }}
                     >
                       {isAnalyzing ? (
                         <>
@@ -2546,7 +2534,8 @@ Report ID: ${Date.now()}
                   {extractedDocument && (
                     <Button
                       onClick={nextStep}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 text-white hover:bg-[#2F36B0]"
+                      style={{ backgroundColor: '#3B43D6' }}
                     >
                       Proceed to Download
                       <ChevronRight className="h-4 w-4" />

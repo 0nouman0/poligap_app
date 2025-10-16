@@ -54,6 +54,9 @@ const RecentChats = ({
   const getSelectedConversation = useGlobalChatStore(
     (state) => state.getSelectedConversation
   );
+  const createConversationAPI = useGlobalChatStore(
+    (state) => state.createConversationAPI
+  );
   const selectedConversation = useGlobalChatStore(
     (state) => state.selectedConversation
   );
@@ -101,6 +104,21 @@ const RecentChats = ({
     
     await deleteConversationAPI({ conversationId: chatdata_id }); // pass as object with conversationId property
     getConversationListsAPI(actualCompanyId, actualUserId);
+  };
+
+  const handleNewChat = async () => {
+    try {
+      const convo = await createConversationAPI({ companyId: actualCompanyId, userId: actualUserId });
+      if (convo?._id) {
+        await getConversationListsAPI(actualCompanyId, actualUserId);
+        await getSelectedConversation({ conversationId: convo._id }, convo);
+        const loadChatHistory = useGlobalChatStore.getState().loadChatHistory;
+        await loadChatHistory(convo._id);
+        if (isMobile) setRecentChatsOpen(false);
+      }
+    } catch (e) {
+      console.error('Failed to create new chat', e);
+    }
   };
 
   const handleGoToChat = async (chatData: ChatItem) => {
@@ -161,8 +179,8 @@ const RecentChats = ({
           <div className="px-3 py-2.5 border-b border-border rounded-t-[20px] select-none bg-card/50 dark:bg-card/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" strokeWidth={1.67} />
-                <h2 className="text-foreground dark:text-foreground text-xs font-semibold">Recent Chats</h2>
+                <MessageCircle className="w-4 h-4" strokeWidth={1.67} style={{ color: '#3B43D6' }} />
+                <h2 className="text-xs font-semibold" style={{ color: '#3B43D6' }}>Recent Chats</h2>
               </div>
               <Button
                 variant="ghost"
@@ -173,7 +191,7 @@ const RecentChats = ({
                 <X className="h-3.5 w-3.5 text-foreground dark:text-foreground" />
               </Button>
             </div>
-            <p className="text-[9px] text-muted-foreground dark:text-muted-foreground mt-0.5">Historical analyses for selected standards</p>
+            {/* Subheader removed per UX request */}
           </div>
 
           {/* Chat list with sections */}
@@ -191,8 +209,8 @@ const RecentChats = ({
                   <div key={sectionTitle} className="space-y-1.5">
                     {/* Section header with Yesterday/Previous 7 days */}
                     <div className="flex items-center gap-1.5 mb-1.5 select-none">
-                      <div className="px-1.5 py-0.5 bg-muted dark:bg-muted rounded-[3px]">
-                        <span className="text-[9px] text-muted-foreground dark:text-muted-foreground font-normal">{sectionTitle}</span>
+                      <div className="px-1.5 py-0.5 rounded-[3px] border" style={{ backgroundColor: 'rgba(59, 67, 214, 0.08)', borderColor: '#3B43D6' }}>
+                        <span className="text-[9px] font-semibold" style={{ color: '#3B43D6' }}>{sectionTitle}</span>
                       </div>
                       <div className="flex-1 h-[1px] bg-border dark:bg-border"></div>
                     </div>
@@ -201,9 +219,9 @@ const RecentChats = ({
                     <div className="space-y-1">
                       {chats.map((chat, idx) => (
                         <div key={chat._id || `chat-${idx}`} className="relative">
-                          {/* Active indicator line */}
+                          {/* Active indicator line at extreme left */}
                           {selectedConversation?._id === chat._id && (
-                            <div className="absolute left-[-12px] top-0 bottom-0 w-[2px] bg-primary dark:bg-primary rounded-r"></div>
+                            <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-r" style={{ backgroundColor: '#3B43D6' }}></div>
                           )}
                           <div
                             onClick={() => handleGoToChat(chat)}
@@ -249,6 +267,19 @@ const RecentChats = ({
                 ))}
               </>
             )}
+          </div>
+          {/* Footer new chat button (inside container) */}
+          <div className="border-t border-border dark:border-border p-3">
+            <div className="flex justify-center">
+              <Button
+                size="sm"
+                className="h-8 px-3 rounded-[6px] text-white"
+                style={{ backgroundColor: '#3B43D6' }}
+                onClick={handleNewChat}
+              >
+                New Chat
+              </Button>
+            </div>
           </div>
         </div>
       </div>
