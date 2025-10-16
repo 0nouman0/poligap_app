@@ -179,11 +179,11 @@ export default function DashboardPage() {
       <div className="w-full max-w-none p-6 space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="space-y-3">
-            <h1 className="text-3xl font-bold text-foreground">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">
               Good afternoon, {userData?.name || 'User'}
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -198,8 +198,8 @@ export default function DashboardPage() {
         <div className="flex flex-col items-center justify-center py-20 space-y-6">
           <div className="text-center space-y-4">
             <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto" />
-            <h2 className="text-2xl font-semibold">Welcome to Your Dashboard</h2>
-            <p className="text-muted-foreground max-w-md">
+            <h2 className="text-xl font-bold">Welcome to Your Dashboard</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
               Your dashboard will show analytics and insights once you start using the platform. 
               Get started by seeding some sample data to see how it works.
             </p>
@@ -232,8 +232,8 @@ export default function DashboardPage() {
                       <feature.icon className="h-6 w-6" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-2">{feature.title}</h3>
-                      <p className="text-sm text-muted-foreground">{feature.description}</p>
+                      <h3 className="text-base font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-xs text-muted-foreground">{feature.description}</p>
                     </div>
                     <ArrowRight className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -250,11 +250,11 @@ export default function DashboardPage() {
     <div className="w-full max-w-none p-6 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-3">
-          <h1 className="text-3xl font-bold text-foreground">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-foreground">
             Good afternoon, {userData?.name || 'User'}
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {new Date().toLocaleDateString('en-US', { 
               weekday: 'long', 
               year: 'numeric', 
@@ -294,10 +294,10 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Searches (MTD)
                 </p>
-                <p className="text-2xl font-bold">{analytics?.overview.totalSearches || 0}</p>
+                <p className="text-xl font-bold">{analytics?.overview.totalSearches || 0}</p>
               </div>
               <Search className="h-8 w-8 text-blue-600" />
             </div>
@@ -308,10 +308,10 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Audit Logs (MTD)
                 </p>
-                <p className="text-2xl font-bold">{analytics?.overview.totalDocumentAnalyses || 0}</p>
+                <p className="text-xl font-bold">{analytics?.overview.totalDocumentAnalyses || 0}</p>
               </div>
               <FileText className="h-8 w-8 text-green-600" />
             </div>
@@ -322,10 +322,10 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Flagged (all)
                 </p>
-                <p className="text-2xl font-bold">{analytics?.flaggedIssues.total || 0}</p>
+                <p className="text-xl font-bold">{analytics?.flaggedIssues.total || 0}</p>
                 <p className="text-xs text-muted-foreground">
                   New: {analytics?.flaggedIssues.new || 0} Resolved: {analytics?.flaggedIssues.resolved || 0}
                 </p>
@@ -339,10 +339,10 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Avg Compliance Score
                 </p>
-                <p className="text-2xl font-bold">{analytics?.compliance.averageScore || 0}%</p>
+                <p className="text-xl font-bold">{analytics?.compliance.averageScore || 0}%</p>
               </div>
               <TrendingUp className="h-8 w-8 text-purple-600" />
             </div>
@@ -357,7 +357,7 @@ export default function DashboardPage() {
           {/* Top Searches */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
                 Top searches
               </CardTitle>
@@ -378,7 +378,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No top searches to show.</p>
+                <p className="text-xs text-muted-foreground">No top searches to show.</p>
               )}
             </CardContent>
           </Card>
@@ -386,7 +386,7 @@ export default function DashboardPage() {
           {/* Compliance Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Shield className="h-5 w-5" />
                 Compliance summary
               </CardTitle>
@@ -394,21 +394,21 @@ export default function DashboardPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                  <p className="text-sm text-muted-foreground">Average score</p>
-                  <p className="text-2xl font-bold">{analytics?.compliance.averageScore || 0}%</p>
+                  <p className="text-xs text-muted-foreground">Average score</p>
+                  <p className="text-xl font-bold">{analytics?.compliance.averageScore || 0}%</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Analyzed docs</p>
-                  <p className="text-2xl font-bold">{analytics?.compliance.totalAnalyses || 0}</p>
+                  <p className="text-xs text-muted-foreground">Analyzed docs</p>
+                  <p className="text-xl font-bold">{analytics?.compliance.totalAnalyses || 0}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Top metric keys</p>
-                  <p className="text-2xl font-bold">—</p>
+                  <p className="text-xs text-muted-foreground">Top metric keys</p>
+                  <p className="text-xl font-bold">—</p>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-sm font-medium mb-3">Top compliances</h4>
+                <h4 className="text-sm font-semibold mb-3">Top compliances</h4>
                 {analytics?.compliance.byStandard.length ? (
                   <div className="space-y-3">
                     {analytics.compliance.byStandard.slice(0, 3).map((standard, index) => (

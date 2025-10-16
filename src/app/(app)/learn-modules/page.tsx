@@ -193,7 +193,7 @@ export default function LearnModulesPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-foreground mb-4">
+        <h1 className="text-2xl font-bold text-foreground mb-4">
           Learn Modules
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">

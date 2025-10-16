@@ -344,7 +344,7 @@ export default function UploadAssetsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Upload Assets</h1>
+          <h1 className="text-2xl font-bold">Upload Assets</h1>
           <p className="text-muted-foreground mt-2">
             Upload and manage your files for cross-application usage
           </p>
@@ -401,7 +401,7 @@ export default function UploadAssetsPage() {
         <CardContent className="p-8">
           <div className="text-center mb-8">
             <Upload className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-2xl font-semibold mb-2">Upload Your Files</h3>
+            <h3 className="text-xl font-bold mb-2">Upload Your Files</h3>
             <p className="text-muted-foreground mb-6">
               Choose a file type below or drag and drop files anywhere
             </p>

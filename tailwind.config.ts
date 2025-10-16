@@ -10,8 +10,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
-          "var(--font-inter)",
-          "Inter",
+          "var(--font-poppins)",
+          "Poppins",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
@@ -22,6 +22,11 @@ const config: Config = {
           "Fira Sans",
           "Droid Sans",
           "Helvetica Neue",
+          "sans-serif",
+        ],
+        inter: [
+          "var(--font-inter)",
+          "Inter",
           "sans-serif",
         ],
       },
@@ -86,10 +91,14 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontSize: {
-        xs: "10px",
-        "xs-sm": "11px",
-        sm: "12px",
-        base: "13px",
+        // Standardized font sizes based on Figma design
+        xs: ["0.75rem", { lineHeight: "1.5" }], // 12px
+        sm: ["0.875rem", { lineHeight: "1.5" }], // 14px
+        base: ["1rem", { lineHeight: "1.5" }], // 16px
+        lg: ["1.125rem", { lineHeight: "1.5" }], // 18px
+        xl: ["1.25rem", { lineHeight: "1.5" }], // 20px
+        "2xl": ["1.5rem", { lineHeight: "1.5" }], // 24px
+        "3xl": ["1.875rem", { lineHeight: "1.5" }], // 30px
       },
       keyframes: {
         "accordion-down": {

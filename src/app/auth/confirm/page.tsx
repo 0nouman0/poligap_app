@@ -103,7 +103,7 @@ export default function ConfirmEmailPage() {
               {status === 'error' && <XCircle className="h-12 w-12 text-red-600" />}
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">
+          <CardTitle className="text-xl font-bold">
             {status === 'loading' && 'Verifying Email'}
             {status === 'success' && 'Email Verified!'}
             {status === 'error' && 'Verification Failed'}

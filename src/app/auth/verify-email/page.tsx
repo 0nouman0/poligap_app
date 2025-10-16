@@ -74,7 +74,7 @@ export default function VerifyEmailPage() {
               <Mail className="h-12 w-12 text-purple-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Verify Your Email</CardTitle>
+          <CardTitle className="text-xl font-bold">Verify Your Email</CardTitle>
           <CardDescription className="text-base">
             We've sent a verification link to
             <div className="font-semibold text-purple-700 mt-1">

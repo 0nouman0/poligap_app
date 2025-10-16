@@ -892,65 +892,83 @@ export default function ComplianceCheckPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Fixed Header Section */}
           <div className="flex-shrink-0 p-8 pb-4">
-            {/* Header Section */}
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-12 h-12 text-[#3B43D6]" strokeWidth={1.5} />
+            {/* Header Section - Figma Design */}
+            <div className="flex items-start gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-[#3B43D6] flex items-center justify-center flex-shrink-0">
+                <Shield className="w-6 h-6 text-white" strokeWidth={1.67} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground mb-1">
+                <h1 className="text-base font-semibold text-[#2D2F34] dark:text-foreground mb-1">
                   Compliance Check
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground opacity-100">
                   Analyze your documents against compliance standards using AI
                 </p>
               </div>
             </div>
 
-            {/* Step Title */}
+            {/* Step Title - Figma Design */}
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-foreground dark:text-foreground mb-1">{steps[currentStep - 1]?.title}</h2>
-              <p className="text-sm text-muted-foreground dark:text-muted-foreground">{steps[currentStep - 1]?.description}</p>
+              <h2 className="text-base font-semibold text-[#2D2F34] dark:text-foreground mb-1">{steps[currentStep - 1]?.title}</h2>
+              <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground">{steps[currentStep - 1]?.description === "Choose compliance standards" ? "0 of 40 standards selected" : steps[currentStep - 1]?.description}</p>
             </div>
 
-            {/* Stepper Indicator */}
+            {/* Stepper Indicator - Figma Design */}
             <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-0">
+        <div className="flex items-center gap-4">
           {steps.map((step, index) => (
-            <div key={step.id} className="flex items-center">
-              <div className={`flex items-center justify-center w-[39px] h-[39px] rounded-full transition-all ${
+            <React.Fragment key={step.id}>
+              <div className={`flex items-center justify-center w-[39px] h-[39px] rounded-full transition-all border ${
                 currentStep === step.id
-                  ? 'bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground'
-                  : 'bg-card dark:bg-card border-2 border-border dark:border-border text-muted-foreground dark:text-muted-foreground'
+                  ? 'bg-[#3B43D6] text-white border-[#3B43D6]'
+                  : 'bg-white dark:bg-card text-[#717171] border-[#D9D9D9] dark:border-border'
                 }`}>
-                <span className="text-sm font-medium">{String(step.id).padStart(2, '0')}</span>
+                <span className="text-base font-semibold">{String(step.id).padStart(2, '0')}</span>
               </div>
               {index < steps.length - 1 && (
-                <div className={`w-[60px] h-[2px] ${
-                  currentStep > step.id ? 'bg-primary dark:bg-primary' : 'bg-border dark:bg-border'
-                }`} />
+                <svg width="62" height="39" viewBox="0 0 62 39" fill="none" className="flex-shrink-0">
+                  <line 
+                    x1="0" 
+                    y1="20" 
+                    x2="62" 
+                    y2="20" 
+                    stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} 
+                    strokeWidth="1" 
+                    strokeDasharray="2 2"
+                  />
+                </svg>
               )}
-            </div>
+            </React.Fragment>
           ))}
         </div>
         
-        {/* Select All Checkbox - Show only on step 1 */}
+        {/* Select All Checkbox - Show only on step 1 - Figma Design */}
         {currentStep === 1 && (
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="select-all-top"
-              checked={selectedStandards.length === complianceStandards.length}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedStandards(complianceStandards.map(s => s.id));
-                } else {
-                  setSelectedStandards([]);
-                }
-              }}
-              className="w-5 h-5 rounded border-border dark:border-border text-primary focus:ring-primary cursor-pointer"
-            />
-            <label htmlFor="select-all-top" className="text-sm font-medium text-foreground dark:text-foreground cursor-pointer">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <input
+                type="checkbox"
+                id="select-all-top"
+                checked={selectedStandards.length === complianceStandards.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedStandards(complianceStandards.map(s => s.id));
+                  } else {
+                    setSelectedStandards([]);
+                  }
+                }}
+                className="peer sr-only"
+              />
+              <label 
+                htmlFor="select-all-top" 
+                className="flex items-center justify-center w-6 h-6 border-2 border-[#717171] rounded cursor-pointer peer-checked:bg-white peer-checked:border-[#717171]"
+              >
+                {selectedStandards.length === complianceStandards.length && (
+                  <CheckCircle className="w-4 h-4 text-[#717171]" strokeWidth={2} />
+                )}
+              </label>
+            </div>
+            <label htmlFor="select-all-top" className="text-base font-semibold text-[#2D2F34] dark:text-foreground cursor-pointer">
               Select All
             </label>
           </div>
@@ -1664,19 +1682,18 @@ export default function ComplianceCheckPage() {
             </div>
           ) : currentStep !== 4 && (
             <div className="flex-shrink-0 p-8 pt-0">
-              <div className="flex justify-end gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <div className="flex justify-end gap-[15px]">
+                <button
                   onClick={prevStep}
                   disabled={currentStep === 1 || isAnalyzing}
-                  className="h-[36px] px-6 rounded-[5px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                  className="flex items-center gap-[5px] px-[10px] py-0 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-[5px] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  <span className="text-sm font-medium">Previous</span>
-                </Button>
-                <Button
-                  size="sm"
+                  <ChevronLeft className="w-4 h-4 text-[#717171] dark:text-gray-400" strokeWidth={1.33} />
+                  <span className="text-xs font-semibold text-[#717171] dark:text-gray-400">
+                    Previous
+                  </span>
+                </button>
+                <button
                   onClick={() => {
                     if (currentStep === 3) {
                       if (canAnalyze) {
@@ -1693,11 +1710,13 @@ export default function ComplianceCheckPage() {
                     currentStep === 5 ||
                     isAnalyzing
                   }
-                  className="h-[36px] px-6 rounded-[5px] bg-primary dark:bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 text-primary-foreground dark:text-primary-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                  className="flex items-center gap-[5px] px-[15px] py-0 h-9 bg-[#6E72FF] rounded-[5px] hover:bg-[#5B5FE6] transition-colors text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="text-sm font-medium">{currentStep === 3 ? 'Analyze' : 'Next'}</span>
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
+                  <span className="text-xs font-semibold">
+                    {currentStep === 3 ? 'Analyze' : 'Next'}
+                  </span>
+                  <ChevronRight className="w-4 h-4" strokeWidth={1.33} />
+                </button>
               </div>
             </div>
           )}
@@ -1719,26 +1738,20 @@ export default function ComplianceCheckPage() {
             </Button>
 
             {!isLogsCollapsed && (
-            <Card className="bg-card dark:bg-card rounded-[10px] shadow-md border border-border dark:border-border h-[675px] flex flex-col sticky top-6">
-              <CardHeader className="pb-3 relative border-b border-border dark:border-border">
+            <Card className="bg-white dark:bg-card rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] border-0 h-[675px] flex flex-col sticky top-6">
+              <CardHeader className="pb-3 relative">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-3 right-3 h-6 w-6"
+                  className="absolute top-3 right-3 h-5 w-5 hover:bg-transparent"
                   onClick={() => setIsLogsCollapsed(true)}
                   title="Close panel"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                <div className="flex items-center justify-between pr-8">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2 text-foreground dark:text-foreground">
-                    <History className="h-5 w-5 text-primary dark:text-primary" />
-                    Audit Logs
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                <div className="flex items-start gap-2">
+                  <button 
+                    className="p-0 hover:opacity-70 transition-opacity"
                     onClick={() => {
                       const userId = getUserId();
                       if (userId) {
@@ -1747,12 +1760,17 @@ export default function ComplianceCheckPage() {
                     }}
                     title="Refresh"
                   >
-                    <History className="h-4 w-4" />
-                  </Button>
+                    <History className="h-5 w-5 text-[#717171]" strokeWidth={1.67} />
+                  </button>
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-semibold text-[#2D2F34] dark:text-foreground mb-1">
+                      Audit Logs
+                    </CardTitle>
+                    <CardDescription className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground">
+                      Historical analyses for selected standards
+                    </CardDescription>
+                  </div>
                 </div>
-                <CardDescription className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
-                  Historical analyses
-                </CardDescription>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden flex flex-col p-4">
                 {isLoadingLogs ? (
@@ -1763,16 +1781,10 @@ export default function ComplianceCheckPage() {
                     </div>
                   </div>
                 ) : filteredAuditLogs.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center text-center py-8 text-muted-foreground">
-                    <div>
-                      <div className="w-20 h-20 mx-auto mb-4 bg-muted dark:bg-muted rounded-full flex items-center justify-center">
-                        <FileText className="h-10 w-10 text-muted-foreground dark:text-muted-foreground" />
-                      </div>
-                      <p className="text-sm font-medium text-foreground dark:text-foreground mb-1">No Audit Logs Yet</p>
-                      <p className="text-xs text-muted-foreground dark:text-muted-foreground max-w-[200px] mx-auto">
-                        Complete an analysis to see your history here
-                      </p>
-                    </div>
+                  <div className="flex-1 flex items-center justify-center text-center py-16">
+                    <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground max-w-[184px]">
+                      No previous analyses found for selected standards
+                    </p>
                   </div>
                 ) : (
                   <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2">

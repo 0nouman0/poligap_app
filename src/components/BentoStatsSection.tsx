@@ -40,7 +40,7 @@ export default function BentoStatsSection() {
                 : "animate-fade-in"
             }`}
           >
-            <div className="flex-shrink-0 text-primary text-4xl font-extrabold drop-shadow-lg">
+            <div className="flex-shrink-0 text-primary text-2xl font-bold drop-shadow-lg">
               {stat.value}
             </div>
             <div>
