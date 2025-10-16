@@ -120,7 +120,7 @@ export default function SsoLogin() {
     [SsoLoginApi, ssoLoginData.email]
   );
 
-  const krooloLogoSrc = "/assets/poligap (1).png";
+  const krooloLogoSrc = "/assets/poligap-logo.png";
 
   return (
     <>
