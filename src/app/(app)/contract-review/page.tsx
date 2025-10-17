@@ -970,7 +970,7 @@ export default function ContractReview() {
           </div>
           <div>
             <h1 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">Contract Review</h1>
-            <p className="text-[11px] text-[#6A707C] dark:text-gray-400 mt-0.5 leading-tight">
+            <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-0.5 leading-tight">
               Upload contracts and get AI-powered analysis against reference templates
             </p>
           </div>
@@ -986,7 +986,7 @@ export default function ContractReview() {
                currentStep === 2 ? "Review template format or provide your own" : 
                steps[currentStep - 1]?.title}
             </h2>
-            <p className="text-[11px] text-[#6A707C] dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-0.5">
               {currentStep === 1 ? `${knowledgeBaseTemplates.length} templates` : 
                currentStep === 2 ? "Verify required sections and preview format" : 
                ""}
@@ -1044,7 +1044,7 @@ export default function ContractReview() {
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-hidden flex flex-col">
                 <div className="mb-3">
                   <h3 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-1.5">Contract Templates</h3>
-                  <p className="text-[11px] text-[#6A707C] dark:text-gray-400 leading-[14px]">
+                  <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-[14px]">
                     Select a baseline template that has been reviewed and approved by legal experts. Your uploaded contract will be compared against this template to identify gaps and weaknesses.
                   </p>
                 </div>
@@ -1070,7 +1070,7 @@ export default function ContractReview() {
                               <div className="flex items-center gap-2">
                                 <div className="bg-[#EDFFDE] dark:bg-green-900/30 rounded-full px-2 py-0.5 flex items-center gap-1">
                                   <Award className="h-2.5 w-2.5 text-[#47AF47]" />
-                                  <span className="text-[9px] font-medium text-[#47AF47]">Baseline</span>
+                                  <span className="text-xs font-medium text-[#47AF47]">Baseline</span>
                                 </div>
                                 <CheckCircle className={"h-4 w-4 transition-colors " + (isSelected ? 'text-[#3B43D6]' : 'text-[#DADADA] dark:text-gray-600')} />
                               </div>
@@ -1078,22 +1078,22 @@ export default function ContractReview() {
                             
                             <div className="mb-2.5">
                               <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-1 leading-tight line-clamp-2">{template.name}</h4>
-                              <p className="text-[10px] text-[#6A707C] dark:text-gray-400 leading-tight line-clamp-2">{template.description}</p>
+                              <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-tight line-clamp-2">{template.description}</p>
                             </div>
                             
                             <div className="space-y-1.5">
-                              <div className="text-[10px] font-semibold text-[#2D2F34] dark:text-gray-300">
+                              <div className="text-xs font-semibold text-[#2D2F34] dark:text-gray-300">
                                 Sections: {template.sections}
                               </div>
-                              <div className="text-[10px] font-semibold text-[#2D2F34] dark:text-gray-300 truncate">
+                              <div className="text-xs font-semibold text-[#2D2F34] dark:text-gray-300 truncate">
                                 Sources: {template.sources.join(", ")}
                               </div>
                               <div className="flex flex-wrap gap-1.5">
                                 <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                  <span className="text-[9px] font-medium text-[#2D2F34] dark:text-gray-300">Parties</span>
+                                  <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">Parties</span>
                                 </div>
                                 <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                  <span className="text-[9px] font-medium text-[#2D2F34] dark:text-gray-300">+{template.requiredSections.length - 1} more</span>
+                                  <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">+{template.requiredSections.length - 1} more</span>
                                 </div>
                               </div>
                             </div>
@@ -1122,7 +1122,7 @@ export default function ContractReview() {
                           <div key={index} className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
                             <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 flex-1 leading-tight">{section.title}</span>
-                            <span className={"rounded-full px-2 py-0.5 text-[9px] font-medium whitespace-nowrap " + (
+                            <span className={"rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap " + (
                               section.priority === 'critical' ? 'bg-[#EDDBDB] text-[#BA0003]' :
                               section.priority === 'high' ? 'bg-[#FFE7E0] text-[#E55400]' :
                               section.priority === 'medium' ? 'bg-[#FFF8CB] text-[#BF6D0A]' :
@@ -1165,38 +1165,38 @@ export default function ContractReview() {
                       <RotateCcw className="h-4 w-4 text-[#717171] dark:text-gray-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <h4 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-0.5">Audit Logs</h4>
-                        <p className="text-[10px] text-[#6A707C] dark:text-gray-400 leading-tight">Recent activity for template</p>
+                        <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-tight">Recent activity for template</p>
                       </div>
                     </div>
                     
                     {logsLoading ? (
                       <div className="flex items-center justify-center py-8">
-                        <p className="text-[10px] text-center text-[#6A707C] dark:text-gray-400">Loading logs...</p>
+                        <p className="text-xs text-center text-[#6A707C] dark:text-gray-400">Loading logs...</p>
                       </div>
                     ) : templateLogs.length === 0 ? (
                       <div className="flex items-center justify-center py-8">
-                        <p className="text-[10px] text-center text-[#6A707C] dark:text-gray-400">No logs yet for this template.</p>
+                        <p className="text-xs text-center text-[#6A707C] dark:text-gray-400">No logs yet for this template.</p>
                       </div>
                     ) : (
                       <div className="space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                         {templateLogs.map((log: any, idx: number) => (
                           <div key={idx} className="pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
                             <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-[11px] font-medium text-[#2D2F34] dark:text-gray-100 line-clamp-2">
+                              <p className="text-xs font-medium text-[#2D2F34] dark:text-gray-100 line-clamp-2">
                                 {log.action || 'Contract Review'}
                               </p>
-                              <span className="text-[9px] text-[#6A707C] dark:text-gray-400 whitespace-nowrap">
+                              <span className="text-xs text-[#6A707C] dark:text-gray-400 whitespace-nowrap">
                                 {new Date(log.timestamp || log.createdAt).toLocaleDateString('en-US', { 
                                   month: 'short', 
                                   day: 'numeric' 
                                 })}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[#6A707C] dark:text-gray-400 line-clamp-2 mb-1">
+                            <p className="text-xs text-[#6A707C] dark:text-gray-400 line-clamp-2 mb-1">
                               {log.details || log.description || 'Contract analysis completed'}
                             </p>
                             {log.userName && (
-                              <p className="text-[9px] text-[#8D8D8D] dark:text-gray-500">
+                              <p className="text-xs text-[#8D8D8D] dark:text-gray-500">
                                 By: {log.userName}
                               </p>
                             )}

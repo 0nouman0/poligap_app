@@ -1,5 +1,4 @@
 import localFont from "next/font/local";
-import { Poppins } from "next/font/google";
 import "./globals.css";
 import "../styles/typography.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -7,13 +6,6 @@ import { ToastProvider } from "@/components/toast-provider";
 import { Metadata } from "next";
 import React from "react";
 import { QueryProvider } from "@/components/QueryProvider";
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-});
 
 const Inter = localFont({
   src: [
@@ -77,7 +69,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${Inter.variable} ${poppins.variable} h-full`}>
+    <html lang="en" suppressHydrationWarning className={`${Inter.variable} h-full`}>
       <head>
         <link
           rel="icon"
@@ -86,7 +78,7 @@ export default function RootLayout({
           sizes="32x32"
         />
       </head>
-      <body className={`${poppins.className} antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
+      <body className={`font-sans antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>{children}</QueryProvider>
           <ToastProvider />
