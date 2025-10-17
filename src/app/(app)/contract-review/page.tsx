@@ -777,44 +777,166 @@ export default function ContractReview() {
       toastError('Missing Information', 'Please select a template and upload a file');
       return;
     }
-
+    
+    // Clear any existing data and reset error state
+    setExtractedDocument(null);
+    crStore.setExtractedDocument(null);
+    crStore.setSuggestions([]);
+    
     setIsAnalyzing(true);
-
     try {
-      const formData = new FormData();
-      formData.append('file', uploadedFile);
-      formData.append('templateId', selectedTemplate.id);
-      formData.append('templateName', selectedTemplate.name);
-      if (finalInstructions) {
-        formData.append('instructions', finalInstructions);
-      }
-      if (applyRuleBase) {
-        formData.append('applyRuleBase', 'true');
+      // Extract text from uploaded file
+      let extractedText = '';
+      
+      extractedText = await extractFileText(uploadedFile);
+      if (!extractedText.trim()) {
+        throw new Error('Could not extract text from the uploaded file. Please try a different PDF or contact support.');
       }
 
-      const response = await fetch('/api/contract-review/analyze', {
+      // Build template clauses for analysis
+      const clauses = selectedTemplate?.requiredSections?.map(s => ({
+        title: s.title,
+        content: '',
+        isRequired: true,
+        priority: s.priority,
+        guidelines: []
+      })) || [];
+
+      // Call Gemini API for analysis
+      const response = await fetch('/api/contract-analyze', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: extractedText, 
+          templateClauses: clauses, 
+          contractType: selectedTemplate?.name || 'Contract',
+          instructions: finalInstructions || undefined
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Analysis failed');
+        const errorData = await response.json();
+        throw new Error(errorData?.error || 'Analysis failed');
       }
 
-      const data = await response.json();
+      const analysisData = await response.json();
       
-      if (data.extractedDocument) {
-        setExtractedDocument(data.extractedDocument);
-        crStore.setExtractedDocument(data.extractedDocument);
-        if (data.suggestions) {
-          crStore.setSuggestions(data.suggestions);
-        }
-        toastSuccess('Analysis Complete', 'Your contract has been analyzed successfully');
-      }
+      // Create document with real analysis results
+      const document: ExtractedDocument = {
+        id: `doc-${Date.now()}`,
+        fileName: uploadedFile.name,
+        fullText: extractedText,
+        sections: [],
+        gaps: (analysisData.suggestions || []).map((s: any, idx: number) => ({
+          id: s.id || `gap_${idx}`,
+          sectionTitle: s.section || 'General',
+          gapType: s.type === 'addition' ? 'missing' : (s.type === 'deletion' ? 'non-compliant' : 'weak'),
+          severity: s.severity || 'medium',
+          description: s.reasoning || 'Suggested improvement',
+          recommendation: s.legalImplications || s.reasoning || '',
+          startIndex: s.startIndex || 0,
+          endIndex: s.endIndex || 0,
+          originalText: s.originalText || '',
+          suggestedText: s.suggestedText || '',
+        })),
+        overallScore: Math.round((analysisData.overallScore || 0.7) * 100),
+        templateId: selectedTemplate?.id || 'custom'
+      };
+
+      setExtractedDocument(document);
+
+      // Sync with canvas store for interactive editing
+      crStore.setExtractedDocument({
+        id: document.id,
+        fileName: document.fileName,
+        fullText: extractedText,
+        sections: document.sections as any,
+        gaps: document.gaps as any,
+        overallScore: document.overallScore,
+        templateId: document.templateId,
+        metadata: { pageCount: 1, extractedAt: new Date(), fileSize: uploadedFile.size }
+      } as any);
+
+      // Map suggestions for canvas interactions
+      const suggestions = (analysisData.suggestions || []).map((s: any, idx: number) => ({
+        id: s.id || `sug_${idx}`,
+        type: s.type || 'modification',
+        severity: s.severity || 'medium',
+        category: s.category || 'clarity',
+        confidence: s.confidence || 0.7,
+        originalText: s.originalText || '',
+        suggestedText: s.suggestedText || '',
+        startIndex: Math.max(0, s.startIndex || 0),
+        endIndex: Math.max(s.startIndex || 0, s.endIndex || 0),
+        reasoning: s.reasoning || '',
+        legalImplications: s.legalImplications || '',
+        riskLevel: s.riskLevel || 'medium',
+        section: s.section || 'General',
+        timestamp: new Date(),
+        status: 'pending' as const,
+        clauseType: s.clauseType || ''
+      }));
+      
+      crStore.setSuggestions(suggestions as any);
+
+      toastSuccess('Analysis Complete', 'Your contract has been analyzed successfully');
     } catch (error) {
-      toastError('Analysis Failed', error instanceof Error ? error.message : 'Failed to analyze contract');
+      console.error('Document extraction and analysis failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toastError('Analysis Failed', `Document processing failed: ${errorMessage}`);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Server-side text extraction for uploaded files
+  const extractFileText = async (file: File): Promise<string> => {
+    if (!file) {
+      throw new Error('No file provided for text extraction');
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/extract-document', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.error || 'Text extraction failed');
+      }
+      
+      const data = await response.json();
+      return data.text || '';
+    } catch (error) {
+      console.error('Text extraction failed:', error);
+      
+      // Fallback to basic client-side extraction for text files
+      const fileName = file.name || '';
+      const fileType = file.type || '';
+      
+      if (fileType.includes('text') || fileName.endsWith('.txt')) {
+        try {
+          return await file.text();
+        } catch {
+          return '';
+        }
+      }
+      
+      // For PDFs, provide a helpful error message
+      if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+        throw new Error('Gemini AI could not parse this PDF. Please try a different PDF file or use the manual text input option.');
+      }
+      
+      // For Word documents
+      if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        throw new Error('Document processing failed. Please try uploading the file again or use a different format.');
+      }
+      
+      throw error;
     }
   };
 
