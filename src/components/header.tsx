@@ -122,6 +122,7 @@ export const Header = memo(function Header() {
   const { setCompanies, setSelectedCompany } = useCompanyStore();
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const [confirmSignOutOpen, setConfirmSignOutOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   // Get user data from user store
   const { userData } = useUserStore();
@@ -173,6 +174,11 @@ export const Header = memo(function Header() {
     await logout();
     setConfirmSignOutOpen(false);
   }, [logout]);
+
+  const handleProfileClick = useCallback(() => {
+    setIsProfileDropdownOpen(false);
+    router.push("/profile");
+  }, [router]);
 
   // Memoized values for performance
   const headerImageSrc = useMemo(() => 
@@ -239,7 +245,7 @@ export const Header = memo(function Header() {
           </div> */}
 
           {/* Profile Picture */}
-          <DropdownMenu modal={false}>
+          <DropdownMenu modal={false} open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -307,7 +313,7 @@ export const Header = memo(function Header() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer px-0 rounded-none hover:bg-gray-50 focus:bg-gray-50 focus:text-gray-900"
-                onClick={() => redirect("/profile")}
+                onClick={handleProfileClick}
               >
                 <div className="px-4 w-full flex items-center">
                   <User className="mr-2 h-4 w-4" /> My Profile
