@@ -328,7 +328,7 @@ export function AppSidebar() {
                 {visibleBottomNavigationItems.map((item, index) => (
                   <div 
                     key={item.title} 
-                    className="opacity-40 hover:opacity-100 transition-all duration-300 ease-in-out"
+                    className="transition-all duration-300 ease-in-out"
                     style={{
                       transitionDelay: `${index * 50}ms`
                     }}
@@ -337,7 +337,7 @@ export function AppSidebar() {
                       title={item.title}
                       href={item.page}
                       icon={item.icon}
-                      isActive={false}
+                      isActive={currentPage === item.page}
                     />
                   </div>
                 ))}

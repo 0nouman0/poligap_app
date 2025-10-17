@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Shield, FileText, CheckCircle, AlertTriangle, Download, Copy, Settings, Database, Info } from "lucide-react";
+import { Shield, FileText, CheckCircle, AlertTriangle, Download, Copy, Settings, Database, Info, BookOpen, RotateCcw, ChevronDown, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
@@ -84,7 +84,7 @@ function SearchSelect({
   options,
   value,
   onChange,
-  placeholder = "Select...",
+  placeholder = "Select",
 }: { options: string[]; value: string; onChange: (v: string) => void; placeholder?: string }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,22 +92,26 @@ function SearchSelect({
   const current = value || "";
   return (
     <div className="relative">
-      <button type="button" onClick={()=>setOpen(!open)} className="w-full border border-input rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-accent bg-background text-foreground">
-        <span className={`truncate ${current ? '' : 'text-muted-foreground'}`}>{current || placeholder}</span>
-        <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+      <button 
+        type="button" 
+        onClick={()=>setOpen(!open)} 
+        className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] flex items-center justify-between"
+      >
+        <span className={current ? '' : 'text-[#595959]'}>{current || placeholder}</span>
+        <ChevronDown className="w-[18px] h-[18px]" />
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-full bg-popover border border-border rounded-md shadow-lg">
-          <div className="p-2 border-b border-border">
-            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="w-full border border-input rounded px-2 py-1 text-sm bg-background text-foreground"/>
+        <div className="absolute z-20 mt-2 w-full bg-white border border-[#E6E6E6] rounded-[5px] shadow-lg">
+          <div className="p-2 border-b border-[#E6E6E6]">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="w-full border border-[#E6E6E6] rounded px-2 py-1 text-sm bg-white text-[#595959]"/>
           </div>
           <div className="max-h-56 overflow-y-auto p-2">
             {filtered.map(opt => (
-              <button key={opt} type="button" className="w-full text-left px-2 py-1 text-sm rounded hover:bg-accent text-foreground" onClick={()=>{ onChange(opt); setOpen(false); }}>
+              <button key={opt} type="button" className="w-full text-left px-2 py-1 text-sm rounded hover:bg-[#EFF1F6] text-[#595959]" onClick={()=>{ onChange(opt); setOpen(false); }}>
                 {opt}
               </button>
             ))}
-            {filtered.length === 0 && <div className="text-xs text-muted-foreground px-2 py-1">No results</div>}
+            {filtered.length === 0 && <div className="text-xs text-[#6A707C] px-2 py-1">No results</div>}
           </div>
         </div>
       )}
@@ -321,98 +325,199 @@ export default function PolicyGeneratorPage() {
   }, [inputs.policyType]);
 
   return (
-    <div className="w-full mx-auto p-6 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
-          <FileText className="h-8 w-8" />
-          Policy Generator
-        </h1>
-        <p className="text-muted-foreground">Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.</p>
-      </div>
-
-      {/* Stepper */}
-      <div className="flex items-center justify-center space-x-4">
-        {steps.map((step, idx) => (
-          <div key={step.id} className="flex items-center">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${currentStep >= step.id ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground text-muted-foreground'}`}>
-              {currentStep > step.id ? <CheckCircle className="h-5 w-5" /> : <span className="text-sm font-medium">{step.id}</span>}
-            </div>
-            {idx < steps.length - 1 && (
-              <div className={`w-16 h-0.5 mx-2 transition-all ${currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
-            )}
+    <div className="w-full min-h-screen bg-[#FAFAFB] flex flex-col items-end pr-4">
+      {/* Header Section */}
+      <div className="w-full max-w-[1646px] flex justify-between items-center mt-[92px] mb-[32px]">
+        {/* Left: Title and Description */}
+        <div className="flex items-center gap-[15px]">
+          <div className="w-12 h-12 rounded-full bg-[#3B43D6] flex items-center justify-center flex-shrink-0">
+            <BookOpen className="w-6 h-6 text-white" strokeWidth={2.57} />
           </div>
-        ))}
+          <div>
+            <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19px]">
+              Policy Generator
+            </h1>
+            <p className="text-[12px] text-[#6A707C] leading-[15px] mt-[5px]">
+              Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Step Indicators */}
+        <div className="flex items-center gap-4">
+          {/* Step 01 */}
+          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+            <span className={`text-[16px] font-semibold ${currentStep >= 1 ? 'text-white' : 'text-[#717171]'}`}>01</span>
+          </div>
+          
+          {/* Connector 1 */}
+          <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
+          
+          {/* Step 02 */}
+          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+            <span className={`text-[16px] font-semibold ${currentStep >= 2 ? 'text-white' : 'text-[#717171]'}`}>02</span>
+          </div>
+          
+          {/* Connector 2 */}
+          <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
+          
+          {/* Step 03 */}
+          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+            <span className={`text-[16px] font-semibold ${currentStep >= 3 ? 'text-white' : 'text-[#717171]'}`}>03</span>
+          </div>
+          
+          {/* Connector 3 */}
+          <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
+          
+          {/* Step 04 */}
+          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 4 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+            <span className={`text-[16px] font-semibold ${currentStep >= 4 ? 'text-white' : 'text-[#717171]'}`}>04</span>
+          </div>
+        </div>
       </div>
 
-      <div className="text-center">
-        <h2 className="text-xl font-semibold">{steps[currentStep - 1]?.title}</h2>
-        <p className="text-muted-foreground text-sm">{steps[currentStep - 1]?.description}</p>
-      </div>
-
-      {/* Main Card */}
-      <div className="bg-card rounded-lg border border-border shadow-sm">
-        <div className="p-6">
+      {/* Main Content Area with Right Sidebar */}
+      <div className="w-full max-w-[1646px] flex gap-[25px]">
+        {/* Main Form Area */}
+        <div className="flex-1">
           {currentStep === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Policy Type</label>
-                <select value={inputs.policyType} onChange={(e)=>setInputs({...inputs, policyType:e.target.value})} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground">
-                  {[
-                    "Privacy Policy",
-                    "Cookie Policy",
-                    "Information Security Policy",
-                    "Data Retention Policy",
-                    "Acceptable Use Policy",
-                    "Vendor Management Policy",
-                  ].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Industry / Domain</label>
-                <input className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground" value={inputs.industry} onChange={(e)=>setInputs({...inputs, industry:e.target.value})} placeholder="e.g., SaaS, FinTech" />
-              </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Region / Country</label>
-                <SearchSelect
-                  options={AVAILABLE_REGIONS}
-                  value={inputs.region}
-                  onChange={(v)=>setInputs({...inputs, region: v})}
-                  placeholder="Search region/country..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Organization Type</label>
-                <select value={inputs.orgType} onChange={(e)=>setInputs({...inputs, orgType:e.target.value})} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground">
-                  <option value="">Select…</option>
-                  <option value="startup">Startup</option>
-                  <option value="smb">SMB</option>
-                  <option value="enterprise">Enterprise</option>
-                  <option value="public">Public Sector</option>
-                  <option value="nonprofit">Non-profit</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs text-muted-foreground mb-1">Frameworks</label>
-                <MultiSelect
-                  options={AVAILABLE_FRAMEWORKS}
-                  value={inputs.frameworks}
-                  onChange={(v)=>setInputs({...inputs, frameworks: v})}
-                  placeholder="Search and select frameworks..."
-                />
-                {inputs.frameworks.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {inputs.frameworks.map(fw => (
-                      <span key={fw} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs border border-primary/20">{fw}</span>
-                    ))}
+            <div className="flex flex-col gap-[25px]">
+              {/* First Row */}
+              <div className="flex gap-[25px]">
+                {/* Policy Type */}
+                <div className="w-[628px] flex flex-col gap-[18px]">
+                  <label className="text-[14px] font-medium text-[#595959]">Policy Type</label>
+                  <div className="relative">
+                    <select 
+                      value={inputs.policyType} 
+                      onChange={(e)=>setInputs({...inputs, policyType:e.target.value})} 
+                      className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] appearance-none cursor-pointer"
+                    >
+                      {[
+                        "Privacy Policy",
+                        "Cookie Policy",
+                        "Information Security Policy",
+                        "Data Retention Policy",
+                        "Acceptable Use Policy",
+                        "Vendor Management Policy",
+                      ].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#595959] pointer-events-none" />
                   </div>
-                )}
+                </div>
+
+                {/* Industry / Domain */}
+                <div className="w-[638px] flex flex-col gap-[18px]">
+                  <label className="text-[14px] font-medium text-[#595959]">Industry / Domain</label>
+                  <input 
+                    className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] placeholder:text-[#595959]" 
+                    value={inputs.industry} 
+                    onChange={(e)=>setInputs({...inputs, industry:e.target.value})} 
+                    placeholder="e.g. SaaS, FinTech" 
+                  />
+                </div>
               </div>
-              <div className="md:col-span-2">
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={inputs.applyRuleBase} onChange={(e)=>setInputs({...inputs, applyRuleBase:e.target.checked})} />
-                  Apply RuleBase during generation
-                </label>
-                <div className="text-xs text-muted-foreground mt-1">RuleBase guides clause selection and phrasing to your compliance profile.</div>
+
+              {/* Second Row */}
+              <div className="flex gap-[25px]">
+                {/* Region / Country */}
+                <div className="w-[626px] flex flex-col gap-[18px]">
+                  <label className="text-[14px] font-medium text-[#595959]">Region / Country</label>
+                  <div className="relative">
+                    <SearchSelect
+                      options={AVAILABLE_REGIONS}
+                      value={inputs.region}
+                      onChange={(v)=>setInputs({...inputs, region: v})}
+                      placeholder="Select"
+                    />
+                  </div>
+                </div>
+
+                {/* Organization Type */}
+                <div className="w-[639px] flex flex-col gap-[18px]">
+                  <label className="text-[14px] font-medium text-[#595959]">Organization Type</label>
+                  <div className="relative">
+                    <select 
+                      value={inputs.orgType} 
+                      onChange={(e)=>setInputs({...inputs, orgType:e.target.value})} 
+                      className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] appearance-none cursor-pointer"
+                    >
+                      <option value="">Select</option>
+                      <option value="startup">Startup</option>
+                      <option value="smb">SMB</option>
+                      <option value="enterprise">Enterprise</option>
+                      <option value="public">Public Sector</option>
+                      <option value="nonprofit">Non-profit</option>
+                    </select>
+                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#595959] pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Frameworks */}
+              <div className="flex flex-col gap-[18px]">
+                <label className="text-[14px] font-medium text-[#595959]">Frameworks</label>
+                <div className="bg-white border border-[#E6E6E6] rounded-[5px] p-[15px] flex flex-wrap gap-[10px] min-h-[82px]">
+                  {['GDPR', 'ISO 27001', 'SOC 2', 'CCPA', 'DPDP Act', 'HIPAA'].map(fw => (
+                    <button
+                      key={fw}
+                      type="button"
+                      onClick={() => {
+                        if (inputs.frameworks.includes(fw)) {
+                          setInputs({...inputs, frameworks: inputs.frameworks.filter(f => f !== fw)});
+                        } else {
+                          setInputs({...inputs, frameworks: [...inputs.frameworks, fw]});
+                        }
+                      }}
+                      className={`px-[7px] py-[5px] rounded-[20px] text-[14px] font-medium transition-colors ${
+                        inputs.frameworks.includes(fw) 
+                          ? 'bg-[#3B43D6] text-white' 
+                          : 'bg-[#EFF1F6] text-[#595959]'
+                      }`}
+                    >
+                      {fw}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Apply RuleBase */}
+              <div className="h-[48px] flex items-center gap-[10px]">
+                <input 
+                  type="checkbox" 
+                  id="applyRuleBase"
+                  checked={inputs.applyRuleBase} 
+                  onChange={(e)=>setInputs({...inputs, applyRuleBase:e.target.checked})}
+                  className="w-6 h-6 border-2 border-black rounded cursor-pointer accent-[#3B43D6]"
+                />
+                <div>
+                  <label htmlFor="applyRuleBase" className="text-[16px] font-semibold text-[#2D2F34] cursor-pointer">
+                    Apply RuleBase during generation
+                  </label>
+                  <p className="text-[12px] text-[#6A707C] mt-[5px]">
+                    RuleBase guides clause selection and phrasing to your compliance profile.
+                  </p>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-end gap-[15px] mt-[25px]">
+                <button
+                  onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
+                  disabled={currentStep === 1}
+                  className="h-9 px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-[12px] font-semibold text-[#717171] flex items-center gap-[5px] disabled:opacity-50"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                  Previous
+                </button>
+                <button
+                  onClick={()=> setCurrentStep(currentStep+1)}
+                  disabled={!canProceed1 || isGenerating}
+                  className="h-9 px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}
@@ -428,6 +533,25 @@ export default function PolicyGeneratorPage() {
                 <textarea rows={5} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground" value={inputs.customRules} onChange={(e)=>setInputs({...inputs, customRules:e.target.value})} placeholder="Enter any specific clauses, exclusions, or constraints you want enforced" />
               </div>
               <div className="text-xs text-muted-foreground">Tip: You can later move your notes to a proper Knowledge Base page and select assets for reuse.</div>
+
+              {/* Navigation */}
+              <div className="flex justify-end gap-[15px] mt-[25px]">
+                <button
+                  onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
+                  className="h-9 px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-[12px] font-semibold text-[#717171] flex items-center gap-[5px]"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                  Previous
+                </button>
+                <button
+                  onClick={()=> setCurrentStep(currentStep+1)}
+                  disabled={isGenerating}
+                  className="h-9 px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -459,7 +583,25 @@ export default function PolicyGeneratorPage() {
                   <div className="text-muted-foreground">Custom Rules: {inputs.customRules.trim().length > 0 ? `${inputs.customRules.trim().length} chars` : 'None'}</div>
                 </div>
               </div>
-              {/* Note: Generate action moved to bottom navigation. */}
+
+              {/* Navigation */}
+              <div className="flex justify-end gap-[15px] mt-[25px]">
+                <button
+                  onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
+                  className="h-9 px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-[12px] font-semibold text-[#717171] flex items-center gap-[5px]"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                  Previous
+                </button>
+                <button
+                  onClick={generatePolicy}
+                  disabled={!canGenerate}
+                  className="h-9 px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
+                >
+                  {isGenerating ? 'Generating…' : 'Generate Policy'}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -479,107 +621,106 @@ export default function PolicyGeneratorPage() {
                   <Download className="h-4 w-4"/> Export .md
                 </a>
               </div>
+
+              {/* Navigation */}
+              <div className="flex justify-end gap-[15px] mt-[25px]">
+                <button
+                  onClick={()=> { setCurrentStep(1); setResult(""); }}
+                  className="h-9 px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-[12px] font-semibold flex items-center gap-[5px]"
+                >
+                  New Policy
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Audit Logs Sidebar */}
+        <div className="w-[322px] h-[711px] bg-white rounded-[10px] p-6 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-1">
+            <RotateCcw className="w-5 h-5 text-[#717171]" strokeWidth={1.67} />
+            <div className="text-[16px] font-semibold text-[#2D2F34]">Audit Logs</div>
+          </div>
+          <div className="text-[12px] text-[#6A707C] mb-6">
+            Historical generations for "{inputs.policyType}".
+          </div>
+
+          {logsLoading && (
+            <div className="text-[12px] text-[#6A707C] text-center mt-32">Loading logs…</div>
+          )}
+
+          {!logsLoading && logsError && (
+            <div className="text-sm text-red-600 dark:text-red-400">{logsError}</div>
+          )}
+
+          {!logsLoading && !logsError && policyLogs.length === 0 && (
+            <div className="flex flex-col items-center justify-center mt-32">
+              <svg width="169" height="77" viewBox="0 0 169 77" fill="none" className="mb-4">
+                <rect x="7.25" y="17.11" width="66.29" height="42.6" fill="rgba(246, 247, 251, 0.7)" />
+                <rect y="32.89" width="33.21" height="9.7" fill="#605BFF" />
+                <rect y="0" width="45.53" height="8.32" fill="#C0CADE" />
+                <rect y="13.03" width="66.29" height="5.54" fill="#DEE3ED" />
+                <rect y="21.81" width="56.24" height="5.54" fill="#DEE3ED" />
+                <rect x="90.08" y="12.66" width="69.3" height="51.51" fill="rgba(246, 247, 251, 0.7)" />
+                <rect x="104.32" y="22.58" width="36.45" height="41.59" fill="#D4DEEE" />
+                <rect x="104.32" y="22.58" width="33.69" height="36.08" fill="#695CFF" />
+                <rect x="140.93" y="41.3" width="32.69" height="29.66" fill="#AE8FF7" />
+              </svg>
+              <div className="text-[12px] text-[#6A707C] text-center">No logs yet for this policy.</div>
+            </div>
+          )}
+
+          {!logsLoading && !logsError && policyLogs.length > 0 && (
+            <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
+              {policyLogs.map((log: any) => (
+                <div key={log._id} className="border border-border rounded-md p-3 hover:bg-accent/50 transition-colors bg-card">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium truncate text-foreground">
+                      {log.fileName || inputs.policyType}
+                    </div>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                        log.status === 'compliant'
+                          ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
+                          : log.status === 'non-compliant'
+                          ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
+                          : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                      }`}
+                    >
+                      {log.status}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+                    <span>
+                      {new Date(log.analysisDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                    {typeof log.gapsCount === 'number' && <span>• {log.gapsCount} issues</span>}
+                    {typeof log.score === 'number' && <span>• {log.score}%</span>}
+                  </div>
+                  {Array.isArray(log.standards) && log.standards.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {log.standards.slice(0, 3).map((s: string) => (
+                        <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                          {s}
+                        </span>
+                      ))}
+                      {log.standards.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          +{log.standards.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
-
-      {/* Audit Logs */}
-      <div className="bg-card rounded-lg border border-border shadow-sm p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Shield className="h-4 w-4 text-primary" />
-          <div className="font-semibold">Audit Logs</div>
-        </div>
-        <div className="text-xs text-muted-foreground mb-3">
-          Historical generations for "{inputs.policyType}".
-        </div>
-
-        {logsLoading && (
-          <div className="text-sm text-muted-foreground">Loading logs…</div>
-        )}
-
-        {!logsLoading && logsError && (
-          <div className="text-sm text-red-600 dark:text-red-400">{logsError}</div>
-        )}
-
-        {!logsLoading && !logsError && policyLogs.length === 0 && (
-          <div className="text-sm text-muted-foreground">No logs yet for this policy.</div>
-        )}
-
-        {!logsLoading && !logsError && policyLogs.length > 0 && (
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-            {policyLogs.map((log: any) => (
-              <div key={log._id} className="border border-border rounded-md p-3 hover:bg-accent/50 transition-colors bg-card">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium truncate text-foreground">
-                    {log.fileName || inputs.policyType}
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full border ${
-                      log.status === 'compliant'
-                        ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
-                        : log.status === 'non-compliant'
-                        ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
-                        : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
-                    }`}
-                  >
-                    {log.status}
-                  </span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
-                  <span>
-                    {new Date(log.analysisDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </span>
-                  {typeof log.gapsCount === 'number' && <span>• {log.gapsCount} issues</span>}
-                  {typeof log.score === 'number' && <span>• {log.score}%</span>}
-                </div>
-                {Array.isArray(log.standards) && log.standards.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {log.standards.slice(0, 3).map((s: string) => (
-                      <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                        {s}
-                      </span>
-                    ))}
-                    {log.standards.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        +{log.standards.length - 3}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Nav Buttons */}
-      {currentStep < 4 && (
-        <div className="flex justify-between">
-          <button onClick={()=> setCurrentStep(Math.max(1, currentStep-1))} className="px-3 py-2 rounded-md border border-input text-sm bg-background text-foreground hover:bg-accent">Previous</button>
-          {currentStep === 3 ? (
-            <button
-              onClick={generatePolicy}
-              disabled={!canGenerate}
-              className="px-4 py-2 rounded-md text-sm text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50"
-            >
-              {isGenerating ? 'Generating…' : 'Generate Policy'}
-            </button>
-          ) : (
-            <button
-              onClick={()=> setCurrentStep(currentStep+1)}
-              disabled={(currentStep===1 && !canProceed1) || isGenerating}
-              className="px-3 py-2 rounded-md border border-input text-sm bg-background text-foreground hover:bg-accent disabled:opacity-50"
-            >
-              Next
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
