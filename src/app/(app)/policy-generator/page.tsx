@@ -325,67 +325,68 @@ export default function PolicyGeneratorPage() {
   }, [inputs.policyType]);
 
   return (
-    <div className="w-full min-h-screen bg-[#FAFAFB] flex flex-col items-end pr-4">
-      {/* Header Section */}
-      <div className="w-full max-w-[1646px] flex justify-between items-center mt-[92px] mb-[32px]">
-        {/* Left: Title and Description */}
-        <div className="flex items-center gap-[15px]">
-          <div className="w-12 h-12 rounded-full bg-[#3B43D6] flex items-center justify-center flex-shrink-0">
-            <BookOpen className="w-6 h-6 text-white" strokeWidth={2.57} />
+    <div className="w-full min-h-screen bg-[#FAFAFB] py-6 px-4">
+      <div className="w-full max-w-[1903px] mx-auto">
+        {/* Header Section */}
+        <div className="w-full max-w-[1646px] flex justify-between items-center mb-[32px]">
+          {/* Left: Title and Description */}
+          <div className="flex items-center gap-[15px]">
+            <div className="w-12 h-12 rounded-full bg-[#3B43D6] flex items-center justify-center flex-shrink-0">
+              <BookOpen className="w-6 h-6 text-white" strokeWidth={2.57} />
+            </div>
+            <div>
+              <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19px]">
+                Policy Generator
+              </h1>
+              <p className="text-[12px] text-[#6A707C] leading-[15px] mt-[5px]">
+                Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19px]">
-              Policy Generator
-            </h1>
-            <p className="text-[12px] text-[#6A707C] leading-[15px] mt-[5px]">
-              Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.
-            </p>
+
+          {/* Right: Step Indicators */}
+          <div className="flex items-center gap-4">
+            {/* Step 01 */}
+            <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+              <span className={`text-[16px] font-semibold ${currentStep >= 1 ? 'text-white' : 'text-[#717171]'}`}>01</span>
+            </div>
+            
+            {/* Connector 1 */}
+            <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
+            
+            {/* Step 02 */}
+            <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+              <span className={`text-[16px] font-semibold ${currentStep >= 2 ? 'text-white' : 'text-[#717171]'}`}>02</span>
+            </div>
+            
+            {/* Connector 2 */}
+            <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
+            
+            {/* Step 03 */}
+            <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+              <span className={`text-[16px] font-semibold ${currentStep >= 3 ? 'text-white' : 'text-[#717171]'}`}>03</span>
+            </div>
+            
+            {/* Connector 3 */}
+            <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
+            
+            {/* Step 04 */}
+            <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 4 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
+              <span className={`text-[16px] font-semibold ${currentStep >= 4 ? 'text-white' : 'text-[#717171]'}`}>04</span>
+            </div>
           </div>
         </div>
 
-        {/* Right: Step Indicators */}
-        <div className="flex items-center gap-4">
-          {/* Step 01 */}
-          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
-            <span className={`text-[16px] font-semibold ${currentStep >= 1 ? 'text-white' : 'text-[#717171]'}`}>01</span>
-          </div>
-          
-          {/* Connector 1 */}
-          <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
-          
-          {/* Step 02 */}
-          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
-            <span className={`text-[16px] font-semibold ${currentStep >= 2 ? 'text-white' : 'text-[#717171]'}`}>02</span>
-          </div>
-          
-          {/* Connector 2 */}
-          <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
-          
-          {/* Step 03 */}
-          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
-            <span className={`text-[16px] font-semibold ${currentStep >= 3 ? 'text-white' : 'text-[#717171]'}`}>03</span>
-          </div>
-          
-          {/* Connector 3 */}
-          <div className="w-[62px] h-0 border-t border-dashed border-[#A0A8C2]" />
-          
-          {/* Step 04 */}
-          <div className={`w-[39px] h-[39px] rounded-full flex items-center justify-center ${currentStep >= 4 ? 'bg-[#3B43D6]' : 'bg-white border border-[#D9D9D9]'}`}>
-            <span className={`text-[16px] font-semibold ${currentStep >= 4 ? 'text-white' : 'text-[#717171]'}`}>04</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area with Right Sidebar */}
-      <div className="w-full max-w-[1646px] flex gap-[25px]">
-        {/* Main Form Area */}
-        <div className="flex-1">
+        {/* Main Content Area with Right Sidebar */}
+        <div className="flex gap-[25px]">
+          {/* Main Form Area */}
+          <div className="flex-1 max-w-[1290px]">
           {currentStep === 1 && (
             <div className="flex flex-col gap-[25px]">
               {/* First Row */}
               <div className="flex gap-[25px]">
                 {/* Policy Type */}
-                <div className="w-[628px] flex flex-col gap-[18px]">
+                <div className="flex-1 flex flex-col gap-[18px]">
                   <label className="text-[14px] font-medium text-[#595959]">Policy Type</label>
                   <div className="relative">
                     <select 
@@ -407,7 +408,7 @@ export default function PolicyGeneratorPage() {
                 </div>
 
                 {/* Industry / Domain */}
-                <div className="w-[638px] flex flex-col gap-[18px]">
+                <div className="flex-1 flex flex-col gap-[18px]">
                   <label className="text-[14px] font-medium text-[#595959]">Industry / Domain</label>
                   <input 
                     className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] placeholder:text-[#595959]" 
@@ -421,7 +422,7 @@ export default function PolicyGeneratorPage() {
               {/* Second Row */}
               <div className="flex gap-[25px]">
                 {/* Region / Country */}
-                <div className="w-[626px] flex flex-col gap-[18px]">
+                <div className="flex-1 flex flex-col gap-[18px]">
                   <label className="text-[14px] font-medium text-[#595959]">Region / Country</label>
                   <div className="relative">
                     <SearchSelect
@@ -434,7 +435,7 @@ export default function PolicyGeneratorPage() {
                 </div>
 
                 {/* Organization Type */}
-                <div className="w-[639px] flex flex-col gap-[18px]">
+                <div className="flex-1 flex flex-col gap-[18px]">
                   <label className="text-[14px] font-medium text-[#595959]">Organization Type</label>
                   <div className="relative">
                     <select 
@@ -556,36 +557,87 @@ export default function PolicyGeneratorPage() {
           )}
 
           {currentStep === 3 && (
-            <div className="space-y-4">
-              {/* Statutory warning */}
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3 rounded text-sm flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 text-yellow-700 dark:text-yellow-400"/>
-                <div>
-                  <div className="font-semibold text-yellow-800 dark:text-yellow-300">Statutory Warning</div>
-                  <div className="text-yellow-700 dark:text-yellow-400">
-                    This Policy Generator produces draft content for reference only. It is not legal advice and should not be used as-is in real-world scenarios. Use responsibly and have your organization's legal/compliance team review before any adoption.
+            <div className="flex flex-col gap-[28px]">
+              {/* Statutory Warning */}
+              <div className="h-[100px] bg-[#FFFCE9] border border-[#FFBF71] rounded-[10px] p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
+                <div className="flex gap-[10px]">
+                  <AlertTriangle className="w-6 h-6 text-[#E55400] flex-shrink-0" strokeWidth={2} />
+                  <div className="flex flex-col gap-[10px]">
+                    <div className="text-[16px] font-semibold text-[#E55400]">Statutory Warning</div>
+                    <div className="text-[12px] text-[#2D2F34] leading-[14.5px]">
+                      This Policy Generator produces draft content for reference only. It is not legal advice and should not be used as-is in real-world scenarios. Use responsibly and have your organization's legal/compliance team review before any adoption.
+                    </div>
                   </div>
                 </div>
               </div>
-              {/* Metadata summary */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium text-foreground">Context</div>
-                  <div className="text-muted-foreground">Type: {inputs.policyType}</div>
-                  <div className="text-muted-foreground">Industry: {inputs.industry || '-'} | Region: {inputs.region || '-'} | Org: {inputs.orgType || '-'}</div>
-                  <div className="text-muted-foreground">Generated On: {new Date().toLocaleString()}</div>
+
+              {/* Context and Configuration */}
+              <div className="h-[400px] bg-white rounded-[10px] p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] flex flex-col gap-5">
+                {/* Context Section */}
+                <div className="text-[16px] font-semibold text-[#2D2F34]">Context</div>
+                <div className="flex gap-[36px]">
+                  <div className="w-[150px] h-[44px]">
+                    <div className="text-[16px] font-semibold text-[#2D2F34]">Type</div>
+                    <div className="text-[12px] text-[#6A707C] mt-[10px]">{inputs.policyType || 'Cookie Policy'}</div>
+                  </div>
+                  <div className="w-[150px] h-[44px]">
+                    <div className="text-[16px] font-semibold text-[#2D2F34]">Industry</div>
+                    <div className="text-[12px] text-[#6A707C] mt-[10px]">{inputs.industry || 'SaaS'}</div>
+                  </div>
+                  <div className="w-[150px] h-[44px]">
+                    <div className="text-[16px] font-semibold text-[#2D2F34]">Region</div>
+                    <div className="text-[12px] text-[#6A707C] mt-[10px]">{inputs.region || 'United State'}</div>
+                  </div>
+                  <div className="w-[150px] h-[44px]">
+                    <div className="text-[16px] font-semibold text-[#2D2F34]">ORG</div>
+                    <div className="text-[12px] text-[#6A707C] mt-[10px]">{inputs.orgType || 'smb'}</div>
+                  </div>
+                  <div className="w-[150px] h-[44px]">
+                    <div className="text-[16px] font-semibold text-[#2D2F34]">Generated On</div>
+                    <div className="text-[12px] text-[#6A707C] mt-[10px]">{new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</div>
+                  </div>
+                  <div className="w-[150px] h-[44px]">
+                    <div className="text-[16px] font-semibold text-[#2D2F34]">RuleBase</div>
+                    <div className="text-[12px] text-[#6A707C] mt-[10px]">{inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-medium text-foreground">Configuration</div>
-                  <div className="text-muted-foreground">Frameworks ({inputs.frameworks.length}): {inputs.frameworks.join(', ') || '-'}</div>
-                  <div className="text-muted-foreground">RuleBase: {inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
-                  <div className="text-muted-foreground">Knowledge Notes: {inputs.kbNotes.trim().length > 0 ? `${inputs.kbNotes.trim().length} chars` : 'None'}</div>
-                  <div className="text-muted-foreground">Custom Rules: {inputs.customRules.trim().length > 0 ? `${inputs.customRules.trim().length} chars` : 'None'}</div>
+
+                {/* Configuration Section */}
+                <div className="text-[16px] font-semibold text-[#2D2F34]">Configuration</div>
+                <div className="flex gap-[10px] py-[15px]">
+                  {inputs.frameworks.length > 0 ? (
+                    inputs.frameworks.map(fw => (
+                      <div key={fw} className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">
+                        {fw}
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">GDPR</div>
+                      <div className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">ISO 27001</div>
+                      <div className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">SOC 2</div>
+                      <div className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">CCPA</div>
+                      <div className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">DPDP Act</div>
+                      <div className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-[14px] font-medium text-[#595959]">HIPAA</div>
+                    </>
+                  )}
+                </div>
+
+                {/* Knowledge Notes */}
+                <div className="text-[16px] font-semibold text-[#2D2F34]">Knowledge Notes</div>
+                <div className="text-[12px] text-[#6A707C]">
+                  {inputs.kbNotes || 'Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.'}
+                </div>
+
+                {/* Custom Rules */}
+                <div className="text-[16px] font-semibold text-[#2D2F34]">Custom Rules</div>
+                <div className="text-[12px] text-[#6A707C]">
+                  {inputs.customRules || 'Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.'}
                 </div>
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-end gap-[15px] mt-[25px]">
+              <div className="flex justify-end gap-[15px]">
                 <button
                   onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
                   className="h-9 px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-[12px] font-semibold text-[#717171] flex items-center gap-[5px]"
@@ -598,8 +650,7 @@ export default function PolicyGeneratorPage() {
                   disabled={!canGenerate}
                   className="h-9 px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
                 >
-                  {isGenerating ? 'Generating…' : 'Generate Policy'}
-                  <ChevronRight className="w-4 h-4" />
+                  Generate Policy
                 </button>
               </div>
             </div>
@@ -719,6 +770,7 @@ export default function PolicyGeneratorPage() {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
