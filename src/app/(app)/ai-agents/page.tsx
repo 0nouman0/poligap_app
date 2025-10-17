@@ -13,7 +13,8 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Construction
+  Construction,
+  Shield
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -160,232 +161,213 @@ export default function AIAgentsPage() {
     }
   };
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
-          <div className="flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">AI Agents</h1>
-            <Sparkles className="h-4 w-4 text-yellow-500" />
+    <div className="w-full min-h-screen bg-[#FAFAFB] py-6 px-4">
+      <div className="max-w-[1646px] mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-[13px] mb-8">
+          <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
+            <Shield className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
           </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 text-center">
-            <p className="text-muted-foreground text-lg">
+          <div className="flex flex-col">
+            <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19.36px]">AI Agents</h1>
+            <p className="text-[12px] text-[#6A707C] leading-[14.52px]">
               Curated, task-specific agents to accelerate your workflows. Choose an agent below to get started.
             </p>
           </div>
+        </div>
 
-          {/* Agents Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center max-w-5xl mx-auto">
-            {/* Email Notifier Agent */}
-            <Card className="cursor-pointer transition-all hover:shadow-lg group w-full max-w-sm h-full">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                    <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <Badge variant="secondary">Active</Badge>
-                </div>
-                <CardTitle className="text-lg font-semibold">Email Notifier</CardTitle>
-                <CardDescription className="text-sm text-muted-foreground min-h-[3rem]">
-                  Automate email alerts and notifications for key events and policy changes.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button 
-                  onClick={() => openAgent("Email Notifier")} 
-                  className="w-full"
-                  size="sm"
-                >
-                  Use Agent
-                </Button>
-              </CardContent>
-            </Card>
+        {/* Agents Grid */}
+        <div className="flex flex-wrap gap-[30px] px-[15px] py-5">
+          {/* Email Notifier - Active */}
+          <div className="w-[380px] bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 flex flex-col gap-[15px]">
+            <div className="flex justify-between items-start">
+              <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
+                <Mail className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
+              </div>
+              <div className="px-[10px] py-[5px] bg-[#EDFFDE] rounded-[35px]">
+                <span className="text-[12px] font-medium text-[#47AF47] leading-[14.52px] text-center">Active</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-[5px]">
+              <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">Email Notifier</h3>
+              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px]">
+                Automate email alerts and notifications for key events and policy changes.
+              </p>
+            </div>
+            <button
+              onClick={() => openAgent("Email Notifier")}
+              className="w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
+            >
+              Use Agent
+            </button>
+          </div>
 
-            {/* Law Scanner Agent */}
-            <Card className="cursor-pointer transition-all hover:shadow-lg group w-full max-w-sm h-full">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                    <Scale className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <Badge variant="secondary">Active</Badge>
-                </div>
-                <CardTitle className="text-lg font-semibold">Law Scanner</CardTitle>
-                <CardDescription className="text-sm text-muted-foreground min-h-[3rem]">
-                  Scan documents for legal clauses, risks, and compliance issues.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button 
-                  onClick={() => openAgent("Law Scanner")} 
-                  className="w-full"
-                  size="sm"
-                >
-                  Use Agent
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Law Scanner - Active */}
+          <div className="w-[380px] bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 flex flex-col gap-[15px]">
+            <div className="flex justify-between items-start">
+              <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
+                <Scale className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
+              </div>
+              <div className="px-[10px] py-[5px] bg-[#EDFFDE] rounded-[35px]">
+                <span className="text-[12px] font-medium text-[#47AF47] leading-[14.52px] text-center">Active</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-[5px]">
+              <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">Law Scanner</h3>
+              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px]">
+                Scan documents for legal clauses, risks, and compliance issues.
+              </p>
+            </div>
+            <button
+              onClick={() => openAgent("Law Scanner")}
+              className="w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
+            >
+              Use Agent
+            </button>
+          </div>
 
-
-            {/* Coming Soon Card */}
-            <Card className="border-dashed opacity-60 w-full max-w-sm h-full">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-                    <Construction className="h-6 w-6 text-gray-500" />
-                  </div>
-                  <Badge variant="outline">Coming Soon</Badge>
-                </div>
-                <CardTitle className="text-lg font-semibold">More Agents</CardTitle>
-                <CardDescription className="text-sm text-muted-foreground min-h-[3rem]">
-                  New specialized agents are in development. Stay tuned for updates!
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Button 
-                  disabled 
-                  className="w-full"
-                  size="sm"
-                  variant="outline"
-                >
-                  In Development
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Coming Soon */}
+          <div className="w-[380px] bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 flex flex-col gap-[15px]">
+            <div className="flex justify-between items-start">
+              <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
+                <Construction className="w-6 h-6 text-[#717171]" strokeWidth={2} />
+              </div>
+              <div className="px-[10px] py-[5px] bg-[#F5F5F5] rounded-[35px]">
+                <span className="text-[12px] font-medium text-[#717171] leading-[14.52px] text-center">Coming Soon</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-[5px]">
+              <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">More Agents</h3>
+              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px]">
+                New specialized agents are in development. Stay tuned for updates!
+              </p>
+            </div>
+            <button
+              disabled
+              className="w-full py-[7px] bg-[#DADADA] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px] cursor-not-allowed"
+            >
+              In Development
+            </button>
           </div>
         </div>
       </div>
 
       {/* Modal: Agent Workspace */}
       {open && (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-none w-[98vw] h-[95vh] p-0">
-            <DialogHeader className="px-6 py-4 border-b">
-              <div className="flex items-center gap-3">
-                {activeAgent === "Email Notifier" && <Mail className="h-5 w-5 text-blue-600" />}
-                {activeAgent === "Law Scanner" && <Scale className="h-5 w-5 text-purple-600" />}
-                <DialogTitle className="text-xl font-semibold">{activeAgent} Agent</DialogTitle>
-              </div>
-            </DialogHeader>
-            {/* Content - Full Width */}
-            <div className="h-[calc(95vh-80px)] overflow-y-auto">
-              <section className="p-12">
-                {/* Actions Content - Always Visible */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-primary" />
-                      <h3 className="text-lg font-semibold">Actions</h3>
-                    </div>
-                    
-                    {activeAgent === "Email Notifier" ? (
-                      <div className="space-y-8">
-                        <div className="grid grid-cols-1 lg:grid-cols-1 gap-12">
-                          <Card className="lg:col-span-1">
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2 text-base">
-                                <Mail className="h-4 w-4" />
-                                Recipients
-                              </CardTitle>
-                              <CardDescription>
-                                Enter email addresses separated by commas, spaces, or new lines
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <Textarea
-                                value={emailsText}
-                                onChange={(e) => setEmailsText(e.target.value)}
-                                rows={10}
-                                placeholder="alice@example.com, bob@example.com&#10;or paste from a spreadsheet"
-                                className="resize-y min-h-[250px]"
-                              />
-                              <div className="flex items-center justify-between">
-                                <Badge variant="secondary">
-                                  {parseEmails(emailsText).length} emails parsed
-                                </Badge>
-                                <label className="cursor-pointer">
-                                  <input
-                                    type="file"
-                                    accept=".csv,.txt,.tsv"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const f = e.target.files?.[0];
-                                      if (f) onUploadEmails(f);
-                                      e.currentTarget.value = "";
-                                    }}
-                                  />
-                                  <Button variant="outline" size="sm" asChild>
-                                    <span className="flex items-center gap-2">
-                                      <Upload className="h-4 w-4" />
-                                      Upload CSV/TXT
-                                    </span>
-                                  </Button>
-                                </label>
-                              </div>
-                            </CardContent>
-                          </Card>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-[rgba(216,216,216,0.5)] backdrop-blur-[20px]"
+            onClick={closeModal}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-[675px] bg-white rounded-[20px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center px-[21px] py-[26px]">
+              {activeAgent === "Email Notifier" && (
+                <Mail className="w-6 h-6 text-[#000000]" strokeWidth={2} />
+              )}
+              {activeAgent === "Law Scanner" && (
+                <Scale className="w-6 h-6 text-[#000000]" strokeWidth={2} />
+              )}
+              <h2 className="ml-[31px] text-[16px] font-semibold text-[#2D2F34] leading-[19.36px]">
+                {activeAgent} Agent
+              </h2>
+              <button
+                onClick={closeModal}
+                className="ml-auto w-6 h-6 flex items-center justify-center"
+              >
+                <XCircle className="w-6 h-6 text-[#000000]" strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Content - Scrollable */}
+            <div className="max-h-[600px] overflow-y-auto px-[21px] pb-[21px]">
+              <section>
+                {activeAgent === "Email Notifier" ? (
+                      <div className="flex flex-col gap-5">
+                        {/* Actions Section */}
+                        <div className="border border-dashed border-[#A0A8C2] rounded-[10px] p-5 flex flex-col gap-[15px]">
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Actions</h3>
                           
-                          <Card className="xl:col-span-2">
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2 text-base">
-                                <Sparkles className="h-4 w-4" />
-                                Notification Type
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <Select value={selectedAction} onValueChange={setSelectedAction}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {emailActions.map((a) => (
-                                    <SelectItem key={a.value} value={a.value}>
-                                      {a.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              
-                              <Card className="bg-muted/50">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-sm flex items-center gap-2">
-                                    👁️ Preview
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                  <div className="font-medium text-sm">{getPreview().subject}</div>
-                                  <div className="text-sm text-muted-foreground">{getPreview().body}</div>
-                                </CardContent>
-                              </Card>
-                            </CardContent>
-                          </Card>
+                          {/* Email Input */}
+                          <div className="border border-[#E6E6E6] rounded-[5px] p-[15px]">
+                            <Textarea
+                              value={emailsText}
+                              onChange={(e) => setEmailsText(e.target.value)}
+                              placeholder="Enter email addresses separated by commas, spaces, or new lines"
+                              className="w-full min-h-[100px] border-0 p-0 text-[12px] font-medium text-[#595959] leading-[14.52px] resize-none focus:ring-0 focus-visible:ring-0"
+                            />
+                          </div>
+
+                          {/* Upload Section */}
+                          <div className="border border-[#E6E6E6] rounded-[5px] p-[15px_20px] bg-[#FAFAFA] flex justify-center items-center gap-[10px]">
+                            <div className="flex items-center gap-[10px]">
+                              <Upload className="w-6 h-6 text-[#595959]" strokeWidth={2} />
+                              <span className="text-[12px] font-medium text-[#595959] leading-[14.52px]">
+                                Upload SCV/TXT
+                              </span>
+                            </div>
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept=".csv,.txt,.tsv"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) onUploadEmails(f);
+                                  e.currentTarget.value = "";
+                                }}
+                              />
+                              <div className="h-9 px-[15px] bg-[#3B43D6] rounded-[5px] flex items-center justify-center">
+                                <span className="text-[12px] font-semibold text-white leading-[14.52px]">
+                                  Choose File
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+
+                          {/* Parsed Count */}
+                          <div className="text-[12px] font-medium text-[#717171] leading-[14.52px]">
+                            {parseEmails(emailsText).length} emails parsed
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          <Button
-                            onClick={sendNotifications}
-                            disabled={sending || parseEmails(emailsText).length === 0}
-                            className="flex items-center gap-2"
-                          >
-                            {sending ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <Send className="h-4 w-4" />
-                                Send Notifications
-                              </>
-                            )}
-                          </Button>
+                        {/* Notification Type Section */}
+                        <div className="border border-dashed border-[#A0A8C2] rounded-[10px] p-5 flex flex-col gap-[15px]">
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Notification Type</h3>
                           
+                          {/* Dropdown */}
+                          <div className="border border-[#E6E6E6] rounded-[5px] p-[15px] flex items-center gap-[10px]">
+                            <Select value={selectedAction} onValueChange={setSelectedAction}>
+                              <SelectTrigger className="w-full border-0 p-0 h-auto focus:ring-0">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {emailActions.map((a) => (
+                                  <SelectItem key={a.value} value={a.value}>
+                                    {a.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Preview Label */}
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Preview</h3>
+
+                          {/* Preview Content */}
+                          <div className="border border-[#E6E6E6] rounded-[5px] p-[15px] flex items-center gap-[10px]">
+                            <div className="text-[12px] font-medium text-[#595959] leading-[18px]">
+                              <div className="font-semibold mb-2">{getPreview().subject}</div>
+                              <div className="whitespace-pre-line">{getPreview().body}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Send Button */}
+                        <div className="flex justify-end items-center gap-[15px]">
                           {sendResult && (
                             <div className="flex items-center gap-4 text-sm">
                               <div className="flex items-center gap-1">
@@ -400,6 +382,13 @@ export default function AIAgentsPage() {
                               )}
                             </div>
                           )}
+                          <button
+                            onClick={sendNotifications}
+                            disabled={sending || parseEmails(emailsText).length === 0}
+                            className="h-9 px-[15px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-right leading-[14.52px] disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {sending ? "Sending..." : "Send Notifications"}
+                          </button>
                         </div>
                       </div>
                     ) : activeAgent === "Law Scanner" ? (
@@ -477,11 +466,10 @@ export default function AIAgentsPage() {
                         </div>
                       </>
                     )}
-                  </div>
               </section>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
     </div>
   );
