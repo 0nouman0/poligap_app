@@ -67,6 +67,8 @@ export default function UserProfilePage() {
   // Image states
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
+  const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
+  const [isBannerUploading, setIsBannerUploading] = useState(false);
   
   // Refs for file inputs
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -147,7 +149,7 @@ export default function UserProfilePage() {
     setBannerPreview(null);
     setProfilePicPreview(null);
     setIsBannerUploading(false);
-    setIsProfilePicUploading(false);
+    setIsUploadingProfilePic(false);
   }, [bannerImage, profileData?.profileImage]);
 
   // Validation functions
@@ -934,14 +936,14 @@ export default function UserProfilePage() {
               )}
                <button
                  className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-                   isSaving && isProfilePicUploading 
+                   isSaving && isUploadingProfilePic 
                      ? 'opacity-0 cursor-not-allowed' 
                      : 'opacity-0 group-hover:opacity-100'
                  }`}
                  onClick={handleProfilePicEdit}
-                 title={isSaving && isProfilePicUploading ? "Uploading profile picture..." : "Edit profile picture"}
+                 title={isSaving && isUploadingProfilePic ? "Uploading profile picture..." : "Edit profile picture"}
                  type="button"
-                 disabled={isSaving && isProfilePicUploading}
+                 disabled={isSaving && isUploadingProfilePic}
                >
                  <div className="w-full h-full flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20">
                    <Camera className="h-4 w-4 text-white drop-shadow" />
