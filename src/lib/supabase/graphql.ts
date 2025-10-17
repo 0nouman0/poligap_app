@@ -49,6 +49,21 @@ export const queries = {
     }
   `,
 
+  deleteConversation: `
+    mutation DeleteConversation($id: UUID!) {
+      updateagent_conversationsCollection(
+        filter: { id: { eq: $id } }
+        set: { status: "deleted", updated_at: "now()" }
+      ) {
+        records {
+          id
+          status
+          updated_at
+        }
+      }
+    }
+  `,
+
   updateProfile: `
     mutation UpdateProfile(
       $id: UUID!
@@ -491,6 +506,129 @@ export const queries = {
             created_at
           }
         }
+      }
+    }
+  `,
+
+  // Knowledge
+  getKnowledge: `
+    query GetKnowledge($userId: UUID!) {
+      knowledge_itemsCollection(
+        filter: { user_id: { eq: $userId }, status: { neq: "deleted" } }
+        orderBy: { uploaded_at: DescNullsLast }
+      ) {
+        edges {
+          node {
+            id
+            name
+            url
+            source_type
+            status
+            uploaded_at
+          }
+        }
+      }
+      user_knowledge_settingsCollection(filter: { user_id: { eq: $userId } }) {
+        edges { node { user_id is_enabled updated_at } }
+      }
+    }
+  `,
+
+  createKnowledgeItems: `
+    mutation CreateKnowledgeItems($objects: [knowledge_itemsInsertInput!]!) {
+      insertIntoknowledge_itemsCollection(objects: $objects) {
+        records { id name source_type status uploaded_at }
+      }
+    }
+  `,
+
+  softDeleteKnowledgeItem: `
+    mutation SoftDeleteKnowledgeItem($id: UUID!) {
+      updateknowledge_itemsCollection(
+        filter: { id: { eq: $id } }
+        set: { status: "deleted", uploaded_at: "now()" }
+      ) {
+        records { id status uploaded_at }
+      }
+    }
+  `,
+
+  toggleKnowledgeSettings: `
+    mutation ToggleKnowledgeSettings($user_id: UUID!, $is_enabled: Boolean!) {
+      insertIntouser_knowledge_settingsCollection(
+        objects: [{ user_id: $user_id, is_enabled: $is_enabled, updated_at: "now()" }]
+        onConflict: { updateColumns: [is_enabled, updated_at] }
+      ) {
+        records { user_id is_enabled updated_at }
+      }
+    }
+  `,
+
+  // Sitemaps
+  getSitemaps: `
+    query GetSitemaps($userId: UUID!) {
+      sitemapsCollection(
+        filter: { user_id: { eq: $userId }, status: { neq: "deleted" } }
+        orderBy: { uploaded_at: DescNullsLast }
+      ) {
+        edges {
+          node {
+            id
+            sitemap_url
+            sitemap_identifier
+            include_paths
+            exclude_paths
+            status
+            uploaded_at
+          }
+        }
+      }
+    }
+  `,
+
+  createSitemap: `
+    mutation CreateSitemap($object: sitemapsInsertInput!) {
+      insertIntositemapsCollection(objects: [$object]) {
+        records { id sitemap_url sitemap_identifier status uploaded_at }
+      }
+    }
+  `,
+
+  softDeleteSitemap: `
+    mutation SoftDeleteSitemap($id: UUID!) {
+      updatesitemapsCollection(
+        filter: { id: { eq: $id } }
+        set: { status: "deleted", uploaded_at: "now()" }
+      ) {
+        records { id status uploaded_at }
+      }
+    }
+  `,
+
+  // Org/Companies
+  getUserCompanies: `
+    query GetUserCompanies($userId: UUID!) {
+      user_companiesCollection(filter: { user_id: { eq: $userId } }) {
+        edges {
+          node {
+            role
+            company_id
+            company: companies {
+              id
+              name
+              enable_knowledge_base
+              created_at
+            }
+          }
+        }
+      }
+    }
+  `,
+
+  getUserDetails: `
+    query GetUserDetails($userId: UUID!) {
+      profilesCollection(filter: { id: { eq: $userId } }) {
+        edges { node { id email name } }
       }
     }
   `,

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DJANGO_API_ROUTES } from "@/constants/endpoints";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+import { createGraphQLClient, queries } from "@/lib/supabase/graphql";
 // import { KnowledgeFile, KnowledgeLink } from "@/utils/internal-knowledge.util";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 
@@ -106,224 +107,182 @@ export interface SitemapCrawlResponse {
   data?: any;
 }
 
-// API function for upload
+// API function for upload (GraphQL)
 const uploadKnowledge = async (
   data: KnowledgeUploadRequest
 ): Promise<KnowledgeUploadResponse> => {
-  // Use FormData for multipart/form-data
-  const formData = new FormData();
-  formData.append("external_user_id_internal", data.external_user_id_internal);
-  data.account_ids.forEach((id) => formData.append("account_ids", id));
-  formData.append("user_email", data.user_email);
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
 
-  // Append all files with the field name "file" to match other implementations
-  data.files.forEach((file) => formData.append("files", file));
-  data.websites.forEach((site) => formData.append("websites", site));
-  data.youtubeLinks.forEach((link) => formData.append("youtubeLinks", link));
-  formData.append("use_exa_ai", String(data.use_exa_ai));
-
-  console.log("formData ===>", formData);
-  const response = await fetch(DJANGO_API_ROUTES.KNOWLEDGE_UPLOAD, {
-    method: "POST",
-    // Do not set Content-Type header; browser will set it for multipart/form-data
-    body: formData,
+  const objects: any[] = [];
+  // Map files as knowledge items (store names; file upload handled elsewhere if needed)
+  data.files.forEach((file) => {
+    objects.push({
+      user_id: data.external_user_id_internal,
+      account_ids: data.account_ids,
+      source_type: "file",
+      name: file.name,
+      url: null,
+      status: "queued",
+    });
+  });
+  data.websites.forEach((site) => {
+    objects.push({
+      user_id: data.external_user_id_internal,
+      account_ids: data.account_ids,
+      source_type: "website",
+      name: site,
+      url: site,
+      status: "queued",
+    });
+  });
+  data.youtubeLinks.forEach((link) => {
+    objects.push({
+      user_id: data.external_user_id_internal,
+      account_ids: data.account_ids,
+      source_type: "youtube",
+      name: link,
+      url: link,
+      status: "queued",
+    });
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || `Upload failed with status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  await gql.request(queries.createKnowledgeItems, { objects });
+  return { status: "ok", message: "Queued knowledge items for processing" };
 };
 
-// API function for fetching knowledge data
+// API function for fetching knowledge data (GraphQL)
 const fetchKnowledge = async (userId: string): Promise<KnowledgeData> => {
-  const response = await fetch(`${DJANGO_API_ROUTES.GET_KNOWLEDGE}${userId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  const res: any = await gql.request(queries.getKnowledge, { userId });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || `Failed to fetch knowledge data: ${response.status}`
-    );
-  }
+  const items = (res?.knowledge_itemsCollection?.edges || []).map((e: any) => e.node);
+  const settingsNode = res?.user_knowledge_settingsCollection?.edges?.[0]?.node;
+  const is_enabled = settingsNode ? settingsNode.is_enabled : undefined;
 
-  return response.json();
+  const files = items.filter((i: any) => i.source_type === "file").map((i: any) => ({
+    id: i.id,
+    name: i.name,
+    url: i.url,
+    status: i.status,
+    uploaded_at: i.uploaded_at,
+  }));
+  const websites = items.filter((i: any) => i.source_type === "website").map((i: any) => ({
+    id: i.id,
+    name: i.name,
+    url: i.url,
+    status: i.status,
+    uploaded_at: i.uploaded_at,
+  }));
+  const youtubeLinks = items.filter((i: any) => i.source_type === "youtube").map((i: any) => ({
+    id: i.id,
+    name: i.name,
+    url: i.url,
+    status: i.status,
+    uploaded_at: i.uploaded_at,
+  }));
+
+  return { files, websites, youtubeLinks, is_enabled };
 };
 
-// API function for deleting knowledge item
+// API function for deleting knowledge item (GraphQL)
 const deleteKnowledgeItem = async (
   data: KnowledgeDeleteRequest
 ): Promise<{ success: boolean; message: string }> => {
-  const response = await fetch(
-    `${DJANGO_API_ROUTES.DELETE_KNOWLEDGE_ITEM}${data.itemId}`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        external_user_id: data.external_user_id,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || `Delete failed with status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  await gql.request(queries.softDeleteKnowledgeItem, { id: data.itemId });
+  return { success: true, message: "Deleted" };
 };
 
-// API function for toggling knowledge
+// API function for toggling knowledge (GraphQL)
 const toggleKnowledge = async (
   data: KnowledgeToggleRequest
 ): Promise<KnowledgeToggleResponse> => {
-  const response = await fetch(DJANGO_API_ROUTES.TOGGLE_KNOWLEDGE, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  const res: any = await gql.request(queries.toggleKnowledgeSettings, {
+    user_id: data.external_user_id,
+    is_enabled: data.is_enabled,
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || `Toggle failed with status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  const node = res?.insertIntouser_knowledge_settingsCollection?.records?.[0];
+  return { message: "Updated", is_enabled: node?.is_enabled ?? data.is_enabled };
 };
 
-// API function for uploading sitemap
+// API function for uploading sitemap (GraphQL)
 const uploadSitemap = async (
   data: SitemapUploadRequest
 ): Promise<SitemapUploadResponse> => {
-  const response = await fetch(DJANGO_API_ROUTES.SITEMAP_UPLOAD, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  await gql.request(queries.createSitemap, {
+    object: {
+      user_id: data.external_user_id,
+      sitemap_url: data.sitemap_url,
+      sitemap_identifier: data.sitemap_identifier,
+      include_paths: data.include_paths ?? [],
+      exclude_paths: data.exclude_paths ?? [],
+      status: "pending",
     },
-    body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message ||
-        `Sitemap upload failed with status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  return { status: "ok", message: "Sitemap queued" };
 };
 
-// Enhanced API function for sitemap crawling with include/exclude paths
+// Enhanced API function for sitemap crawling with include/exclude paths (GraphQL placeholder)
 const crawlSitemap = async (
   data: SitemapCrawlRequest
 ): Promise<SitemapCrawlResponse> => {
-  const requestBody = {
-    external_user_id: data.external_user_id,
-    user_email: data.user_email,
-    url: data.url,
-    crawl_type: data.crawl_type,
-    account_ids: data.account_ids,
-    ...(data.include_paths && data.include_paths.length > 0 && {
-      include_paths: data.include_paths
-    }),
-    ...(data.exclude_paths && data.exclude_paths.length > 0 && {
-      exclude_paths: data.exclude_paths
-    })
-  };
-
-  const response = await fetch(DJANGO_API_ROUTES.SITEMAP_UPLOAD, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  // For now, insert a sitemap record representing a crawl request
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  const url = data.url;
+  await gql.request(queries.createSitemap, {
+    object: {
+      user_id: data.external_user_id,
+      sitemap_url: url,
+      sitemap_identifier: data.crawl_type,
+      include_paths: data.include_paths ?? [],
+      exclude_paths: data.exclude_paths ?? [],
+      status: "in_progress",
     },
-    body: JSON.stringify(requestBody),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message ||
-        `Sitemap crawl failed with status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  return { status: "ok", message: "Crawl started", crawl_id: undefined };
 };
 
-// API function for fetching sitemaps
+// API function for fetching sitemaps (GraphQL)
 const fetchSitemaps = async (
   userId: string,
-  userEmail: string
+  _userEmail: string
 ): Promise<SitemapData> => {
-  const params = new URLSearchParams({
-    account_ids: userId,
-    external_user_id: userId,
-    user_email: userEmail,
-  });
-
-  const response = await fetch(
-    `${DJANGO_API_ROUTES.GET_SITEMAPS}${params.toString()}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || `Failed to fetch sitemaps: ${response.status}`
-    );
-  }
-
-  return response.json();
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  const res: any = await gql.request(queries.getSitemaps, { userId });
+  const sitemaps = (res?.sitemapsCollection?.edges || []).map((e: any) => ({
+    id: e.node.id,
+    sitemap_url: e.node.sitemap_url,
+    status: e.node.status,
+    uploaded_at: e.node.uploaded_at,
+  }));
+  return { sitemaps };
 };
 
-// API function for deleting sitemap
+// API function for deleting sitemap (GraphQL)
 const deleteSitemap = async (
   data: SitemapDeleteRequest
 ): Promise<{ success: boolean; message: string }> => {
-  const response = await fetch(
-    `${DJANGO_API_ROUTES.DELETE_SITEMAP}${data.itemId}`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        external_user_id: data.external_user_id,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message ||
-        `Sitemap delete failed with status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  const supabase = createSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const gql = createGraphQLClient(sessionData.session?.access_token);
+  await gql.request(queries.softDeleteSitemap, { id: data.itemId });
+  return { success: true, message: "Deleted" };
 };
 
 // Upload hook

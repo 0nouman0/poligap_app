@@ -1,6 +1,8 @@
 "use client";
 
 import { persistentCache, CACHE_KEYS, withCache } from './cache';
+import { createClient as createSupabaseClient } from '@/lib/supabase/client';
+import { createGraphQLClient, queries } from '@/lib/supabase/graphql';
 
 interface ApiOptions {
   useCache?: boolean;
@@ -138,42 +140,102 @@ export const apiClient = new ApiClient();
 
 // Specific API functions with caching
 export const userApi = {
-  getProfile: (userId: string) =>
-    apiClient.get(`/api/users/profile?userId=${userId}`, {
-      useCache: true,
-      cacheTTL: 600, // 10 minutes
-    }),
+  async getProfile(userId: string) {
+    const cacheKey = `gql_profile_${userId}`;
+    const cached = persistentCache.get(cacheKey);
+    if (cached) return cached;
 
-  getProfileFallback: (userId: string) =>
-    apiClient.get(`/api/users/profile-fallback?userId=${userId}`, {
-      useCache: true,
-      cacheTTL: 300, // 5 minutes
-    }),
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+    const gql = createGraphQLClient(data.session?.access_token);
+    const res: any = await gql.request(queries.getProfile, { id: userId });
+    const node = res?.profilesCollection?.edges?.[0]?.node || null;
+    if (node) persistentCache.set(cacheKey, node, 600);
+    return node;
+  },
 
-  updateProfile: (userId: string, profileData: any) =>
-    apiClient.put('/api/users/update-profile', {
-      userId,
-      profileData,
-    }),
+  async getProfileFallback(userId: string) {
+    // For now, same as getProfile but with shorter TTL
+    const cacheKey = `gql_profile_fallback_${userId}`;
+    const cached = persistentCache.get(cacheKey);
+    if (cached) return cached;
+
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+    const gql = createGraphQLClient(data.session?.access_token);
+    const res: any = await gql.request(queries.getProfile, { id: userId });
+    const node = res?.profilesCollection?.edges?.[0]?.node || null;
+    if (node) persistentCache.set(cacheKey, node, 300);
+    return node;
+  },
+
+  async updateProfile(userId: string, profileData: any) {
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+    const gql = createGraphQLClient(data.session?.access_token);
+    const res: any = await gql.request(queries.updateProfile, {
+      id: userId,
+      name: profileData?.name,
+      mobile: profileData?.mobile,
+      dob: profileData?.dob,
+      country: profileData?.country,
+      designation: profileData?.designation,
+      about: profileData?.about,
+      profile_image: profileData?.profile_image,
+      banner: profileData?.banner,
+      company_name: profileData?.company_name,
+    });
+    // Invalidate caches
+    persistentCache.set(`gql_profile_${userId}`, res?.updateprofilesCollection?.records?.[0], 0);
+    persistentCache.set(`gql_profile_fallback_${userId}`, res?.updateprofilesCollection?.records?.[0], 0);
+    return res?.updateprofilesCollection?.records?.[0] || null;
+  },
 };
 
 export const auditApi = {
-  getLogs: (userId: string) =>
-    apiClient.get(`/api/audit-logs?userId=${userId}`, {
-      useCache: true,
-      cacheTTL: 180, // 3 minutes
-    }),
+  async getLogs(userId: string) {
+    const cacheKey = `gql_audit_${userId}`;
+    const cached = persistentCache.get(cacheKey);
+    if (cached) return cached;
+
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+    const gql = createGraphQLClient(data.session?.access_token);
+    const res: any = await gql.request(queries.getAuditLogs, { userId });
+    const logs = (res?.audit_logsCollection?.edges || []).map((e: any) => e.node);
+    persistentCache.set(cacheKey, logs, 180);
+    return logs;
+  },
 };
 
 export const chatApi = {
-  getHistory: (userId: string) =>
-    apiClient.get(`/api/chat-history?userId=${userId}`, {
-      useCache: true,
-      cacheTTL: 120, // 2 minutes
-    }),
+  async getHistory(userId: string) {
+    const cacheKey = `gql_conversations_${userId}`;
+    const cached = persistentCache.get(cacheKey);
+    if (cached) return cached;
 
-  createConversation: (data: any) =>
-    apiClient.post('/api/ai-chat/create-chat', data),
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+    const gql = createGraphQLClient(data.session?.access_token);
+    const res: any = await gql.request(queries.getConversations, { userId });
+    const conversations = (res?.agent_conversationsCollection?.edges || []).map((e: any) => e.node);
+    persistentCache.set(cacheKey, conversations, 120);
+    return conversations;
+  },
+
+  async createConversation(input: { chat_name: string; user_id: string; company_id?: string | null }) {
+    const supabase = createSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+    const gql = createGraphQLClient(data.session?.access_token);
+    const res: any = await gql.request(queries.createConversation, {
+      chat_name: input.chat_name,
+      user_id: input.user_id,
+      company_id: input.company_id ?? null,
+    });
+    // Invalidate cache
+    persistentCache.set(`gql_conversations_${input.user_id}`, null as any, 0);
+    return res?.insertIntoagent_conversationsCollection?.records?.[0] || null;
+  },
 };
 
 // Preload critical data

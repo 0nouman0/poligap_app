@@ -12,6 +12,8 @@ import { toastInfo } from "@/components/toast-varients";
 import { Button } from "@/components/ui/button";
 import LoginSidePanel from "@/components/common/sso-login-side-panel";
 import { useCompanyStore } from "@/stores/company-store";
+import { createClient as createSupabaseClient } from "@/lib/supabase/client";
+import { createGraphQLClient, queries } from "@/lib/supabase/graphql";
 
 type Company = {
   color: string | undefined;
@@ -42,51 +44,37 @@ export default function OrgListPage() {
     const fetchData = async () => {
       try {
         // Access localStorage only on client side
-        const accessToken =
-          typeof window !== "undefined"
-            ? localStorage.getItem("accessToken")
-            : null;
         const userId =
           typeof window !== "undefined"
             ? localStorage.getItem("user_id")
             : null;
 
-        if (accessToken) {
-          const res = await fetch(
-            process.env.NEXT_PUBLIC_BACKEND_URL +
-              "/api/v1/enterprise-search/get-user-company-list",
-            {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            }
-          );
-          const data = await res.json();
-          if (Array.isArray(data.data)) {
-            setCompanies(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              data.data.map((company: any) => ({
-                ...company,
-                color: COLORS[Math.floor(Math.random() * COLORS.length)],
-              }))
-            );
-            if (data.data.length > 0) {
-              setSelectedCompanyId(data.data[0].companyId); // default select first
-            }
+        const supabase = createSupabaseClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const gql = createGraphQLClient(sessionData.session?.access_token);
+
+        // Fetch companies via GraphQL
+        if (userId) {
+          const res: any = await gql.request(queries.getUserCompanies, { userId });
+          const edges = res?.user_companiesCollection?.edges || [];
+          const mapped = edges.map((e: any) => ({
+            color: COLORS[Math.floor(Math.random() * COLORS.length)],
+            companyId: e.node.company?.id,
+            companyName: e.node.company?.name,
+            role: e.node.role || "Member",
+          })).filter((c: any) => c.companyId && c.companyName);
+
+          setCompanies(mapped);
+          if (mapped.length > 0) {
+            setSelectedCompanyId(mapped[0].companyId);
           }
         }
 
-        // Optionally, fetch user email
-        if (userId && accessToken) {
-          const userDetailsRes = await fetch(
-            process.env.NEXT_PUBLIC_BACKEND_URL +
-              "/api/v1/enterprise-search/user-details",
-            {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            }
-          );
-          const userDetails = await userDetailsRes.json();
-          if (userDetails?.data?.userDetails?.email) {
-            setUserEmail(userDetails.data.userDetails.email);
-          }
+        // Fetch user details via GraphQL
+        if (userId) {
+          const userDetailsRes: any = await gql.request(queries.getUserDetails, { userId });
+          const node = userDetailsRes?.profilesCollection?.edges?.[0]?.node;
+          if (node?.email) setUserEmail(node.email);
         }
       } catch (error) {
         console.error("Error fetching companies or email:", error);
@@ -116,22 +104,14 @@ export default function OrgListPage() {
           selectedCompany.role === "Owner" ||
           selectedCompany.role === "Admin"
         ) {
-          const accessToken =
-            typeof window !== "undefined"
-              ? localStorage.getItem("accessToken")
-              : null;
-          const userDetailsRes = await fetch(
-            process.env.NEXT_PUBLIC_BACKEND_URL +
-              "/api/v1/enterprise-search/user-details",
-            {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            }
-          );
-          const userDetailsData = await userDetailsRes.json();
+          const supabase = createSupabaseClient();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const gql = createGraphQLClient(sessionData.session?.access_token);
+          const userDetailsData: any = await gql.request(queries.getUserDetails, { userId });
           console.log("userDetailsData ==> 🔥", userDetailsData);
           await importCompanies(
-            userDetailsData.data.companies,
-            accessToken || ""
+            userDetailsData?.profilesCollection?.edges?.[0]?.node?.company_name || [],
+            ""
           );
           // Set the selected company in the store before redirecting
           setSelectedCompany({
@@ -262,15 +242,12 @@ export default function OrgListPage() {
 
           router.push("/");
         } else {
-          const userDetailsResp = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/enterprise-search/get-company-user-details/${selectedCompany.companyId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              },
-            }
-          );
-          const userDetailsJson = await userDetailsResp.json();
+          const supabase2 = createSupabaseClient();
+          const { data: sessionData2 } = await supabase2.auth.getSession();
+          const gql2 = createGraphQLClient(sessionData2.session?.access_token);
+          // Using profiles and user_companies data to simulate details
+          const userDetailsRes2: any = await gql2.request(queries.getUserDetails, { userId });
+          const userDetailsJson = { data: userDetailsRes2?.profilesCollection?.edges?.[0]?.node };
           await addUser(
             userId,
             userDetailsJson.data,
