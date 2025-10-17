@@ -67,6 +67,7 @@ export default function UserProfilePage() {
   // Image states
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
+  const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
   
   // Refs for file inputs
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -456,9 +457,10 @@ export default function UserProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show loading state
+    // Start upload state (do not show optimistic preview to avoid instant UI changes)
     const optimisticUrl = URL.createObjectURL(file);
-    setProfilePicPreview(optimisticUrl);
+    setProfilePicPreview(optimisticUrl); // kept for potential future preview UI, but not shown while persisting
+    setIsUploadingProfilePic(true);
     setIsSaving(true);
 
     try {
@@ -471,31 +473,33 @@ export default function UserProfilePage() {
 
       if (updateProfilePic.success && updateProfilePic.data?.fileUrl) {
         const newImageUrl = updateProfilePic.data.fileUrl;
-        
-        // Immediately update local state with the new URL
-        setProfilePicPreview(null); // Clear blob URL
-        
-        // Update profile data state immediately
-        const updatedProfileData = {
-          ...profileData,
-          profileImage: newImageUrl,
-        };
-        setProfileData(updatedProfileData as any);
-        
-        // Update user store immediately
-        if (userData) {
-          setUserData({
-            ...userData,
+        // Persist the profile image URL to the database via the hook.
+        // Only update the UI after the DB confirms persistence.
+        const updatedProfile = await updateProfile({ profileImage: newImageUrl });
+
+        if (updatedProfile) {
+          // Clear any blob preview
+          setProfilePicPreview(null);
+
+          // Update local state after persistence
+          const updatedProfileData = {
+            ...profileData,
             profileImage: newImageUrl,
-          });
+          };
+          setProfileData(updatedProfileData as any);
+
+          // Update user store
+          if (userData) {
+            setUserData({
+              ...userData,
+              profileImage: newImageUrl,
+            });
+          }
+
+          toastSuccess("Profile picture updated successfully");
+        } else {
+          throw new Error('Failed to persist profile image');
         }
-
-        // Use updateProfile hook to sync with database and clear cache
-        await updateProfile({
-          profileImage: newImageUrl,
-        });
-
-        toastSuccess("Profile picture updated successfully");
       } else {
         throw new Error("Upload failed");
       }
@@ -505,6 +509,7 @@ export default function UserProfilePage() {
       setProfilePicPreview(null);
     } finally {
       setIsSaving(false);
+      setIsUploadingProfilePic(false);
       // Clean up blob URL
       if (optimisticUrl) {
         URL.revokeObjectURL(optimisticUrl);
@@ -912,7 +917,14 @@ export default function UserProfilePage() {
           {/* Profile Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
             <div className="z-10 -mt-16 sm:-mt-24 relative group">
-              {profilePicPreview || profileData?.profileImage ? (
+              {isUploadingProfilePic ? (
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white flex items-center justify-center bg-gray-100 shadow-md">
+                  <div className="flex flex-col items-center gap-1">
+                    <Loader2 className="h-6 w-6 text-gray-600 animate-spin" />
+                    <p className="text-xs text-gray-600 mt-1">Saving...</p>
+                  </div>
+                </div>
+              ) : profilePicPreview || profileData?.profileImage ? (
                 <img
                   src={profilePicPreview || profileData?.profileImage}
                   alt={profileData?.name || "User"}
@@ -927,8 +939,8 @@ export default function UserProfilePage() {
                   {getInitials(profileData?.name || '')}
                 </div>
               )}
-              {/* Loading overlay for profile picture */}
-              {isSaving && profilePicPreview && (
+              {/* Loading overlay for profile picture (during upload/persist) */}
+              {isUploadingProfilePic && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>

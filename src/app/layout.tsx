@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/toast-provider";
 import { Metadata } from "next";
 import React from "react";
-import { QueryProvider } from "@/components/QueryProvider";
+import { QueryProvider } from "@/providers/query-provider";
 
 const Inter = localFont({
   src: [

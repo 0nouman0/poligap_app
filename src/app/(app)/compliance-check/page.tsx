@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen, BarChart2, XOctagon, Coffee, Meh } from "lucide-react";
+import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen, BarChart2, XOctagon, Coffee, Meh, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AssetPicker } from "@/components/AssetPicker";
@@ -444,6 +444,20 @@ export default function ComplianceCheckPage() {
   const [addedTaskKeys, setAddedTaskKeys] = useState<Set<string>>(new Set());
   const [addingTaskKeys, setAddingTaskKeys] = useState<Set<string>>(new Set());
   const [isLogsCollapsed, setIsLogsCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter standards based on search query
+  const filteredStandards = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return complianceStandards;
+    }
+    const query = searchQuery.toLowerCase();
+    return complianceStandards.filter(standard => 
+      standard.name.toLowerCase().includes(query) ||
+      standard.description.toLowerCase().includes(query) ||
+      standard.id.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   // Fetch audit logs and rules from stores on mount
   useEffect(() => {
@@ -563,6 +577,11 @@ export default function ComplianceCheckPage() {
       const newStandards = prev.includes(standardId)
         ? prev.filter(id => id !== standardId)
         : [...prev, standardId];
+      
+      // Auto-open audit logs when a standard is selected
+      if (newStandards.length > 0 && isLogsCollapsed) {
+        setIsLogsCollapsed(false);
+      }
       
       return newStandards;
     });
@@ -891,105 +910,100 @@ export default function ComplianceCheckPage() {
         {/* Center Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Fixed Header Section */}
-          <div className="flex-shrink-0 p-8 pb-4">
-            {/* Header Section - Figma Design */}
-            <div className="flex items-start gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-[#3B43D6] flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-white" strokeWidth={1.67} />
+          <div className="flex-shrink-0 px-6 pt-5 pb-3">
+            {/* Header Section */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+                <Shield className="h-5 w-5 text-[#3B43D6]" />
               </div>
               <div>
-                <h1 className="text-base font-semibold text-[#2D2F34] dark:text-foreground mb-1">
-                  Compliance Check
-                </h1>
-                <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground opacity-100">
+                <h1 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">Compliance Check</h1>
+                <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-0.5 leading-tight">
                   Analyze your documents against compliance standards using AI
                 </p>
               </div>
             </div>
+          </div>
 
-            {/* Step Title and Controls */}
-            <div className="mb-4">
-              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4">
-                {/* Left: Title */}
-                <h2 className="text-base font-semibold text-[#2D2F34] dark:text-foreground">{steps[currentStep - 1]?.title}</h2>
-                {/* Center: Stepper (centered horizontally) */}
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center gap-4">
-                    {steps.map((step, index) => (
-                      <React.Fragment key={step.id}>
-                        <div className={`flex items-center justify-center w-[39px] h-[39px] rounded-full transition-all border ${
-                          currentStep === step.id
-                            ? 'bg-[#3B43D6] text-white border-[#3B43D6]'
-                            : 'bg-white dark:bg-card text-[#717171] border-[#D9D9D9] dark:border-border'
-                          }`}>
-                          <span className="text-base font-semibold">{String(step.id).padStart(2, '0')}</span>
-                        </div>
-                        {index < steps.length - 1 && (
-                          <svg width="62" height="39" viewBox="0 0 62 39" fill="none" className="flex-shrink-0">
-                            <line 
-                              x1="0" 
-                              y1="20" 
-                              x2="62" 
-                              y2="20" 
-                              stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} 
-                              strokeWidth="1" 
-                              strokeDasharray="2 2"
-                            />
-                          </svg>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-                {/* Right: Select All (only on step 1) */}
-                {currentStep === 1 && (
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        id="select-all-top"
-                        checked={selectedStandards.length === complianceStandards.length}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedStandards(complianceStandards.map(s => s.id));
-                          } else {
-                            setSelectedStandards([]);
-                          }
-                        }}
-                        className="peer sr-only"
-                      />
-                      <label 
-                        htmlFor="select-all-top" 
-                        className="flex items-center justify-center w-6 h-6 border-2 border-[#717171] rounded cursor-pointer peer-checked:bg-white peer-checked:border-[#717171]"
-                      >
-                        {selectedStandards.length === complianceStandards.length && (
-                          <CheckCircle className="w-4 h-4 text-[#717171]" strokeWidth={2} />
-                        )}
-                      </label>
-                    </div>
-                    <label htmlFor="select-all-top" className="text-base font-semibold text-[#2D2F34] dark:text-foreground cursor-pointer">
-                      Select All
-                    </label>
-                  </div>
-                )}
+          {/* Step Indicator and Title Section */}
+          <div className="flex-shrink-0 px-6 pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">
+                  {steps[currentStep - 1]?.title}
+                </h2>
+                <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-0.5">
+                  {currentStep === 1 ? `${selectedStandards.length} of ${complianceStandards.length} standards selected` : steps[currentStep - 1]?.description}
+                </p>
               </div>
-              <p className="text-xs font-normal text-[#6A707C] dark:text-muted-foreground mt-1">{steps[currentStep - 1]?.description === "Choose compliance standards" ? "0 of 40 standards selected" : steps[currentStep - 1]?.description}</p>
+              
+              {/* Stepper */}
+              <div className="flex items-center gap-3">
+                {steps.map((step, index) => (
+                  <div key={step.id} className="flex items-center">
+                    <div className={"flex items-center justify-center w-9 h-9 rounded-full transition-all " + (
+                      currentStep >= step.id
+                        ? 'bg-[#3B43D6] text-white'
+                        : 'bg-white dark:bg-gray-800 border border-[#D9D9D9] dark:border-gray-600 text-[#717171] dark:text-gray-400'
+                    )}>
+                      <span className="text-sm font-semibold">
+                        {String(step.id).padStart(2, '0')}
+                      </span>
+                    </div>
+                    {index < steps.length - 1 && (
+                      <svg className="w-14 h-9 mx-0" viewBox="0 0 56 36">
+                        <line x1="0" y1="18" x2="56" y2="18" stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} strokeWidth="1" strokeDasharray="2 2" />
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-
           </div>
 
           {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto px-8 pb-6 scrollbar-thin">{/* Step Content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-4 scrollbar-thin">{/* Step Content */}
           {/* Step 1: Select Compliance Standards */}
           {currentStep === 1 && (
-            <div className="space-y-8">
+            <div className="space-y-3">
+              {/* Search Bar */}
+              <div className="relative w-[280px]">
+                <Input
+                  type="text"
+                  placeholder="Search Template..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
+                />
+                <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3" viewBox="0 0 12 12" fill="none">
+                  <path d="M5.5 9.5C7.70914 9.5 9.5 7.70914 9.5 5.5C9.5 3.29086 7.70914 1.5 5.5 1.5C3.29086 1.5 1.5 3.29086 1.5 5.5C1.5 7.70914 3.29086 9.5 5.5 9.5Z" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M10.5 10.5L8.5 8.5" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Results count */}
+              {searchQuery && filteredStandards.length > 0 && (
+                <p className="text-xs text-[#6A707C] dark:text-gray-400">
+                  Found {filteredStandards.length} standard{filteredStandards.length !== 1 ? 's' : ''}
+                </p>
+              )}
+
               {/* Standards Grid - Responsive based on audit logs state */}
               <div className={`grid gap-4 ${
-                selectedStandards.length > 0 
+                selectedStandards.length > 0 && !isLogsCollapsed
                   ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3' 
-                  : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                  : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4'
               }`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {complianceStandards.map((standard) => (
+                {filteredStandards.length > 0 ? (
+                  filteredStandards.map((standard) => (
                   <div
                     key={standard.id}
                     className={`relative bg-card dark:bg-card rounded-[10px] p-4 cursor-pointer transition-all duration-200 hover:shadow-lg border ${
@@ -1003,7 +1017,17 @@ export default function ComplianceCheckPage() {
                     {/* Checkmark - Top Right */}
                     {selectedStandards.includes(standard.id) && (
                       <div className="absolute top-3 right-3">
-                        <CheckCircle className="h-5 w-5 text-primary dark:text-primary" fill="currentColor" />
+                        <svg 
+                          className="h-6 w-6 text-primary" 
+                          fill="none" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth="2.5" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
                       </div>
                     )}
                     
@@ -1020,7 +1044,14 @@ export default function ComplianceCheckPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className="col-span-full flex flex-col items-center justify-center py-12">
+                    <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-lg font-medium text-foreground mb-2">No standards found</p>
+                    <p className="text-sm text-muted-foreground">Try adjusting your search query</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

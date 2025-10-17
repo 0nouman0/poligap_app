@@ -124,16 +124,16 @@ export default function SignInPage() {
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
-          <div className="text-center">
+          <div className="text-center mb-8">
             <div className="flex items-center justify-center">
               <Image
                 src={krooloLogoSrc}
                 alt="PoliGap AI Logo"
-                width={280}
-                height={280}
+                width={500}
+                height={500}
                 priority
                 className="object-contain"
-                style={{ width: 'auto', height: 'auto', maxWidth: '200px' }}
+                style={{ width: 'auto', height: 'auto', maxWidth: '450px' }}
               />
             </div>
           </div>
