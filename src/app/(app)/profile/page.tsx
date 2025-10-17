@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState, useRef } from "react";
 import { toastSuccess, toastError } from "@/components/toast-varients";
-import { uploadToS3 } from "@/app/api/s3/upload/uploadtos3";
+import { uploadToSupabase, updateProfileImageInDB, updateBannerInDB } from "@/lib/supabase/storage";
 import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/utils/user.util";
 import { useUserProfile, UserProfile } from "@/lib/hooks/useUserProfile";
@@ -391,25 +391,37 @@ export default function UserProfilePage() {
     setIsSaving(true);
 
     try {
-      // Upload to S3 and update database
-      const updateBanner = await uploadToS3(
+      // Upload to Supabase Storage
+      const uploadResult = await uploadToSupabase(
         file,
-        "banner",
+        "banners",
         userData?.userId!
       );
 
-      if (updateBanner.success && updateBanner.data?.fileUrl) {
-        const newBannerUrl = updateBanner.data.fileUrl;
+      if (uploadResult.success && uploadResult.url) {
+        const newBannerUrl = uploadResult.url;
+        
+        console.log('🎨 New banner URL:', newBannerUrl);
+        
+        // Update database first
+        const dbUpdateResult = await updateBannerInDB(userData?.userId!, newBannerUrl);
+        
+        if (!dbUpdateResult.success) {
+          throw new Error(dbUpdateResult.error || "Failed to update database");
+        }
+        
+        console.log('✅ Database updated, now updating UI...');
         
         // Update profile data state with the new URL
         const updatedProfileData = {
           ...profileData,
           banner: {
-            ...profileData?.banner,
             image: newBannerUrl,
           },
         };
         setProfileData(updatedProfileData as any);
+        
+        console.log('📱 Profile data updated:', updatedProfileData.banner);
         
         // Update user store with the new URL
         if (userData) {
@@ -419,17 +431,18 @@ export default function UserProfilePage() {
               image: newBannerUrl,
             },
           });
+          console.log('💾 User store updated');
         }
 
-        // Use updateProfile hook to sync with database and clear cache
-        await updateProfile({
-          banner: {
-            ...profileData?.banner,
-            image: newBannerUrl,
-          },
-        }, { suppressToast: true });
+        // Force refresh from database to ensure sync
+        if (userData?.userId) {
+          console.log('🔄 Refreshing profile from database...');
+          await refreshProfile();
+        }
+
+        toastSuccess("Banner updated successfully");
       } else {
-        throw new Error("Upload failed");
+        throw new Error(uploadResult.error || "Upload failed");
       }
     } catch (error) {
       console.error("Banner update error:", error);
@@ -437,6 +450,10 @@ export default function UserProfilePage() {
     } finally {
       setIsSaving(false);
       setIsBannerUploading(false);
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -453,24 +470,37 @@ export default function UserProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show loading state
+    // Set uploading state and show optimistic preview
+    setIsUploadingProfilePic(true);
     const optimisticUrl = URL.createObjectURL(file);
     setProfilePicPreview(optimisticUrl);
     setIsSaving(true);
 
     try {
-      // Upload to S3 and update database
-      const updateProfilePic = await uploadToS3(
+      // Upload to Supabase Storage
+      const uploadResult = await uploadToSupabase(
         file,
-        "profileImage",
+        "avatars",
         userData?.userId!
       );
 
-      if (updateProfilePic.success && updateProfilePic.data?.fileUrl) {
-        const newImageUrl = updateProfilePic.data.fileUrl;
+      if (uploadResult.success && uploadResult.url) {
+        const newImageUrl = uploadResult.url;
         
-        // Immediately update local state with the new URL
-        setProfilePicPreview(null); // Clear blob URL
+        console.log('🎨 New profile image URL:', newImageUrl);
+        
+        // Update database first
+        const dbUpdateResult = await updateProfileImageInDB(userData?.userId!, newImageUrl);
+        
+        if (!dbUpdateResult.success) {
+          throw new Error(dbUpdateResult.error || "Failed to update database");
+        }
+        
+        console.log('✅ Database updated, now updating UI...');
+        
+        // Clear blob URL after successful upload
+        setProfilePicPreview(null);
+        URL.revokeObjectURL(optimisticUrl);
         
         // Update profile data state immediately
         const updatedProfileData = {
@@ -479,32 +509,38 @@ export default function UserProfilePage() {
         };
         setProfileData(updatedProfileData as any);
         
+        console.log('📱 Profile data updated with new image');
+        
         // Update user store immediately
         if (userData) {
           setUserData({
             ...userData,
             profileImage: newImageUrl,
           });
+          console.log('💾 User store updated');
         }
 
-        // Use updateProfile hook to sync with database and clear cache
-        await updateProfile({
-          profileImage: newImageUrl,
-        });
+        // Force refresh from database to ensure sync
+        if (userData?.userId) {
+          console.log('🔄 Refreshing profile from database...');
+          await refreshProfile();
+        }
 
         toastSuccess("Profile picture updated successfully");
       } else {
-        throw new Error("Upload failed");
+        throw new Error(uploadResult.error || "Upload failed");
       }
     } catch (error) {
       console.error("Profile picture update error:", error);
       toastError("Failed to update profile picture. Please try again.");
-    } finally {
-      setIsSaving(false);
-      // Clean up blob URL
+      // Clean up blob URL on error
       if (optimisticUrl) {
         URL.revokeObjectURL(optimisticUrl);
       }
+      setProfilePicPreview(null);
+    } finally {
+      setIsSaving(false);
+      setIsUploadingProfilePic(false);
       if (profilePicInputRef.current) {
         profilePicInputRef.current.value = "";
       }
