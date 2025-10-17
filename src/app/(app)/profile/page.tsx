@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState, useRef } from "react";
 import { toastSuccess, toastError } from "@/components/toast-varients";
-import { uploadToSupabase, updateProfileImageInDB, updateBannerInDB } from "@/lib/supabase/storage";
+import { uploadAndUpdateImage } from "@/lib/supabase/image-upload";
 import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/utils/user.util";
 import { useUserProfile, UserProfile } from "@/lib/hooks/useUserProfile";
@@ -65,23 +65,15 @@ export default function UserProfilePage() {
   const [editableFields, setEditableFields] = useState<Record<string, EditableField>>({});
   
   // Image states
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
-  const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
+  const [isProfilePicUploading, setIsProfilePicUploading] = useState(false);
   
   // Refs for file inputs
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Banner image logic - keep previous image during upload
-  let bannerImage = "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
-  if (profileData?.banner?.image) {
-    bannerImage = profileData.banner.image;
-  }
-  
-  // During upload, show the current banner image (not the preview)
-  const displayBannerImage = isBannerUploading ? bannerImage : (bannerPreview || bannerImage);
+  // Banner image logic
+  const bannerImage = profileData?.banner?.image || "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
 
   // Fetch profile data on component mount
   useEffect(() => {
@@ -144,13 +136,13 @@ export default function UserProfilePage() {
     }
   }, [error, clearError]);
 
-  // Reset previews when images change
+  // Reset upload states when component unmounts or user changes
   useEffect(() => {
-    setBannerPreview(null);
-    setProfilePicPreview(null);
-    setIsBannerUploading(false);
-    setIsUploadingProfilePic(false);
-  }, [bannerImage, profileData?.profileImage]);
+    return () => {
+      setIsBannerUploading(false);
+      setIsProfilePicUploading(false);
+    };
+  }, []);
 
   // Validation functions
   const validateName = (name: string): { isValid: boolean; error?: string } => {
@@ -386,71 +378,39 @@ export default function UserProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Set uploading state - this will keep the previous image visible
     setIsBannerUploading(true);
     setIsSaving(true);
 
     try {
-      // Upload to Supabase Storage
-      const uploadResult = await uploadToSupabase(
-        file,
-        "banners",
-        userData?.userId!
-      );
-
-      if (uploadResult.success && uploadResult.url) {
-        const newBannerUrl = uploadResult.url;
+      console.log('🚀 Starting banner upload...');
+      
+      // Upload image and update database
+      const result = await uploadAndUpdateImage(file, 'banner', userData?.userId!);
+      
+      if (result.success && result.url) {
+        console.log('✅ Banner upload successful:', result.url);
         
-        console.log('🎨 New banner URL:', newBannerUrl);
-        
-        // Update database first
-        const dbUpdateResult = await updateBannerInDB(userData?.userId!, newBannerUrl);
-        
-        if (!dbUpdateResult.success) {
-          throw new Error(dbUpdateResult.error || "Failed to update database");
-        }
-        
-        console.log('✅ Database updated, now updating UI...');
-        
-        // Update profile data state with the new URL
-        const updatedProfileData = {
-          ...profileData,
-          banner: {
-            image: newBannerUrl,
-          },
-        };
-        setProfileData(updatedProfileData as any);
-        
-        console.log('📱 Profile data updated:', updatedProfileData.banner);
-        
-        // Update user store with the new URL
-        if (userData) {
-          setUserData({
-            ...userData,
+        // Update profile using the hook's updateProfile function
+        await updateProfile(
+          { 
             banner: {
-              image: newBannerUrl,
-            },
-          });
-          console.log('💾 User store updated');
-        }
-
-        // Force refresh from database to ensure sync
-        if (userData?.userId) {
-          console.log('🔄 Refreshing profile from database...');
-          await refreshProfile();
-        }
-
-        toastSuccess("Banner updated successfully");
+              ...profileData?.banner,
+              image: result.url,
+            }
+          },
+          { suppressToast: true }
+        );
+        
+        console.log('🎉 Banner updated successfully in UI');
       } else {
-        throw new Error(uploadResult.error || "Upload failed");
+        throw new Error(result.error || 'Upload failed');
       }
     } catch (error) {
-      console.error("Banner update error:", error);
-      toastError("Failed to update banner. Please try again.");
+      console.error('❌ Banner upload error:', error);
+      toastError('Failed to update banner. Please try again.');
     } finally {
       setIsSaving(false);
       setIsBannerUploading(false);
-      // Clear file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -470,77 +430,34 @@ export default function UserProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Set uploading state and show optimistic preview
-    setIsUploadingProfilePic(true);
-    const optimisticUrl = URL.createObjectURL(file);
-    setProfilePicPreview(optimisticUrl);
+    setIsProfilePicUploading(true);
     setIsSaving(true);
 
     try {
-      // Upload to Supabase Storage
-      const uploadResult = await uploadToSupabase(
-        file,
-        "avatars",
-        userData?.userId!
-      );
-
-      if (uploadResult.success && uploadResult.url) {
-        const newImageUrl = uploadResult.url;
+      console.log('🚀 Starting profile picture upload...');
+      
+      // Upload image and update database
+      const result = await uploadAndUpdateImage(file, 'profileImage', userData?.userId!);
+      
+      if (result.success && result.url) {
+        console.log('✅ Profile picture upload successful:', result.url);
         
-        console.log('🎨 New profile image URL:', newImageUrl);
+        // Update profile using the hook's updateProfile function
+        await updateProfile(
+          { profileImage: result.url },
+          { suppressToast: true }
+        );
         
-        // Update database first
-        const dbUpdateResult = await updateProfileImageInDB(userData?.userId!, newImageUrl);
-        
-        if (!dbUpdateResult.success) {
-          throw new Error(dbUpdateResult.error || "Failed to update database");
-        }
-        
-        console.log('✅ Database updated, now updating UI...');
-        
-        // Clear blob URL after successful upload
-        setProfilePicPreview(null);
-        URL.revokeObjectURL(optimisticUrl);
-        
-        // Update profile data state immediately
-        const updatedProfileData = {
-          ...profileData,
-          profileImage: newImageUrl,
-        };
-        setProfileData(updatedProfileData as any);
-        
-        console.log('📱 Profile data updated with new image');
-        
-        // Update user store immediately
-        if (userData) {
-          setUserData({
-            ...userData,
-            profileImage: newImageUrl,
-          });
-          console.log('💾 User store updated');
-        }
-
-        // Force refresh from database to ensure sync
-        if (userData?.userId) {
-          console.log('🔄 Refreshing profile from database...');
-          await refreshProfile();
-        }
-
-        toastSuccess("Profile picture updated successfully");
+        console.log('🎉 Profile picture updated successfully in UI');
       } else {
-        throw new Error(uploadResult.error || "Upload failed");
+        throw new Error(result.error || 'Upload failed');
       }
     } catch (error) {
-      console.error("Profile picture update error:", error);
-      toastError("Failed to update profile picture. Please try again.");
-      // Clean up blob URL on error
-      if (optimisticUrl) {
-        URL.revokeObjectURL(optimisticUrl);
-      }
-      setProfilePicPreview(null);
+      console.error('❌ Profile picture upload error:', error);
+      toastError('Failed to update profile picture. Please try again.');
     } finally {
       setIsSaving(false);
-      setIsUploadingProfilePic(false);
+      setIsProfilePicUploading(false);
       if (profilePicInputRef.current) {
         profilePicInputRef.current.value = "";
       }
@@ -910,7 +827,7 @@ export default function UserProfilePage() {
         {/* Banner Section - Keep existing styling */}
         <div className="relative group">
           <img
-            src={displayBannerImage}
+            src={bannerImage}
             alt="Profile Banner"
             className="w-full h-48 md:h-64 object-cover"
           />
@@ -949,7 +866,7 @@ export default function UserProfilePage() {
           {/* Profile Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
             <div className="z-10 -mt-16 sm:-mt-24 relative group">
-              {profilePicPreview || profileData?.profileImage ? (
+              {profileData?.profileImage ? (
                 <img
                   src={profileData.profileImage}
                   alt={profileData?.name || "User"}
@@ -965,21 +882,21 @@ export default function UserProfilePage() {
                 </div>
               )}
               {/* Loading overlay for profile picture */}
-              {isSaving && profilePicPreview && (
+              {isSaving && isProfilePicUploading && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
               )}
                <button
                  className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-                   isSaving && isUploadingProfilePic 
+                   isSaving && isProfilePicUploading 
                      ? 'opacity-0 cursor-not-allowed' 
                      : 'opacity-0 group-hover:opacity-100'
                  }`}
                  onClick={handleProfilePicEdit}
-                 title={isSaving && isUploadingProfilePic ? "Uploading profile picture..." : "Edit profile picture"}
+                 title={isSaving && isProfilePicUploading ? "Uploading profile picture..." : "Edit profile picture"}
                  type="button"
-                 disabled={isSaving && isUploadingProfilePic}
+                 disabled={isSaving && isProfilePicUploading}
                >
                  <div className="w-full h-full flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20">
                    <Camera className="h-4 w-4 text-white drop-shadow" />

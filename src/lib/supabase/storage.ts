@@ -157,12 +157,28 @@ export async function updateBannerInDB(
     console.log('💾 Updating banner in DB:', { userId, bannerUrl });
     const supabase = createClient();
 
+    // First get current banner data to preserve existing properties
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('banner')
+      .eq('id', userId)
+      .single();
+    
+    if (fetchError) {
+      console.error('❌ Error fetching current profile:', fetchError);
+    }
+
+    // Update banner with new image while preserving other properties
     const { error } = await supabase
       .from('profiles')
       .update({ 
         banner: {
-          image: bannerUrl
-        }
+          ...(currentProfile?.banner || {}),
+          image: bannerUrl,
+          type: currentProfile?.banner?.type || 'image',
+          color: currentProfile?.banner?.color || '#FFFFFF',
+        },
+        updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
 

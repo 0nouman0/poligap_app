@@ -61,6 +61,9 @@ const Inter = localFont({
 export const metadata: Metadata = {
   title: "Poligap AI",
   description: "Poligap AI",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -70,14 +73,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${Inter.variable} h-full`}>
-      <head>
-        <link
-          rel="icon"
-          href="/favicon.ico"
-          type="image/x-icon"
-          sizes="32x32"
-        />
-      </head>
       <body className={`font-sans antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>{children}</QueryProvider>
