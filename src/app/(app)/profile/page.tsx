@@ -72,8 +72,8 @@ export default function UserProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Banner image logic
-  const bannerImage = profileData?.banner?.image || "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  // Banner image logic - prioritize profile data from hook (latest from database)
+  const bannerImage = profile?.banner?.image || userData?.banner?.image || "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
 
   // Fetch profile data on component mount
   useEffect(() => {
@@ -390,11 +390,22 @@ export default function UserProfilePage() {
       if (result.success && result.url) {
         console.log('✅ Banner upload successful:', result.url);
         
-        // Update profile using the hook's updateProfile function
+        // Update user store directly (same as header)
+        if (userData) {
+          setUserData({
+            ...userData,
+            banner: {
+              ...userData.banner,
+              image: result.url,
+            },
+          });
+        }
+        
+        // Also update the profile hook for consistency
         await updateProfile(
           { 
             banner: {
-              ...profileData?.banner,
+              ...userData?.banner,
               image: result.url,
             }
           },
@@ -442,7 +453,15 @@ export default function UserProfilePage() {
       if (result.success && result.url) {
         console.log('✅ Profile picture upload successful:', result.url);
         
-        // Update profile using the hook's updateProfile function
+        // Update user store directly (same as header)
+        if (userData) {
+          setUserData({
+            ...userData,
+            profileImage: result.url,
+          });
+        }
+        
+        // Also update the profile hook for consistency
         await updateProfile(
           { profileImage: result.url },
           { suppressToast: true }
@@ -826,11 +845,17 @@ export default function UserProfilePage() {
       <div className="max-w-7xl mx-auto">
         {/* Banner Section - Keep existing styling */}
         <div className="relative group">
-          <img
-            src={bannerImage}
-            alt="Profile Banner"
-            className="w-full h-48 md:h-64 object-cover"
-          />
+          {isInitializing ? (
+            <div className="w-full h-48 md:h-64 bg-gray-200 animate-pulse flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <img
+              src={bannerImage}
+              alt="Profile Banner"
+              className="w-full h-48 md:h-64 object-cover"
+            />
+          )}
           {/* Loading overlay */}
           {isSaving && isBannerUploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -866,10 +891,14 @@ export default function UserProfilePage() {
           {/* Profile Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
             <div className="z-10 -mt-16 sm:-mt-24 relative group">
-              {profileData?.profileImage ? (
+              {isInitializing ? (
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white bg-gray-200 animate-pulse flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : profile?.profileImage || userData?.profileImage ? (
                 <img
-                  src={profileData.profileImage}
-                  alt={profileData?.name || "User"}
+                  src={profile?.profileImage || userData?.profileImage}
+                  alt={profile?.name || userData?.name || "User"}
                   className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white object-cover shadow-md"
                 />
               ) : (

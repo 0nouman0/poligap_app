@@ -7,6 +7,56 @@ export interface UploadResult {
 }
 
 /**
+ * Delete old images for a user from a specific bucket
+ */
+export async function deleteOldImages(
+  bucket: 'banners' | 'avatars',
+  userId: string,
+  keepLatest: number = 1
+): Promise<void> {
+  try {
+    const supabase = createClient();
+    
+    // Get all images for this user in the bucket
+    const { data: files, error: listError } = await supabase.storage
+      .from(bucket)
+      .list('', {
+        limit: 100,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+    if (listError) {
+      console.error('Error listing files:', listError);
+      return;
+    }
+
+    // Filter files for this user and sort by creation date (newest first)
+    const userFiles = files
+      .filter(file => file.name.startsWith(`${userId}_`))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // Keep only the latest files, delete the rest
+    const filesToDelete = userFiles.slice(keepLatest);
+    
+    if (filesToDelete.length > 0) {
+      console.log(`🗑️ Deleting ${filesToDelete.length} old ${bucket} images for user ${userId}`);
+      
+      const { error: deleteError } = await supabase.storage
+        .from(bucket)
+        .remove(filesToDelete.map(file => file.name));
+
+      if (deleteError) {
+        console.error('Error deleting old files:', deleteError);
+      } else {
+        console.log(`✅ Successfully deleted ${filesToDelete.length} old ${bucket} images`);
+      }
+    }
+  } catch (error) {
+    console.error('Error in deleteOldImages:', error);
+  }
+}
+
+/**
  * Upload image to Supabase Storage and return public URL
  */
 export async function uploadImageToStorage(
@@ -133,7 +183,7 @@ export async function updateBannerImage(
 }
 
 /**
- * Complete image upload flow: upload to storage + update database
+ * Complete image upload flow: upload to storage + update database + delete old images
  */
 export async function uploadAndUpdateImage(
   file: File,
@@ -164,6 +214,10 @@ export async function uploadAndUpdateImage(
     }
     
     console.log(`✅ ${type} updated in database successfully`);
+    
+    // Step 3: Delete old images (keep only the latest 1)
+    console.log(`🗑️ Cleaning up old ${type} images...`);
+    await deleteOldImages(bucket, userId, 1);
     
     return { success: true, url: uploadResult.url };
   } catch (error) {
