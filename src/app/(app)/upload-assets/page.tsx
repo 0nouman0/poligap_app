@@ -2,40 +2,20 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { 
-  Upload, 
+  UploadCloud, 
   File, 
   Image, 
   FileText, 
   Video, 
   Archive, 
   Search, 
-  Filter, 
-  Tag, 
   Download, 
   Trash2, 
   Eye,
-  Plus,
-  X,
-  Grid3X3,
-  List,
-  Calendar,
-  FileType,
-  Hash,
-  FileImage,
-  FileVideo,
-  FileSpreadsheet,
-  Presentation
+  Camera,
+  Check,
+  ChevronDown
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAssetsStore, type Asset } from "@/stores/assets-store";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
@@ -51,12 +31,8 @@ export default function UploadAssetsPage() {
   const { 
     assets, 
     isLoading: loading, 
-    allTags, 
     fetchAssets, 
-    addAsset, 
-    updateAssetTags, 
-    deleteAsset,
-    deleteMultipleAssets 
+    addAsset
   } = useAssetsStore();
   
   // Get user data
@@ -82,15 +58,10 @@ export default function UploadAssetsPage() {
   };
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
-  const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
-  const [newTags, setNewTags] = useState("");
-  const [selectedFileType, setSelectedFileType] = useState<string | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   useEffect(() => {
     fetchAssets();
@@ -176,15 +147,7 @@ export default function UploadAssetsPage() {
     return 'others';
   };
 
-  // Get file icon based on mime type
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <Image className="h-5 w-5" />;
-    if (mimeType.startsWith('video/')) return <Video className="h-5 w-5" />;
-    if (mimeType.startsWith('audio/')) return <Video className="h-5 w-5" />;
-    if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-5 w-5" />;
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-5 w-5" />;
-    return <File className="h-5 w-5" />;
-  };
+
 
   // Format file size
   const formatFileSize = (bytes: number): string => {
@@ -195,88 +158,13 @@ export default function UploadAssetsPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Filter assets based on search, category, and tags
+  // Filter assets based on search
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                         asset.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'all' || asset.category === selectedCategory;
-    
-    const matchesTags = selectedTags.length === 0 || 
-                       selectedTags.every(tag => asset.tags.includes(tag));
-    
-    return matchesSearch && matchesCategory && matchesTags;
+    return matchesSearch;
   });
-
-  // Add tags to selected assets
-  const handleAddTags = async () => {
-    if (!newTags.trim() || selectedAssets.length === 0) return;
-
-    const tags = newTags.split(',').map(tag => tag.trim()).filter(tag => tag);
-    
-    // Optimistic update for each selected asset
-    selectedAssets.forEach(assetId => {
-      const asset = assets.find(a => a._id === assetId);
-      if (asset) {
-        const updatedTags = [...new Set([...asset.tags, ...tags])];
-        updateAssetTags(assetId, updatedTags);
-      }
-    });
-
-    try {
-      const response = await fetch('/api/assets/tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assetIds: selectedAssets,
-          tags: tags
-        })
-      });
-
-      if (response.ok) {
-        toastSuccess('Tags Added', `Successfully added tags to ${selectedAssets.length} file(s)`);
-        setSelectedAssets([]);
-        setNewTags("");
-        setIsTagDialogOpen(false);
-      } else {
-        toastError('Tag Update Failed', 'Failed to add tags');
-        await fetchAssets(undefined, true); // Revert on error
-      }
-    } catch (error) {
-      console.error('Error adding tags:', error);
-      toastError('Tag Update Failed', 'An error occurred while adding tags');
-      await fetchAssets(undefined, true); // Revert on error
-    }
-  };
-
-  // Delete selected assets
-  const handleDeleteAssets = async () => {
-    if (selectedAssets.length === 0) return;
-
-    // Optimistic delete
-    deleteMultipleAssets(selectedAssets);
-    setSelectedAssets([]);
-
-    try {
-      const response = await fetch('/api/assets', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetIds: selectedAssets })
-      });
-
-      if (response.ok) {
-        toastSuccess('Assets Deleted', `Successfully deleted ${selectedAssets.length} file(s)`);
-      } else {
-        toastError('Delete Failed', 'Failed to delete assets');
-        await fetchAssets(undefined, true); // Revert on error
-      }
-    } catch (error) {
-      console.error('Error deleting assets:', error);
-      toastError('Delete Failed', 'An error occurred while deleting assets');
-      await fetchAssets(undefined, true); // Revert on error
-    }
-  };
 
   // View asset
   const handleViewAsset = (asset: Asset) => {
@@ -312,419 +200,786 @@ export default function UploadAssetsPage() {
     }
   };
 
-  // Drag and drop handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileUpload(files);
-    }
-  };
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading assets...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#605BFF] mx-auto mb-4"></div>
+          <p className="text-[#6A707C]">Loading assets...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Upload Assets</h1>
-          <p className="text-muted-foreground mt-2">
-            Upload and manage your files for cross-application usage
-          </p>
+    <div style={{ backgroundColor: '#FAFAFB' }} className="min-h-screen py-8 px-10">
+      {/* Header Section */}
+      <div className="flex items-center gap-5 mb-10">
+        {/* Upload Cloud Icon */}
+        <div 
+          className="flex items-center justify-center flex-shrink-0"
+          style={{
+            width: '56px',
+            height: '56px',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '50%',
+            boxShadow: '0px 2px 8px rgba(0,0,0,0.06)'
+          }}
+        >
+          <UploadCloud 
+            style={{
+              width: '32px',
+              height: '32px',
+              strokeWidth: '2.5px',
+              color: '#3B43D6'
+            }}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+
+        {/* Title and Description */}
+        <div>
+          <h1 
+            className="font-semibold"
+            style={{
+              fontSize: '20px',
+              color: '#2D2F34',
+              lineHeight: '1.3em',
+              marginBottom: '6px'
+            }}
           >
-            {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-          </Button>
+            Upload Your Files
+          </h1>
+          <p 
+            style={{
+              fontSize: '14px',
+              color: '#6A707C',
+              lineHeight: '1.4em'
+            }}
+          >
+            Choose a file type below or drag and drop files anywhere
+          </p>
         </div>
       </div>
 
       {/* Upload Progress */}
       {uploadProgress.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Upload Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div 
+          className="mb-6 p-5"
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '10px',
+            boxShadow: '0px 0px 15px 0px rgba(19,43,76,0.1)'
+          }}
+        >
+          <h3 
+            className="font-semibold mb-4"
+            style={{
+              fontSize: '16px',
+              color: '#202020'
+            }}
+          >
+            Upload Progress
+          </h3>
+          <div className="space-y-3">
             {uploadProgress.map((item, index) => (
               <div key={index} className="flex items-center gap-3">
                 <div className="flex-1">
                   <div className="flex justify-between text-sm mb-1">
-                    <span>{item.filename}</span>
-                    <span className={
-                      item.status === 'completed' ? 'text-green-600' :
-                      item.status === 'error' ? 'text-red-600' : 'text-blue-600'
-                    }>
+                    <span style={{ fontSize: '12px', color: '#000000', opacity: 0.7 }}>
+                      {item.filename}
+                    </span>
+                    <span style={{
+                      fontSize: '12px',
+                      color: item.status === 'completed' ? '#47AF47' :
+                             item.status === 'error' ? '#EF4444' : '#605BFF'
+                    }}>
                       {item.status === 'completed' ? 'Completed' :
                        item.status === 'error' ? 'Error' : `${item.progress}%`}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full h-2 rounded-full" style={{ backgroundColor: '#E4E4E4' }}>
                     <div 
-                      className={`h-2 rounded-full transition-all ${
-                        item.status === 'completed' ? 'bg-green-500' :
-                        item.status === 'error' ? 'bg-red-500' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${item.status === 'error' ? 100 : item.progress}%` }}
-                    ></div>
+                      className="h-2 rounded-full transition-all"
+                      style={{
+                        width: `${item.status === 'error' ? 100 : item.progress}%`,
+                        backgroundColor: item.status === 'completed' ? '#47AF47' :
+                                       item.status === 'error' ? '#EF4444' : '#605BFF'
+                      }}
+                    />
                   </div>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Unified Upload Area */}
-      <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
-        <CardContent className="p-8">
-          <div className="text-center mb-8">
-            <Upload className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Upload Your Files</h3>
-            <p className="text-muted-foreground mb-6">
-              Choose a file type below or drag and drop files anywhere
-            </p>
-          </div>
-
-          {/* File Type Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { type: 'images', label: 'Photos', icon: FileImage, accept: 'image/*', color: 'bg-pink-100 text-pink-800 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-300' },
-              { type: 'documents', label: 'Documents', icon: FileText, accept: '.pdf,.doc,.docx,.txt,.rtf', color: 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300' },
-              { type: 'spreadsheets', label: 'Sheets', icon: FileSpreadsheet, accept: '.xlsx,.xls,.csv', color: 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-300' },
-              { type: 'presentations', label: 'Presentations', icon: Presentation, accept: '.pptx,.ppt', color: 'bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-300' }
-            ].map((fileType) => {
-              const IconComponent = fileType.icon;
-              return (
-                <div key={fileType.type} className="relative">
-                  <input
-                    id={`file-upload-${fileType.type}`}
-                    type="file"
-                    multiple
-                    accept={fileType.accept}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        setSelectedFileType(fileType.type);
-                        handleFileUpload(e.target.files);
-                      }
-                    }}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  />
-                  <div className={`relative p-6 rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-all duration-300 cursor-pointer group ${fileType.color}`}>
-                    <div className="text-center">
-                      <IconComponent className="h-12 w-12 mx-auto mb-3 transition-transform group-hover:scale-110" />
-                      <h4 className="font-semibold text-sm">{fileType.label}</h4>
-                      <p className="text-xs opacity-75 mt-1">Click to upload</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* General Upload Area */}
-          <div 
-            className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('general-file-upload')?.click()}
-          >
-            <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-2">Or upload any file type</p>
-            <p className="text-sm text-muted-foreground">Drag and drop files here or click to browse</p>
+      {/* Upload Type Cards and Drag-Drop Zone */}
+      <div className="flex gap-8 mb-12">
+        {/* Left: 4 Upload Type Cards in 2x2 Grid */}
+        <div className="grid grid-cols-2 gap-6" style={{ width: 'auto' }}>
+          {/* Row 1, Col 1 */}
+          {/* Photo Card */}
+          <div className="relative">
             <input
-              id="general-file-upload"
+              id="upload-photo"
+              type="file"
+              multiple
+              accept="image/*"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              onChange={(e) => {
+                if (e.target.files) handleFileUpload(e.target.files);
+              }}
+            />
+            <div 
+              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              style={{
+                width: '330px',
+                height: '110px',
+                backgroundColor: '#F8F9FE',
+                borderRadius: '12px',
+                padding: '20px 24px',
+                border: '1px solid #E8EAED'
+              }}
+            >
+              {/* Icon */}
+              <div 
+                className="flex items-center justify-center flex-shrink-0"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  backgroundColor: 'rgba(91, 147, 255, 0.12)',
+                  borderRadius: '50%'
+                }}
+              >
+                <Camera 
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    strokeWidth: '2.3px',
+                    color: '#605BFF'
+                  }}
+                />
+              </div>
+              {/* Text */}
+              <div>
+                <h4 
+                  className="font-semibold mb-1"
+                  style={{
+                    fontSize: '18px',
+                    color: '#2D2F34',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Photo
+                </h4>
+                <p 
+                  style={{
+                    fontSize: '13px',
+                    color: '#6A707C',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Click to upload
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Documents Card */}
+          <div className="relative">
+            <input
+              id="upload-documents"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.txt,.rtf"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              onChange={(e) => {
+                if (e.target.files) handleFileUpload(e.target.files);
+              }}
+            />
+            <div 
+              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              style={{
+                width: '330px',
+                height: '110px',
+                backgroundColor: '#FFFBF5',
+                borderRadius: '12px',
+                padding: '20px 24px',
+                border: '1px solid #FEF3E8'
+              }}
+            >
+              {/* Icon */}
+              <div 
+                className="flex items-center justify-center flex-shrink-0"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  backgroundColor: 'rgba(249, 145, 0, 0.12)',
+                  borderRadius: '50%'
+                }}
+              >
+                <FileText 
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    strokeWidth: '2.3px',
+                    color: '#F99100'
+                  }}
+                />
+              </div>
+              {/* Text */}
+              <div>
+                <h4 
+                  className="font-semibold mb-1"
+                  style={{
+                    fontSize: '18px',
+                    color: '#2D2F34',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Documents
+                </h4>
+                <p 
+                  style={{
+                    fontSize: '13px',
+                    color: '#6A707C',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Click to upload
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sheets Card */}
+          <div className="relative">
+            <input
+              id="upload-sheets"
+              type="file"
+              multiple
+              accept=".xlsx,.xls,.csv"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              onChange={(e) => {
+                if (e.target.files) handleFileUpload(e.target.files);
+              }}
+            />
+            <div 
+              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              style={{
+                width: '330px',
+                height: '110px',
+                backgroundColor: '#F3FBF7',
+                borderRadius: '12px',
+                padding: '20px 24px',
+                border: '1px solid #E8F5EE'
+              }}
+            >
+              {/* Icon - Green Sheets SVG */}
+              <div 
+                className="flex items-center justify-center flex-shrink-0"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  backgroundColor: 'rgba(22, 136, 70, 0.1)',
+                  borderRadius: '50%'
+                }}
+              >
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <rect x="7" y="5" width="22" height="26" rx="2" fill="#168846"/>
+                  <rect x="10" y="11" width="6" height="5" fill="white" opacity="0.9"/>
+                  <rect x="17" y="11" width="6" height="5" fill="white" opacity="0.9"/>
+                  <rect x="10" y="17" width="6" height="5" fill="white" opacity="0.9"/>
+                  <rect x="17" y="17" width="6" height="5" fill="white" opacity="0.9"/>
+                  <rect x="10" y="23" width="6" height="5" fill="white" opacity="0.9"/>
+                  <rect x="17" y="23" width="6" height="5" fill="white" opacity="0.9"/>
+                </svg>
+              </div>
+              {/* Text */}
+              <div>
+                <h4 
+                  className="font-semibold mb-1"
+                  style={{
+                    fontSize: '18px',
+                    color: '#2D2F34',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Sheets
+                </h4>
+                <p 
+                  style={{
+                    fontSize: '13px',
+                    color: '#6A707C',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Click to upload
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Presentations Card */}
+          <div className="relative">
+            <input
+              id="upload-presentations"
+              type="file"
+              multiple
+              accept=".pptx,.ppt"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              onChange={(e) => {
+                if (e.target.files) handleFileUpload(e.target.files);
+              }}
+            />
+            <div 
+              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              style={{
+                width: '330px',
+                height: '110px',
+                backgroundColor: '#FFF9F3',
+                borderRadius: '12px',
+                padding: '20px 24px',
+                border: '1px solid #FEF3E8'
+              }}
+            >
+              {/* Icon - Orange Presentation SVG */}
+              <div 
+                className="flex items-center justify-center flex-shrink-0"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  backgroundColor: 'rgba(215, 118, 0, 0.1)',
+                  borderRadius: '50%'
+                }}
+              >
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <rect x="6" y="9" width="24" height="18" rx="2" fill="#D77600"/>
+                  <rect x="8.5" y="12" width="10" height="6" fill="white" opacity="0.9"/>
+                  <rect x="8.5" y="19" width="5" height="1.2" fill="white" opacity="0.8"/>
+                  <rect x="8.5" y="21.5" width="7" height="1.2" fill="white" opacity="0.8"/>
+                  <path d="M20 15 L25 15 L25 21 L20 21 Z" fill="white" opacity="0.9"/>
+                </svg>
+              </div>
+              {/* Text */}
+              <div>
+                <h4 
+                  className="font-semibold mb-1"
+                  style={{
+                    fontSize: '18px',
+                    color: '#2D2F34',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Presentations
+                </h4>
+                <p 
+                  style={{
+                    fontSize: '13px',
+                    color: '#6A707C',
+                    lineHeight: '1.3em'
+                  }}
+                >
+                  Click to upload
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Drag and Drop Zone */}
+        <div 
+          className={`cursor-pointer transition-all flex-1 ${isDragActive ? 'border-[#605BFF] bg-blue-50' : ''}`}
+          style={{
+            minWidth: '520px',
+            height: '248px',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: isDragActive ? '2px dashed #605BFF' : '2px dashed #D1D5DB',
+            padding: '32px'
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragActive(true);
+          }}
+          onDragLeave={() => setIsDragActive(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragActive(false);
+            if (e.dataTransfer.files.length > 0) {
+              handleFileUpload(e.dataTransfer.files);
+            }
+          }}
+          onClick={() => document.getElementById('general-upload')?.click()}
+        >
+          <div 
+            className="flex flex-col items-center justify-center h-full gap-4"
+            style={{
+              backgroundColor: isDragActive ? 'transparent' : '#FAFBFC',
+              border: '1px solid #E8EAED',
+              borderRadius: '12px',
+              padding: '24px'
+            }}
+          >
+            {/* Upload Icon */}
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: '64px',
+                height: '64px',
+                backgroundColor: 'rgba(96, 91, 255, 0.08)',
+                borderRadius: '50%'
+              }}
+            >
+              <UploadCloud 
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  color: '#605BFF',
+                  strokeWidth: '2.5px'
+                }}
+              />
+            </div>
+            
+            {/* Button */}
+            <button 
+              className="font-semibold hover:bg-[#3239BC] transition-colors"
+              style={{
+                height: '44px',
+                backgroundColor: '#605BFF',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                borderRadius: '8px',
+                padding: '0 24px',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              Or upload any file type
+            </button>
+
+            {/* Description */}
+            <p 
+              className="font-medium"
+              style={{
+                fontSize: '14px',
+                color: '#6A707C',
+                textAlign: 'center',
+                lineHeight: '1.5em'
+              }}
+            >
+              Drag and drop files here or click to browse
+            </p>
+
+            <input
+              id="general-upload"
               type="file"
               multiple
               className="hidden"
               onChange={(e) => {
-                if (e.target.files) {
-                  setSelectedFileType(null);
-                  handleFileUpload(e.target.files);
-                }
+                if (e.target.files) handleFileUpload(e.target.files);
               }}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search assets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
         </div>
-        
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="images">Images</SelectItem>
-            <SelectItem value="documents">Documents</SelectItem>
-            <SelectItem value="videos">Videos</SelectItem>
-            <SelectItem value="audio">Audio</SelectItem>
-            <SelectItem value="others">Others</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {selectedAssets.length > 0 && (
-          <div className="flex gap-2">
-            <Dialog open={isTagDialogOpen} onOpenChange={setIsTagDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Tag className="h-4 w-4 mr-2" />
-                  Add Tags ({selectedAssets.length})
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Tags to Selected Assets</DialogTitle>
-                  <DialogDescription>
-                    Add comma-separated tags to {selectedAssets.length} selected asset(s)
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="tags">Tags</Label>
-                    <Input
-                      id="tags"
-                      placeholder="tag1, tag2, tag3"
-                      value={newTags}
-                      onChange={(e) => setNewTags(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsTagDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddTags}>Add Tags</Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            
-            <Button variant="destructive" size="sm" onClick={handleDeleteAssets}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete ({selectedAssets.length})
-            </Button>
-          </div>
-        )}
       </div>
 
-      {/* Tag Filters */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Filter by tags:</span>
-          {allTags.slice(0, 10).map(tag => (
-            <Badge
-              key={tag}
-              variant={selectedTags.includes(tag) ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => {
-                if (selectedTags.includes(tag)) {
-                  setSelectedTags(prev => prev.filter(t => t !== tag));
-                } else {
-                  setSelectedTags(prev => [...prev, tag]);
-                }
+      {/* Uploaded Files Section Header */}
+      <div className="flex items-center justify-between mb-8">
+        {/* Title */}
+        <h2 
+          className="font-semibold"
+          style={{
+            fontSize: '20px',
+            color: '#2D2F34',
+            lineHeight: '1.3em'
+          }}
+        >
+          Uploaded Files
+        </h2>
+
+        {/* Search and Category Filter */}
+        <div className="flex items-center gap-3">
+          {/* Search Box */}
+          <div 
+            className="relative flex items-center"
+            style={{
+              width: '320px',
+              height: '40px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E4E7EC',
+              borderRadius: '8px'
+            }}
+          >
+            <Search 
+              style={{
+                width: '16px',
+                height: '16px',
+                color: '#9CA3AF',
+                strokeWidth: '2px',
+                position: 'absolute',
+                left: '14px'
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search Rules..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-full font-medium outline-none bg-transparent"
+              style={{
+                fontSize: '14px',
+                color: '#2D2F34',
+                paddingLeft: '42px',
+                paddingRight: '14px'
+              }}
+            />
+          </div>
+
+          {/* Category Dropdown */}
+          <div 
+            className="relative flex items-center justify-between cursor-pointer hover:border-gray-300 transition-colors"
+            style={{
+              width: '180px',
+              height: '40px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E4E7EC',
+              borderRadius: '8px',
+              padding: '0 14px'
+            }}
+          >
+            <span 
+              className="font-medium"
+              style={{
+                fontSize: '14px',
+                color: '#6A707C'
               }}
             >
-              {tag}
-            </Badge>
-          ))}
-          {allTags.length > 10 && (
-            <Badge variant="outline">+{allTags.length - 10} more</Badge>
-          )}
+              {selectedCategory}
+            </span>
+            <ChevronDown 
+              style={{
+                width: '16px',
+                height: '16px',
+                color: '#9CA3AF',
+                strokeWidth: '2px'
+              }}
+            />
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* Assets Grid/List */}
+      {/* File Cards Grid */}
       {filteredAssets.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <File className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No assets found</h3>
-            <p className="text-muted-foreground text-center">
-              {assets.length === 0 
-                ? "Upload your first asset to get started" 
-                : "Try adjusting your search or filters"}
-            </p>
-          </CardContent>
-        </Card>
+        <div 
+          className="flex flex-col items-center justify-center"
+          style={{
+            backgroundColor: '#FAFBFC',
+            borderRadius: '16px',
+            padding: '96px 40px',
+            border: '1px solid #E8EAED'
+          }}
+        >
+          <div
+            className="flex items-center justify-center mb-6"
+            style={{
+              width: '80px',
+              height: '80px',
+              backgroundColor: '#F0F1F3',
+              borderRadius: '50%'
+            }}
+          >
+            <File 
+              style={{
+                width: '40px',
+                height: '40px',
+                color: '#9CA3AF',
+                strokeWidth: '2px'
+              }}
+            />
+          </div>
+          <h3 
+            className="font-semibold mb-3"
+            style={{
+              fontSize: '18px',
+              color: '#2D2F34'
+            }}
+          >
+            No files found
+          </h3>
+          <p 
+            style={{
+              fontSize: '14px',
+              color: '#6A707C',
+              textAlign: 'center',
+              maxWidth: '400px',
+              lineHeight: '1.5em'
+            }}
+          >
+            {assets.length === 0 
+              ? "Upload your first file to get started with managing your documents" 
+              : "Try adjusting your search or upload new files"}
+          </p>
+        </div>
       ) : (
-        <div className={viewMode === 'grid' 
-          ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-          : "space-y-2"
-        }>
+        <div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          style={{
+            width: '100%'
+          }}
+        >
           {filteredAssets.map((asset) => (
-            <Card 
+            <div 
               key={asset._id} 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                selectedAssets.includes(asset._id) ? 'ring-2 ring-primary' : ''
-              } ${viewMode === 'list' ? 'p-3' : ''}`}
+              className="hover:shadow-xl transition-all cursor-pointer"
+              style={{
+                minWidth: '280px',
+                maxWidth: '320px',
+                backgroundColor: '#FFFFFF',
+                borderRadius: '12px',
+                padding: '24px',
+                boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.08)',
+                border: '1px solid #F0F1F3'
+              }}
             >
-              {viewMode === 'grid' ? (
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      {getFileIcon(asset.mimetype)}
-                      <Checkbox
-                        checked={selectedAssets.includes(asset._id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedAssets(prev => [...prev, asset._id]);
-                          } else {
-                            setSelectedAssets(prev => prev.filter(id => id !== asset._id));
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewAsset(asset);
-                        }}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadAsset(asset);
-                        }}
-                      >
-                        <Download className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {asset.mimetype.startsWith('image/') && asset.thumbnailUrl && (
-                    <div className="w-full h-32 bg-muted rounded-md mb-3 overflow-hidden">
-                      <img 
-                        src={asset.thumbnailUrl} 
-                        alt={asset.originalName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm truncate" title={asset.originalName}>
-                      {asset.originalName}
-                    </h4>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{formatFileSize(asset.size)}</span>
-                      <span>{new Date(asset.uploadDate).toLocaleDateString()}</span>
-                    </div>
-                    {asset.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {asset.tags.slice(0, 2).map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {asset.tags.length > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{asset.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              ) : (
-                <div className="flex items-center gap-4 p-3">
-                  <Checkbox
-                    checked={selectedAssets.includes(asset._id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedAssets(prev => [...prev, asset._id]);
-                      } else {
-                        setSelectedAssets(prev => prev.filter(id => id !== asset._id));
-                      }
+              {/* Top Row: Icon + Active Badge + Check */}
+              <div className="flex items-center justify-between mb-5">
+                {/* File Icon */}
+                <div 
+                  className="flex items-center justify-center flex-shrink-0"
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    backgroundColor: '#F5F6FA',
+                    borderRadius: '50%'
+                  }}
+                >
+                  <FileText 
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      strokeWidth: '2px',
+                      color: '#605BFF'
                     }}
                   />
-                  {getFileIcon(asset.mimetype)}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{asset.originalName}</h4>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{formatFileSize(asset.size)}</span>
-                      <span>{new Date(asset.uploadDate).toLocaleDateString()}</span>
-                      <span className="capitalize">{asset.category}</span>
-                    </div>
+                </div>
+
+                {/* Actions: Active Badge + Check Icon */}
+                <div className="flex items-center gap-2">
+                  {/* Active Badge */}
+                  <div 
+                    className="font-medium"
+                    style={{
+                      backgroundColor: '#ECFDF5',
+                      color: '#059669',
+                      fontSize: '11px',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Active
                   </div>
-                  {asset.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {asset.tags.slice(0, 3).map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewAsset(asset);
+
+                  {/* Check Icon */}
+                  <div
+                    className="flex items-center justify-center"
+                    style={{
+                      width: '20px',
+                      height: '20px'
+                    }}
+                  >
+                    <Check 
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        strokeWidth: '2.5px',
+                        color: '#D1D5DB'
                       }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownloadAsset(asset);
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                 </div>
-              )}
-            </Card>
+              </div>
+
+              {/* Filename */}
+              <h4 
+                className="font-semibold truncate mb-4"
+                style={{
+                  fontSize: '15px',
+                  color: '#2D2F34',
+                  lineHeight: '1.4em'
+                }}
+                title={asset.originalName}
+              >
+                {asset.originalName}
+              </h4>
+
+              {/* File Size and Date */}
+              <div className="flex items-center justify-between mb-5">
+                <span 
+                  style={{
+                    fontSize: '13px',
+                    color: '#6A707C',
+                    fontWeight: '500'
+                  }}
+                >
+                  {formatFileSize(asset.size)}
+                </span>
+                <span 
+                  style={{
+                    fontSize: '13px',
+                    color: '#6A707C',
+                    fontWeight: '500'
+                  }}
+                >
+                  {new Date(asset.uploadDate).toLocaleDateString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
+
+              {/* Buttons Row */}
+              <div className="flex items-center gap-3">
+                {/* View Button */}
+                <button 
+                  className="font-semibold hover:bg-[#1F2937] transition-colors flex-1"
+                  style={{
+                    backgroundColor: '#374151',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    borderRadius: '8px',
+                    padding: '10px 0',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleViewAsset(asset)}
+                >
+                  View
+                </button>
+
+                {/* Download Button */}
+                <button 
+                  className="font-semibold hover:bg-[#4F46E5] transition-colors flex-1"
+                  style={{
+                    backgroundColor: '#605BFF',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    borderRadius: '8px',
+                    padding: '10px 0',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleDownloadAsset(asset)}
+                >
+                  Download
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}
