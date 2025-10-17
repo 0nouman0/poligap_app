@@ -47,7 +47,7 @@ export interface UseUserProfileReturn {
   
   // Actions
   fetchProfile: (userId?: string, companyId?: string) => Promise<UserProfile | null>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<UserProfile | null>;
+  updateProfile: (updates: Partial<UserProfile>, options?: { suppressToast?: boolean }) => Promise<UserProfile | null>;
   refreshProfile: () => Promise<void>;
   clearError: () => void;
 }
@@ -170,7 +170,8 @@ export function useUserProfile(): UseUserProfileReturn {
   }, [userData?.userId, selectedCompany?.companyId, setUserData]);
 
   const updateProfile = useCallback(async (
-    updates: Partial<UserProfile>
+    updates: Partial<UserProfile>,
+    options?: { suppressToast?: boolean }
   ): Promise<UserProfile | null> => {
     setIsLoading(true);
     setError(null);
@@ -255,7 +256,10 @@ export function useUserProfile(): UseUserProfileReturn {
         console.log('✅ User store updated immediately with fresh data');
       }
       
-      toastSuccess('Profile Updated', 'Your profile has been updated successfully');
+      // Only show toast if not suppressed
+      if (!options?.suppressToast) {
+        toastSuccess('Profile Updated', 'Your profile has been updated successfully');
+      }
       return updatedProfile;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
