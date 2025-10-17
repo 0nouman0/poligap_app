@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { cacheManager } from '@/lib/cache-manager';
 
 export interface AuditLog {
   _id: string;
@@ -60,12 +61,16 @@ export const useAuditLogsStore = create<AuditLogsState>((set, get) => ({
 
   // Fetch logs from API
   fetchLogs: async (userId: string, force = false) => {
-    const { isCacheValid, logs } = get();
+    const cacheKey = `audit-logs:${userId}`;
     
-    // Return cached data if valid and not forcing refresh
-    if (!force && isCacheValid() && logs.length > 0) {
-      console.log('✅ Using cached audit logs');
-      return;
+    // Try to get from cache first
+    if (!force) {
+      const cached = cacheManager.get<AuditLog[]>(cacheKey, { prefix: 'audit' });
+      if (cached) {
+        console.log('✅ Using cached audit logs from cache manager');
+        set({ logs: cached, isLoading: false, error: null, lastFetched: Date.now() });
+        return;
+      }
     }
 
     set({ isLoading: true, error: null });
@@ -82,6 +87,12 @@ export const useAuditLogsStore = create<AuditLogsState>((set, get) => ({
       const data = await response.json();
       
       if (data.success && Array.isArray(data.logs)) {
+        // Cache the results with 5 minute TTL
+        cacheManager.set(cacheKey, data.logs, {
+          ttl: 5 * 60 * 1000,
+          prefix: 'audit'
+        });
+        
         set({
           logs: data.logs,
           isLoading: false,
@@ -108,6 +119,7 @@ export const useAuditLogsStore = create<AuditLogsState>((set, get) => ({
 
   // Clear cache
   clearLogs: () => {
+    cacheManager.clearPrefix('audit');
     set({ logs: [], lastFetched: null, error: null });
   },
 

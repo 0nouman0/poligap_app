@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
+// import { ThemeToggle } from "@/components/theme-toggle"; // Hidden for now
 
 import { useAuthStore } from "@/stores/auth-store";
 import { useAuth } from "@/hooks/use-auth";
@@ -233,10 +233,10 @@ export const Header = memo(function Header() {
             <CompanyDropdown />
           </div>
 
-          {/* Theme Switcher */}
-          <div className="flex-shrink-0">
+          {/* Theme Switcher - Hidden for now */}
+          {/* <div className="flex-shrink-0">
             <ThemeToggle />
-          </div>
+          </div> */}
 
           {/* Profile Picture */}
           <DropdownMenu modal={false}>

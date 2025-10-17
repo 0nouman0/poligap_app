@@ -709,7 +709,8 @@ export default function ContractReview() {
     const term = deferredSearchTerm.trim().toLowerCase();
     if (!term) return knowledgeBaseTemplates;
     return knowledgeBaseTemplates.filter((t) =>
-      t.name.toLowerCase().includes(term)
+      t.name.toLowerCase().includes(term) ||
+      t.description?.toLowerCase().includes(term)
     );
   }, [deferredSearchTerm]);
   const [finalInstructions, setFinalInstructions] = useState<string>("");
@@ -1059,57 +1060,69 @@ export default function ContractReview() {
                 
                 {/* Template Cards Grid */}
                 <div className="flex-1 overflow-y-auto scrollbar-hide">
-                  <div className={"grid " + (selectedTemplate ? 'grid-cols-3' : 'grid-cols-4') + " gap-4 p-1"}>
-                    {filteredTemplates.map((template) => {
-                      const isSelected = selectedTemplate?.id === template.id;
-                      return (
-                        <div
-                          key={template.id}
-                          onClick={() => handleTemplateSelect(template)}
-                          className={"bg-white dark:bg-gray-800 rounded-[8px] shadow-sm cursor-pointer transition-all hover:shadow-md " + (
-                            isSelected ? 'ring-2 ring-[#3B43D6] shadow-md' : 'border border-gray-100 dark:border-gray-700 hover:border-[#3B43D6]/50'
-                          )}
-                        >
-                          <div className="p-3">
-                            <div className="flex items-start justify-between mb-2.5">
-                              <div className="w-10 h-10 rounded-full bg-[#EFF1F6] dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                <BookOpen className="h-5 w-5 text-[#3B43D6]" />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="bg-[#EDFFDE] dark:bg-green-900/30 rounded-full px-2 py-0.5 flex items-center gap-1">
-                                  <Award className="h-2.5 w-2.5 text-[#47AF47]" />
-                                  <span className="text-xs font-medium text-[#47AF47]">Baseline</span>
+                  {filteredTemplates.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-20">
+                      <div className="w-16 h-16 rounded-full bg-[#EFF1F6] dark:bg-gray-700 flex items-center justify-center mb-4">
+                        <BookOpen className="h-8 w-8 text-[#6A707C] dark:text-gray-400" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-2">No templates found</h3>
+                      <p className="text-xs text-[#6A707C] dark:text-gray-400 text-center max-w-xs">
+                        No templates match your search "{searchTerm}". Try different keywords or clear your search.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={"grid " + (selectedTemplate ? 'grid-cols-3' : 'grid-cols-4') + " gap-4 p-1"}>
+                      {filteredTemplates.map((template) => {
+                        const isSelected = selectedTemplate?.id === template.id;
+                        return (
+                          <div
+                            key={template.id}
+                            onClick={() => handleTemplateSelect(template)}
+                            className={"bg-white dark:bg-gray-800 rounded-[8px] shadow-sm cursor-pointer transition-all hover:shadow-md " + (
+                              isSelected ? 'ring-2 ring-[#3B43D6] shadow-md' : 'border border-gray-100 dark:border-gray-700 hover:border-[#3B43D6]/50'
+                            )}
+                          >
+                            <div className="p-3">
+                              <div className="flex items-start justify-between mb-2.5">
+                                <div className="w-10 h-10 rounded-full bg-[#EFF1F6] dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                  <BookOpen className="h-5 w-5 text-[#3B43D6]" />
                                 </div>
-                                <CheckCircle className={"h-4 w-4 transition-colors " + (isSelected ? 'text-[#3B43D6]' : 'text-[#DADADA] dark:text-gray-600')} />
-                              </div>
-                            </div>
-                            
-                            <div className="mb-2.5">
-                              <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-1 leading-tight line-clamp-2">{template.name}</h4>
-                              <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-tight line-clamp-2">{template.description}</p>
-                            </div>
-                            
-                            <div className="space-y-1.5">
-                              <div className="text-xs font-semibold text-[#2D2F34] dark:text-gray-300">
-                                Sections: {template.sections}
-                              </div>
-                              <div className="text-xs font-semibold text-[#2D2F34] dark:text-gray-300 truncate">
-                                Sources: {template.sources.join(", ")}
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                  <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">Parties</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="bg-[#EDFFDE] dark:bg-green-900/30 rounded-full px-2 py-0.5 flex items-center gap-1">
+                                    <Award className="h-2.5 w-2.5 text-[#47AF47]" />
+                                    <span className="text-xs font-medium text-[#47AF47]">Baseline</span>
+                                  </div>
+                                  <CheckCircle className={"h-4 w-4 transition-colors " + (isSelected ? 'text-[#3B43D6]' : 'text-[#DADADA] dark:text-gray-600')} />
                                 </div>
-                                <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                  <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">+{template.requiredSections.length - 1} more</span>
+                              </div>
+                              
+                              <div className="mb-2.5">
+                                <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-1 leading-tight line-clamp-2">{template.name}</h4>
+                                <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-tight line-clamp-2">{template.description}</p>
+                              </div>
+                              
+                              <div className="space-y-1.5">
+                                <div className="text-xs font-semibold text-[#2D2F34] dark:text-gray-300">
+                                  Sections: {template.sections}
+                                </div>
+                                <div className="text-xs font-semibold text-[#2D2F34] dark:text-gray-300 truncate">
+                                  Sources: {template.sources.join(", ")}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
+                                    <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">Parties</span>
+                                  </div>
+                                  <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
+                                    <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">+{template.requiredSections.length - 1} more</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 

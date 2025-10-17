@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { cacheManager } from '@/lib/cache-manager';
 
 export interface Rule {
   _id: string;
@@ -56,12 +57,16 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
 
   // Fetch rules from API
   fetchRules: async (force = false) => {
-    const { isCacheValid, rules } = get();
+    const cacheKey = 'all-rules';
     
-    // Return cached data if valid and not forcing refresh
-    if (!force && isCacheValid() && rules.length > 0) {
-      console.log('✅ Using cached rulebase');
-      return;
+    // Try to get from cache first
+    if (!force) {
+      const cached = cacheManager.get<Rule[]>(cacheKey, { prefix: 'rulebase' });
+      if (cached) {
+        console.log('✅ Using cached rulebase from cache manager');
+        set({ rules: cached, isLoading: false, error: null, lastFetched: Date.now() });
+        return;
+      }
     }
 
     set({ isLoading: true, error: null });
@@ -77,6 +82,12 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
       const data = await response.json();
       
       if (Array.isArray(data.rules)) {
+        // Cache the results with 10 minute TTL (rulebase changes less frequently)
+        cacheManager.set(cacheKey, data.rules, {
+          ttl: 10 * 60 * 1000,
+          prefix: 'rulebase'
+        });
+        
         set({
           rules: data.rules,
           isLoading: false,
@@ -96,29 +107,48 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
 
   // Add a new rule to the cache
   addRule: (rule: Rule) => {
-    set((state) => ({
-      rules: [rule, ...state.rules]
-    }));
+    set((state) => {
+      const newRules = [rule, ...state.rules];
+      // Update cache
+      cacheManager.set('all-rules', newRules, {
+        ttl: 10 * 60 * 1000,
+        prefix: 'rulebase'
+      });
+      return { rules: newRules };
+    });
   },
 
   // Update an existing rule in the cache
   updateRule: (id: string, updates: Partial<Rule>) => {
-    set((state) => ({
-      rules: state.rules.map(rule =>
+    set((state) => {
+      const updatedRules = state.rules.map(rule =>
         rule._id === id || rule.id === id ? { ...rule, ...updates } : rule
-      )
-    }));
+      );
+      // Update cache
+      cacheManager.set('all-rules', updatedRules, {
+        ttl: 10 * 60 * 1000,
+        prefix: 'rulebase'
+      });
+      return { rules: updatedRules };
+    });
   },
 
   // Delete a rule from the cache (hard delete - remove from list)
   deleteRule: (id: string) => {
-    set((state) => ({
-      rules: state.rules.filter(rule => rule._id !== id && rule.id !== id)
-    }));
+    set((state) => {
+      const filteredRules = state.rules.filter(rule => rule._id !== id && rule.id !== id);
+      // Update cache
+      cacheManager.set('all-rules', filteredRules, {
+        ttl: 10 * 60 * 1000,
+        prefix: 'rulebase'
+      });
+      return { rules: filteredRules };
+    });
   },
 
   // Clear cache
   clearRules: () => {
+    cacheManager.clearPrefix('rulebase');
     set({ rules: [], lastFetched: null, error: null });
   },
 

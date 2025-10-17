@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Upload, Plus, FileText, Tag, Trash2, Download, Search, Pencil, Sparkles, BookOpen, Loader2, Check } from "lucide-react";
+import { Plus, FileText, Tag, Trash2, Download, Search, Pencil, Sparkles, BookOpen, Loader2, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useRulebaseStore } from "@/stores/rulebase-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -164,7 +164,6 @@ export default function RuleBasePage() {
   const [newRuleName, setNewRuleName] = useState("");
   const [newRuleDesc, setNewRuleDesc] = useState("");
   const [newRuleTags, setNewRuleTags] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editRuleId, setEditRuleId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -210,24 +209,6 @@ export default function RuleBasePage() {
     } catch (e) {
       // revert on failure
       updateRuleInStore(rule._id, { active: prev });
-    }
-  };
-
-  const handleFileUpload = async (files: FileList) => {
-    if (!files.length) return;
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("file", files[0]);
-      const res = await fetch("/api/rulebase/upload", { method: "POST", body: form });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data?.rule) {
-        addRuleToStore(data.rule);
-      }
-    } catch (e) {
-      // swallow errors for now
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -395,28 +376,18 @@ export default function RuleBasePage() {
             <div className="flex flex-col">
               <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19.36px]">RuleBase</h1>
               <p className="text-[12px] text-[#6A707C] leading-[14.52px]">
-                Upload and manage your company's custom compliance and contract rules
+                Manage your company's custom compliance and contract rules
               </p>
             </div>
           </div>
 
           {/* Right side buttons */}
           <div className="flex items-center gap-[15px]">
-            <label className="h-9 px-[10px] border border-[#717171] rounded-[5px] bg-[#FAFAFA] cursor-pointer flex items-center gap-[5px]">
-              <Upload className="w-[14px] h-[14px] text-[#717171]" strokeWidth={1.17} />
-              <span className="text-[12px] font-semibold text-[#717171] leading-[14.52px]">Upload File</span>
-              <input
-                type="file"
-                className="hidden"
-                accept=".txt,.md,.json,.csv,.yaml,.yml,.pdf,.doc,.docx"
-                onChange={e => e.target.files && handleFileUpload(e.target.files)}
-              />
-            </label>
             <button
               onClick={() => setIsCreateOpen(true)}
               className="h-9 px-[15px] bg-[#3B43D6] rounded-[5px] flex items-center gap-[5px]"
             >
-              <span className="text-[12px] font-semibold text-white text-center leading-[14.52px]">+ New Task</span>
+              <span className="text-[12px] font-semibold text-white text-center leading-[14.52px]">+ New Rule</span>
             </button>
           </div>
         </div>
@@ -453,7 +424,7 @@ export default function RuleBasePage() {
               <div className="flex flex-col gap-[15px] w-[1211px]">
                 <h2 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Your Rules</h2>
                 <p className="text-[12px] font-medium text-[#717171] leading-[14.52px]">
-                  Search, view and manage uploaded or created rules
+                  Search, view and manage created rules
                 </p>
               </div>
               
@@ -499,7 +470,7 @@ export default function RuleBasePage() {
                   </defs>
                 </svg>
                 <p className="text-[12px] font-medium text-[#595959] leading-[14.52px]">
-                  No rules yet. Upload a file or create your first rule.
+                  No rules yet. Create your first rule to get started.
                 </p>
               </div>
             ) : (
