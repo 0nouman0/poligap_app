@@ -67,17 +67,19 @@ export default function UserProfilePage() {
   // Image states
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
-  const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
   
   // Refs for file inputs
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Banner image logic
+  // Banner image logic - keep previous image during upload
   let bannerImage = "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
   if (profileData?.banner?.image) {
     bannerImage = profileData.banner.image;
   }
+  
+  // During upload, show the current banner image (not the preview)
+  const displayBannerImage = isBannerUploading ? bannerImage : (bannerPreview || bannerImage);
 
   // Fetch profile data on component mount
   useEffect(() => {
@@ -144,6 +146,8 @@ export default function UserProfilePage() {
   useEffect(() => {
     setBannerPreview(null);
     setProfilePicPreview(null);
+    setIsBannerUploading(false);
+    setIsProfilePicUploading(false);
   }, [bannerImage, profileData?.profileImage]);
 
   // Validation functions
@@ -380,9 +384,8 @@ export default function UserProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show loading state
-    const optimisticUrl = URL.createObjectURL(file);
-    setBannerPreview(optimisticUrl);
+    // Set uploading state - this will keep the previous image visible
+    setIsBannerUploading(true);
     setIsSaving(true);
 
     try {
@@ -396,10 +399,7 @@ export default function UserProfilePage() {
       if (updateBanner.success && updateBanner.data?.fileUrl) {
         const newBannerUrl = updateBanner.data.fileUrl;
         
-        // Immediately update local state with the new URL
-        setBannerPreview(null); // Clear blob URL
-        
-        // Update profile data state immediately
+        // Update profile data state with the new URL
         const updatedProfileData = {
           ...profileData,
           banner: {
@@ -409,7 +409,7 @@ export default function UserProfilePage() {
         };
         setProfileData(updatedProfileData as any);
         
-        // Update user store immediately
+        // Update user store with the new URL
         if (userData) {
           setUserData({
             ...userData,
@@ -425,22 +425,16 @@ export default function UserProfilePage() {
             ...profileData?.banner,
             image: newBannerUrl,
           },
-        });
-
-        toastSuccess("Banner updated successfully");
+        }, { suppressToast: true });
       } else {
         throw new Error("Upload failed");
       }
     } catch (error) {
       console.error("Banner update error:", error);
       toastError("Failed to update banner. Please try again.");
-      setBannerPreview(null);
     } finally {
       setIsSaving(false);
-      // Clean up blob URL
-      if (optimisticUrl) {
-        URL.revokeObjectURL(optimisticUrl);
-      }
+      setIsBannerUploading(false);
     }
   };
 
@@ -457,10 +451,9 @@ export default function UserProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Start upload state (do not show optimistic preview to avoid instant UI changes)
+    // Show loading state
     const optimisticUrl = URL.createObjectURL(file);
-    setProfilePicPreview(optimisticUrl); // kept for potential future preview UI, but not shown while persisting
-    setIsUploadingProfilePic(true);
+    setProfilePicPreview(optimisticUrl);
     setIsSaving(true);
 
     try {
@@ -473,43 +466,39 @@ export default function UserProfilePage() {
 
       if (updateProfilePic.success && updateProfilePic.data?.fileUrl) {
         const newImageUrl = updateProfilePic.data.fileUrl;
-        // Persist the profile image URL to the database via the hook.
-        // Only update the UI after the DB confirms persistence.
-        const updatedProfile = await updateProfile({ profileImage: newImageUrl });
-
-        if (updatedProfile) {
-          // Clear any blob preview
-          setProfilePicPreview(null);
-
-          // Update local state after persistence
-          const updatedProfileData = {
-            ...profileData,
+        
+        // Immediately update local state with the new URL
+        setProfilePicPreview(null); // Clear blob URL
+        
+        // Update profile data state immediately
+        const updatedProfileData = {
+          ...profileData,
+          profileImage: newImageUrl,
+        };
+        setProfileData(updatedProfileData as any);
+        
+        // Update user store immediately
+        if (userData) {
+          setUserData({
+            ...userData,
             profileImage: newImageUrl,
-          };
-          setProfileData(updatedProfileData as any);
-
-          // Update user store
-          if (userData) {
-            setUserData({
-              ...userData,
-              profileImage: newImageUrl,
-            });
-          }
-
-          toastSuccess("Profile picture updated successfully");
-        } else {
-          throw new Error('Failed to persist profile image');
+          });
         }
+
+        // Use updateProfile hook to sync with database and clear cache
+        await updateProfile({
+          profileImage: newImageUrl,
+        });
+
+        toastSuccess("Profile picture updated successfully");
       } else {
         throw new Error("Upload failed");
       }
     } catch (error) {
       console.error("Profile picture update error:", error);
       toastError("Failed to update profile picture. Please try again.");
-      setProfilePicPreview(null);
     } finally {
       setIsSaving(false);
-      setIsUploadingProfilePic(false);
       // Clean up blob URL
       if (optimisticUrl) {
         URL.revokeObjectURL(optimisticUrl);
@@ -849,7 +838,8 @@ export default function UserProfilePage() {
     );
   };
 
-  if (isLoading || isInitializing) {
+  // Only show full page loading during initial load, not during updates
+  if (isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -882,12 +872,12 @@ export default function UserProfilePage() {
         {/* Banner Section - Keep existing styling */}
         <div className="relative group">
           <img
-            src={bannerPreview || bannerImage}
+            src={displayBannerImage}
             alt="Profile Banner"
             className="w-full h-48 md:h-64 object-cover"
           />
           {/* Loading overlay */}
-          {isSaving && bannerPreview && (
+          {isSaving && isBannerUploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40">
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 text-white animate-spin" />
@@ -895,15 +885,19 @@ export default function UserProfilePage() {
               </div>
             </div>
           )}
-          <button
-            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 hover:bg-black/20"
-            onClick={handleBannerEdit}
-            title="Edit banner"
-            type="button"
-            disabled={isSaving}
-          >
-            <Camera className="h-6 w-6 text-white drop-shadow" />
-          </button>
+           <button
+             className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/10 hover:bg-black/20 ${
+               isSaving && isBannerUploading 
+                 ? 'opacity-0 cursor-not-allowed' 
+                 : 'opacity-0 group-hover:opacity-100'
+             }`}
+             onClick={handleBannerEdit}
+             title={isSaving && isBannerUploading ? "Uploading banner..." : "Edit banner"}
+             type="button"
+             disabled={isSaving && isBannerUploading}
+           >
+             <Camera className="h-6 w-6 text-white drop-shadow" />
+           </button>
           <input
             type="file"
             accept="image/*"
@@ -917,16 +911,9 @@ export default function UserProfilePage() {
           {/* Profile Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
             <div className="z-10 -mt-16 sm:-mt-24 relative group">
-              {isUploadingProfilePic ? (
-                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white flex items-center justify-center bg-gray-100 shadow-md">
-                  <div className="flex flex-col items-center gap-1">
-                    <Loader2 className="h-6 w-6 text-gray-600 animate-spin" />
-                    <p className="text-xs text-gray-600 mt-1">Saving...</p>
-                  </div>
-                </div>
-              ) : profilePicPreview || profileData?.profileImage ? (
+              {profilePicPreview || profileData?.profileImage ? (
                 <img
-                  src={profilePicPreview || profileData?.profileImage}
+                  src={profileData.profileImage}
                   alt={profileData?.name || "User"}
                   className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white object-cover shadow-md"
                 />
@@ -939,23 +926,27 @@ export default function UserProfilePage() {
                   {getInitials(profileData?.name || '')}
                 </div>
               )}
-              {/* Loading overlay for profile picture (during upload/persist) */}
-              {isUploadingProfilePic && (
+              {/* Loading overlay for profile picture */}
+              {isSaving && profilePicPreview && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
               )}
-              <button
-                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={handleProfilePicEdit}
-                title="Edit profile picture"
-                type="button"
-                disabled={isSaving}
-              >
-                <div className="w-full h-full flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20">
-                  <Camera className="h-4 w-4 text-white drop-shadow" />
-                </div>
-              </button>
+               <button
+                 className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+                   isSaving && isProfilePicUploading 
+                     ? 'opacity-0 cursor-not-allowed' 
+                     : 'opacity-0 group-hover:opacity-100'
+                 }`}
+                 onClick={handleProfilePicEdit}
+                 title={isSaving && isProfilePicUploading ? "Uploading profile picture..." : "Edit profile picture"}
+                 type="button"
+                 disabled={isSaving && isProfilePicUploading}
+               >
+                 <div className="w-full h-full flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20">
+                   <Camera className="h-4 w-4 text-white drop-shadow" />
+                 </div>
+               </button>
               <input
                 type="file"
                 accept="image/*"
