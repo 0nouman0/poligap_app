@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
 import { CheckSquare, Plus, Filter, Check, RotateCcw, Trash2, Shield, FileText, Info, ChevronDown, MoreHorizontal, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,21 +12,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUserStore } from "@/stores/user-store";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useTasksStore, type Task } from "@/stores/tasks-store";
+import { useTasksList, useCreateTask, useUpdateTask, useDeleteTask } from "@/lib/queries/useTasks";
 
 export default function MyTasksPage() {
   const userData = useUserStore((state) => state.userData);
   const { 
-    tasks, 
-    isLoading: loading, 
-    error, 
-    fetchTasks, 
-    addTask, 
+    tasks: storeTasks,
+    addTask: addTaskToStore,
     updateTask: updateTaskInStore, 
     deleteTask: deleteTaskFromStore,
-    searchTasks,
-    getTasksByStatus,
-    getTasksByPriority,
-    getTasksBySource
   } = useTasksStore();
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -65,7 +59,7 @@ export default function MyTasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [infoOpen, setInfoOpen] = useState(false);
-  const [infoTask, setInfoTask] = useState<Task | null>(null);
+  const [infoTask, setInfoTask] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
 
@@ -101,24 +95,11 @@ export default function MyTasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  const loadTasks = async (force = false) => {
-    const userId = getUserId();
-    
-    if (!userId) {
-      console.error('❌ Cannot load tasks: userId is null');
-      return; // Don't show error toast, just wait for user to be initialized
-    }
-
-    await fetchTasks(userId, force);
-  };
-
-  useEffect(() => {
-    // Only load tasks when we have userData
-    if (userData?.userId) {
-      loadTasks();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData?.userId, activeTab, priorityFilter, sourceFilter]);
+  const resolvedUserId = getUserId();
+  const { data: queryTasks = [], isLoading: loading } = useTasksList(resolvedUserId);
+  const createTaskMutation = useCreateTask(resolvedUserId);
+  const updateTaskMutation = useUpdateTask(resolvedUserId);
+  const deleteTaskMutation = useDeleteTask(resolvedUserId);
 
   // Close filters dropdown when clicking outside
   useEffect(() => {
@@ -133,17 +114,25 @@ export default function MyTasksPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showFilters]);
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = !searchTerm.trim() ||
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (task.description || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = activeTab === 'all' || task.status === activeTab;
-    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
-    const matchesSource = sourceFilter === 'all' || task.source === sourceFilter;
-    
-    return matchesSearch && matchesStatus && matchesPriority && matchesSource;
-  });
+  const deferredSearch = useDeferredValue(searchTerm);
+  const tasks: Task[] = queryTasks.length
+    ? (queryTasks as any[]).map((t) => ({
+        ...t,
+        _id: ((t as any)._id || (t as any).id || "") as string,
+      }))
+    : storeTasks;
+  const filteredTasks = useMemo(() => {
+    const term = deferredSearch.trim().toLowerCase();
+    return tasks.filter(task => {
+      const matchesSearch = !term ||
+        task.title.toLowerCase().includes(term) ||
+        (task.description || "").toLowerCase().includes(term);
+      const matchesStatus = activeTab === 'all' || task.status === activeTab;
+      const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
+      const matchesSource = sourceFilter === 'all' || task.source === sourceFilter;
+      return matchesSearch && matchesStatus && matchesPriority && matchesSource;
+    });
+  }, [tasks, deferredSearch, activeTab, priorityFilter, sourceFilter]);
 
   const getSourceStyle = (source?: string) => {
     switch (source) {
@@ -185,28 +174,18 @@ export default function MyTasksPage() {
 
       console.log('➕ Creating task for userId:', userId);
       
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description: newTaskDescription.trim(),
-          status: 'pending',
-          priority: 'medium',
-          dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
-          category: 'General',
-          source: newTaskSource,
-          userId
-        })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to create task');
-      
-      // Add to store for instant UI update
-      if (data.task) {
-        addTask(data.task);
-        toastSuccess('Task Created', 'New task added successfully!');
-      }
+      const payload = {
+        title,
+        description: newTaskDescription.trim(),
+        status: 'pending' as const,
+        priority: 'medium' as const,
+        dueDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+        category: 'General',
+        source: newTaskSource,
+        userId,
+      };
+      const created = await createTaskMutation.mutateAsync(payload);
+      if (created) toastSuccess('Task Created', 'New task added successfully!');
       
       setNewTaskTitle("");
       setNewTaskDescription("");
@@ -226,23 +205,13 @@ export default function MyTasksPage() {
     updateTaskInStore(id, updates);
     
     try {
-      const res = await fetch('/api/tasks', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, updates })
-      });
-      
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to update task');
-      }
-      
+      await updateTaskMutation.mutateAsync({ id, updates });
       toastSuccess('Task Updated', 'Task updated successfully!');
     } catch (e) {
       console.error('Update task failed', e);
       toastError('Update Failed', e instanceof Error ? e.message : 'Failed to update task');
       // Revert on error by refetching
-      await loadTasks(true);
+      // Query invalidation will refresh; no manual reload needed
     }
   };
 
@@ -254,19 +223,13 @@ export default function MyTasksPage() {
     deleteTaskFromStore(id);
     
     try {
-      const res = await fetch(`/api/tasks?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-      
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to delete task');
-      }
-      
+      await deleteTaskMutation.mutateAsync(id);
       toastSuccess('Task Deleted', 'Task removed successfully!');
     } catch (e) {
       console.error('Delete task failed', e);
       toastError('Delete Failed', e instanceof Error ? e.message : 'Failed to delete task');
       // Revert on error by refetching
-      await loadTasks(true);
+      // Query invalidation will refresh; no manual reload needed
     }
   };
 
@@ -459,12 +422,7 @@ export default function MyTasksPage() {
               Loading tasks…
             </div>
           )}
-          {!!error && (
-            <div className="bg-card dark:bg-card rounded-[10px] shadow-sm p-8 text-center text-red-600 dark:text-red-400 text-sm border border-border dark:border-border">
-              {error}
-            </div>
-          )}
-          {!loading && !error && filteredTasks.length === 0 ? (
+          {!loading && filteredTasks.length === 0 ? (
             <div className="bg-card dark:bg-card rounded-[10px] shadow-sm p-12 border border-border dark:border-border">
               <div className="text-center">
                 <div className="bg-primary/10 dark:bg-primary/20 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
@@ -483,7 +441,7 @@ export default function MyTasksPage() {
           ) : (
             <div className="space-y-[30px]">
                 {filteredTasks.map((task) => {
-                  const idKey = task._id || task.id;
+                  const idKey = (task._id || task.id || '') as string;
                   const isExpanded = expandedTask === idKey;
                   const description = getSuggestedFix(task.description);
                   const shouldTruncate = description && description.length > 120;
@@ -548,7 +506,7 @@ export default function MyTasksPage() {
                             <p>{displayDescription}</p>
                             {shouldTruncate && (
                               <button
-                                onClick={() => setExpandedTask(isExpanded ? null : idKey)}
+                                onClick={() => setExpandedTask(isExpanded ? null : (idKey ?? null))}
                                 className="text-primary dark:text-primary hover:text-primary/90 dark:hover:text-primary/90 text-xs font-medium mt-1 underline"
                               >
                                 {isExpanded ? 'Show Less' : 'Read More'}

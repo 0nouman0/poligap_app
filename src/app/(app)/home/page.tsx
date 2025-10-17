@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import {
 import { useUserStore } from "@/stores/user-store";
 import Link from "next/link";
 import { DashboardSkeleton } from "@/components/ui/page-loader";
+import { useRecentActivity, useOverviewStats } from "@/lib/queries/useHome";
 
 interface ActivityItem {
   id: string;
@@ -38,102 +39,8 @@ interface OverviewStats {
 
 export default function HomePage() {
   const { userData } = useUserStore();
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
-  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
-  const [overviewStats, setOverviewStats] = useState<OverviewStats>({
-    complianceChecks: 0,
-    contractsReviewed: 0,
-    policiesGenerated: 0,
-    trainingModules: 0
-  });
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  
-  // Fetch recent activity data
-  useEffect(() => {
-    const fetchRecentActivity = async () => {
-      try {
-        setIsLoadingActivity(true);
-        
-        // Try to fetch from multiple endpoints to get real activity data
-        const endpoints = [
-          '/api/compliance/recent',
-          '/api/contracts/recent', 
-          '/api/policies/recent',
-          '/api/uploads/recent'
-        ];
-        
-        const activities: ActivityItem[] = [];
-        
-        // Fetch from each endpoint and combine results
-        for (const endpoint of endpoints) {
-          try {
-            const response = await fetch(endpoint);
-            if (response.ok) {
-              const data = await response.json();
-              if (Array.isArray(data)) {
-                activities.push(...data.slice(0, 3)); // Limit to 3 items per type
-              }
-            }
-          } catch (error) {
-            console.log(`No data available from ${endpoint}`);
-          }
-        }
-        
-        // Sort by timestamp and take the most recent 3 items for brief preview
-        const sortedActivities = activities
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 3);
-        
-        setRecentActivity(sortedActivities);
-      } catch (error) {
-        console.error('Error fetching recent activity:', error);
-        // Set empty array if no real data is available
-        setRecentActivity([]);
-      } finally {
-        setIsLoadingActivity(false);
-      }
-    };
-    
-    fetchRecentActivity();
-  }, []);
-
-  // Fetch overview statistics
-  useEffect(() => {
-    const fetchOverviewStats = async () => {
-      try {
-        setIsLoadingStats(true);
-        
-        // Fetch statistics from Supabase collections
-        const statsPromises = [
-          // Compliance checks count
-          fetch('/api/compliance/count').then(res => res.ok ? res.json() : { count: 0 }),
-          // Contracts reviewed count  
-          fetch('/api/contracts/count').then(res => res.ok ? res.json() : { count: 0 }),
-          // Policies generated count
-          fetch('/api/policies/count').then(res => res.ok ? res.json() : { count: 0 }),
-          // Training modules count
-          fetch('/api/training/count').then(res => res.ok ? res.json() : { count: 0 })
-        ];
-
-        const [complianceData, contractsData, policiesData, trainingData] = await Promise.allSettled(statsPromises);
-
-        setOverviewStats({
-          complianceChecks: complianceData.status === 'fulfilled' ? (complianceData.value?.count || 0) : 0,
-          contractsReviewed: contractsData.status === 'fulfilled' ? (contractsData.value?.count || 0) : 0,
-          policiesGenerated: policiesData.status === 'fulfilled' ? (policiesData.value?.count || 0) : 0,
-          trainingModules: trainingData.status === 'fulfilled' ? (trainingData.value?.count || 0) : 0
-        });
-
-      } catch (error) {
-        console.error('Error fetching overview statistics:', error);
-        // Keep default values (all zeros) if fetch fails
-      } finally {
-        setIsLoadingStats(false);
-      }
-    };
-
-    fetchOverviewStats();
-  }, []);
+  const { data: recentActivity = [], isLoading: isLoadingActivity } = useRecentActivity();
+  const { data: overviewStats = { complianceChecks: 0, contractsReviewed: 0, policiesGenerated: 0, trainingModules: 0 }, isLoading: isLoadingStats } = useOverviewStats();
   
   // Get current time-based greeting
   const getGreeting = () => {

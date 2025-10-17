@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useCallback, useDeferredValue } from "react";
 import { Shield, ChevronRight, ChevronLeft, BookOpen, Award, CheckCircle, RotateCcw, Upload, FolderOpen, FileText, Info, Trash2, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -703,6 +703,15 @@ export default function ContractReview() {
   const [activeTab, setActiveTab] = useState<"template" | "custom">("template");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [applyRuleBase, setApplyRuleBase] = useState(false);
+
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const filteredTemplates = useMemo(() => {
+    const term = deferredSearchTerm.trim().toLowerCase();
+    if (!term) return knowledgeBaseTemplates;
+    return knowledgeBaseTemplates.filter((t) =>
+      t.name.toLowerCase().includes(term)
+    );
+  }, [deferredSearchTerm]);
   const [finalInstructions, setFinalInstructions] = useState<string>("");
   const deviceFileInputRef = useRef<HTMLInputElement | null>(null);
   const [deviceInputKey, setDeviceInputKey] = useState(0);
@@ -723,13 +732,12 @@ export default function ContractReview() {
     { id: 5, title: "Make Corrections" }
   ];
 
-  const handleTemplateSelect = (template: ContractTemplate) => {
-    if (selectedTemplate?.id === template.id) {
-      setSelectedTemplate(null);
-      return;
-    }
-    setSelectedTemplate(template);
-  };
+  const handleTemplateSelect = useCallback((template: ContractTemplate) => {
+    setSelectedTemplate((prev) => {
+      if (prev?.id === template.id) return null;
+      return template;
+    });
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1052,7 +1060,7 @@ export default function ContractReview() {
                 {/* Template Cards Grid */}
                 <div className="flex-1 overflow-y-auto scrollbar-hide">
                   <div className={"grid " + (selectedTemplate ? 'grid-cols-3' : 'grid-cols-4') + " gap-4 p-1"}>
-                    {knowledgeBaseTemplates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase())).map((template) => {
+                    {filteredTemplates.map((template) => {
                       const isSelected = selectedTemplate?.id === template.id;
                       return (
                         <div
