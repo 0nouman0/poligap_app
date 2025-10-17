@@ -19,7 +19,8 @@ import {
   Edit3,
   Check,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  AlertTriangle
 } from "lucide-react";
 import { useUserStore, UserData } from "@/stores/user-store";
 import { useCompanyStore } from "@/stores/company-store";
@@ -144,6 +145,158 @@ export default function UserProfilePage() {
     setProfilePicPreview(null);
   }, [bannerImage, profileData?.profileImage]);
 
+  // Validation functions
+  const validateName = (name: string): { isValid: boolean; error?: string } => {
+    if (!name || name.trim().length === 0) {
+      return { isValid: false, error: 'Name is required' };
+    }
+    if (name.trim().length < 2) {
+      return { isValid: false, error: 'Name must be at least 2 characters' };
+    }
+    if (name.trim().length > 100) {
+      return { isValid: false, error: 'Name must not exceed 100 characters' };
+    }
+    // Allow letters, spaces, hyphens, apostrophes, and periods
+    const nameRegex = /^[a-zA-Z\s\-'\.]+$/;
+    if (!nameRegex.test(name)) {
+      return { isValid: false, error: 'Name can only contain letters, spaces, hyphens, apostrophes, and periods' };
+    }
+    return { isValid: true };
+  };
+
+  const validateEmail = (email: string): { isValid: boolean; error?: string } => {
+    if (!email || email.trim().length === 0) {
+      return { isValid: false, error: 'Email is required' };
+    }
+    // Comprehensive email regex that validates Gmail and other providers
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, error: 'Please enter a valid email address' };
+    }
+    // Additional Gmail-specific validation if needed
+    if (email.toLowerCase().includes('@gmail.com')) {
+      const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+      if (!gmailRegex.test(email.toLowerCase())) {
+        return { isValid: false, error: 'Please enter a valid Gmail address' };
+      }
+    }
+    return { isValid: true };
+  };
+
+  const validatePhoneNumber = (phone: string): { isValid: boolean; error?: string } => {
+    if (!phone || phone.trim().length === 0) {
+      return { isValid: false, error: 'Phone number is required' };
+    }
+    // Remove spaces, hyphens, and parentheses for validation
+    const cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // Check if it contains only digits and optional + at the start
+    const phoneRegex = /^\+?\d{10,15}$/;
+    if (!phoneRegex.test(cleanedPhone)) {
+      return { isValid: false, error: 'Phone number must contain 10-15 digits only (spaces and hyphens allowed)' };
+    }
+    
+    // Additional check: ensure no letters
+    if (/[a-zA-Z]/.test(phone)) {
+      return { isValid: false, error: 'Phone number cannot contain letters' };
+    }
+    
+    return { isValid: true };
+  };
+
+  const validateCountry = (country: string): { isValid: boolean; error?: string } => {
+    if (!country || country.trim().length === 0) {
+      return { isValid: false, error: 'Country is required' };
+    }
+    if (country.trim().length < 2) {
+      return { isValid: false, error: 'Please select a valid country' };
+    }
+    return { isValid: true };
+  };
+
+  const validateDesignation = (designation: string): { isValid: boolean; error?: string } => {
+    if (designation && designation.trim().length > 0) {
+      if (designation.trim().length < 2) {
+        return { isValid: false, error: 'Designation must be at least 2 characters' };
+      }
+      if (designation.trim().length > 100) {
+        return { isValid: false, error: 'Designation must not exceed 100 characters' };
+      }
+      // Allow letters, numbers, spaces, and common punctuation
+      const designationRegex = /^[a-zA-Z0-9\s\-\/,\.&()]+$/;
+      if (!designationRegex.test(designation)) {
+        return { isValid: false, error: 'Designation contains invalid characters' };
+      }
+    }
+    return { isValid: true };
+  };
+
+  const validateAbout = (about: string): { isValid: boolean; error?: string } => {
+    if (about && about.trim().length > 0) {
+      if (about.trim().length < 10) {
+        return { isValid: false, error: 'About section must be at least 10 characters' };
+      }
+      if (about.trim().length > 500) {
+        return { isValid: false, error: 'About section must not exceed 500 characters' };
+      }
+    }
+    return { isValid: true };
+  };
+
+  const validateDOB = (dob: string): { isValid: boolean; error?: string } => {
+    if (!dob || dob.trim().length === 0) {
+      return { isValid: true }; // DOB is optional
+    }
+    
+    const dobDate = new Date(dob);
+    const today = new Date();
+    const minAge = 13; // Minimum age requirement
+    const maxAge = 120; // Maximum realistic age
+    
+    if (isNaN(dobDate.getTime())) {
+      return { isValid: false, error: 'Please enter a valid date' };
+    }
+    
+    // Check if date is not in the future
+    if (dobDate > today) {
+      return { isValid: false, error: 'Date of birth cannot be in the future' };
+    }
+    
+    // Check minimum age
+    const ageInYears = (today.getTime() - dobDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    if (ageInYears < minAge) {
+      return { isValid: false, error: `You must be at least ${minAge} years old` };
+    }
+    
+    if (ageInYears > maxAge) {
+      return { isValid: false, error: 'Please enter a valid date of birth' };
+    }
+    
+    return { isValid: true };
+  };
+
+  // Validate field based on field name
+  const validateField = (fieldName: string, value: string): { isValid: boolean; error?: string } => {
+    switch (fieldName) {
+      case 'name':
+        return validateName(value);
+      case 'email':
+        return validateEmail(value);
+      case 'mobile':
+        return validatePhoneNumber(value);
+      case 'country':
+        return validateCountry(value);
+      case 'designation':
+        return validateDesignation(value);
+      case 'about':
+        return validateAbout(value);
+      case 'dob':
+        return validateDOB(value);
+      default:
+        return { isValid: true };
+    }
+  };
+
   // Field editing functions
   const startEditing = (fieldName: string, currentValue: string) => {
     setEditableFields(prev => ({
@@ -168,10 +321,17 @@ export default function UserProfilePage() {
     const fieldData = editableFields[fieldName];
     if (!fieldData || !profileData) return;
 
+    // Validate the field before saving
+    const validation = validateField(fieldName, fieldData.value);
+    if (!validation.isValid) {
+      toastError('Validation Error', validation.error || 'Invalid input');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const updateData = {
-        [fieldName]: fieldData.value
+        [fieldName]: fieldData.value.trim()
       };
 
       const updatedProfile = await updateProfile(updateData);
@@ -217,57 +377,69 @@ export default function UserProfilePage() {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        setBannerPreview(ev.target?.result as string);
-        // Immediately upload and update
-        try {
-          const updateBanner = await uploadToS3(
-            file,
-            "banner",
-            userData?.userId!
-          );
-          if (updateBanner.success) {
-            toastSuccess("Banner updated successfully");
-            
-            // Update both user store and profile data
-            const newBannerUrl = updateBanner.data?.fileUrl;
-            if (newBannerUrl) {
-              // Update user store
-              if (userData) {
-                setUserData({
-                  ...userData,
-                  banner: {
-                    image: newBannerUrl,
-                  },
-                });
-              }
-              
-              // Update profile data state
-              if (profileData) {
-                setProfileData({
-                  ...profileData,
-                  banner: {
-                    ...profileData.banner,
-                    image: newBannerUrl,
-                  },
-                });
-              }
-              
-              // Refresh profile from database to ensure persistence
-              setTimeout(() => {
-                refreshProfile();
-              }, 1000);
-            }
-          } else {
-            toastError("Failed to update banner");
-          }
-        } catch {
-          toastError("An error occurred while updating the banner");
+    if (!file) return;
+
+    // Show loading state
+    const optimisticUrl = URL.createObjectURL(file);
+    setBannerPreview(optimisticUrl);
+    setIsSaving(true);
+
+    try {
+      // Upload to S3 and update database
+      const updateBanner = await uploadToS3(
+        file,
+        "banner",
+        userData?.userId!
+      );
+
+      if (updateBanner.success && updateBanner.data?.fileUrl) {
+        const newBannerUrl = updateBanner.data.fileUrl;
+        
+        // Immediately update local state with the new URL
+        setBannerPreview(null); // Clear blob URL
+        
+        // Update profile data state immediately
+        const updatedProfileData = {
+          ...profileData,
+          banner: {
+            ...profileData?.banner,
+            image: newBannerUrl,
+          },
+        };
+        setProfileData(updatedProfileData as any);
+        
+        // Update user store immediately
+        if (userData) {
+          setUserData({
+            ...userData,
+            banner: {
+              image: newBannerUrl,
+            },
+          });
         }
-      };
-      reader.readAsDataURL(file);
+
+        // Use updateProfile hook to sync with database and clear cache
+        await updateProfile({
+          banner: {
+            ...profileData?.banner,
+            image: newBannerUrl,
+          },
+        });
+
+        toastSuccess("Banner updated successfully");
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      console.error("Banner update error:", error);
+      toastError("Failed to update banner. Please try again.");
+      setBannerPreview(null);
+    } finally {
+      setIsSaving(false);
+      // Clean up blob URL
+      if (optimisticUrl) {
+        URL.revokeObjectURL(optimisticUrl);
+      }
     }
   };
 
@@ -282,54 +454,65 @@ export default function UserProfilePage() {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        setProfilePicPreview(ev.target?.result as string);
-        // Immediately upload and update
-        try {
-          const updateProfilePic = await uploadToS3(
-            file,
-            "profileImage",
-            userData?.userId!
-          );
-          if (updateProfilePic.success) {
-            toastSuccess("Profile picture updated successfully");
-            
-            // Update both user store and profile data
-            const newImageUrl = updateProfilePic.data?.fileUrl;
-            if (newImageUrl) {
-              // Update user store
-              if (userData) {
-                setUserData({
-                  ...userData,
-                  profileImage: newImageUrl,
-                });
-              }
-              
-              // Update profile data state
-              if (profileData) {
-                setProfileData({
-                  ...profileData,
-                  profileImage: newImageUrl,
-                });
-              }
-              
-              // Refresh profile from database to ensure persistence
-              setTimeout(() => {
-                refreshProfile();
-              }, 1000);
-            }
-          } else {
-            toastError("Failed to update profile picture");
-          }
-        } catch {
-          toastError("An error occurred while updating the profile picture");
+    if (!file) return;
+
+    // Show loading state
+    const optimisticUrl = URL.createObjectURL(file);
+    setProfilePicPreview(optimisticUrl);
+    setIsSaving(true);
+
+    try {
+      // Upload to S3 and update database
+      const updateProfilePic = await uploadToS3(
+        file,
+        "profileImage",
+        userData?.userId!
+      );
+
+      if (updateProfilePic.success && updateProfilePic.data?.fileUrl) {
+        const newImageUrl = updateProfilePic.data.fileUrl;
+        
+        // Immediately update local state with the new URL
+        setProfilePicPreview(null); // Clear blob URL
+        
+        // Update profile data state immediately
+        const updatedProfileData = {
+          ...profileData,
+          profileImage: newImageUrl,
+        };
+        setProfileData(updatedProfileData as any);
+        
+        // Update user store immediately
+        if (userData) {
+          setUserData({
+            ...userData,
+            profileImage: newImageUrl,
+          });
         }
-      };
-      reader.readAsDataURL(file);
+
+        // Use updateProfile hook to sync with database and clear cache
+        await updateProfile({
+          profileImage: newImageUrl,
+        });
+
+        toastSuccess("Profile picture updated successfully");
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      console.error("Profile picture update error:", error);
+      toastError("Failed to update profile picture. Please try again.");
+      setProfilePicPreview(null);
+    } finally {
+      setIsSaving(false);
+      // Clean up blob URL
+      if (optimisticUrl) {
+        URL.revokeObjectURL(optimisticUrl);
+      }
+      if (profilePicInputRef.current) {
+        profilePicInputRef.current.value = "";
+      }
     }
-    if (profilePicInputRef.current) profilePicInputRef.current.value = "";
   };
 
   // Remove handleProfilePicCancel and handleProfilePicSave
@@ -402,6 +585,11 @@ export default function UserProfilePage() {
       updateFieldValue('dob', formattedDate);
     };
 
+    // Validate DOB
+    const dobValue = isEditing ? editableFields['dob']?.value || currentDOB : currentDOB;
+    const validation = isEditing ? validateDOB(dobValue) : { isValid: true };
+    const hasError = isEditing && !validation.isValid;
+
     const formatDisplayDate = (dateStr: string) => {
       if (!dateStr) return 'Not provided';
       const { day, month, year } = parseDate(dateStr);
@@ -436,101 +624,113 @@ export default function UserProfilePage() {
     const years = Array.from({ length: 100 }, (_, i) => (currentYear - i).toString());
 
     return (
-      <div className="flex items-center justify-between p-3 rounded-lg border">
-        <div className="flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <div className="flex-1">
-            <Label className="text-sm font-medium">Date of Birth</Label>
+      <div className="flex flex-col">
+        <div className={`flex items-center justify-between p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
+          <div className="flex items-center gap-3 flex-1">
+            <Calendar className={`h-4 w-4 ${hasError ? 'text-red-500' : 'text-[#6A707C]'}`} />
+            <div className="flex-1">
+              <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>Date of Birth</Label>
+              {isEditing ? (
+                <div className="flex gap-2 mt-1">
+                  <Select 
+                    value={month || ''} 
+                    onValueChange={(value) => updateDOBField(day, value, year)}
+                  >
+                    <SelectTrigger className={`w-[120px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
+                      <SelectValue placeholder="Select Month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {months.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select 
+                    value={day || ''} 
+                    onValueChange={(value) => updateDOBField(value, month, year)}
+                  >
+                    <SelectTrigger className={`w-[80px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
+                      <SelectValue placeholder="Day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {days.map((d) => (
+                        <SelectItem key={d} value={d}>
+                          {d}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select 
+                    value={year || ''} 
+                    onValueChange={(value) => updateDOBField(day, month, value)}
+                  >
+                    <SelectTrigger className={`w-[100px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map((y) => (
+                        <SelectItem key={y} value={y}>
+                          {y}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="text-sm text-[#6A707C] mt-1">
+                  {formatDisplayDate(currentDOB)}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {isEditing ? (
-              <div className="flex gap-2 mt-1">
-                <Select 
-                  value={month || ''} 
-                  onValueChange={(value) => updateDOBField(day, value, year)}
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => cancelEditing('dob')}
+                  disabled={isSaving}
+                  className="h-9 border-[#E4E4E4] hover:bg-[#FAFAFB]"
                 >
-                  <SelectTrigger className="w-[120px] h-8">
-                    <SelectValue placeholder="Select Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {months.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select 
-                  value={day || ''} 
-                  onValueChange={(value) => updateDOBField(value, month, year)}
+                  <X className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => saveField('dob')}
+                  disabled={isSaving || hasError}
+                  className="h-9 bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
                 >
-                  <SelectTrigger className="w-[80px] h-8">
-                    <SelectValue placeholder="Day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {days.map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {d}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select 
-                  value={year || ''} 
-                  onValueChange={(value) => updateDOBField(day, month, value)}
-                >
-                  <SelectTrigger className="w-[100px] h-8">
-                    <SelectValue placeholder="Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((y) => (
-                      <SelectItem key={y} value={y}>
-                        {y}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  {isSaving ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Check className="h-3 w-3" />
+                  )}
+                </Button>
+              </>
             ) : (
-              <p className="text-sm text-muted-foreground mt-1">
-                {formatDisplayDate(currentDOB)}
-              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startEditing('dob', currentDOB)}
+                className="h-9 hover:bg-[#EFF1F6]"
+              >
+                <Edit3 className="h-3 w-3" />
+              </Button>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => cancelEditing('dob')}
-                disabled={isSaving}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => saveField('dob')}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Check className="h-3 w-3" />
-                )}
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => startEditing('dob', currentDOB)}
-            >
-              <Edit3 className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
+        {/* Validation error message */}
+        {hasError && validation.error && (
+          <p className="text-xs text-red-600 mt-1 ml-10 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            {validation.error}
+          </p>
+        )}
       </div>
     );
   };
@@ -552,62 +752,94 @@ export default function UserProfilePage() {
     const isEditing = editableFields[fieldName]?.isEditing;
     // Use ?? instead of || to allow empty strings
     const editValue = editableFields[fieldName]?.value ?? value ?? '';
+    
+    // Real-time validation
+    const validation = isEditing ? validateField(fieldName, editValue) : { isValid: true };
+    const hasError = isEditing && !validation.isValid;
+
+    // Input validation handler with character filtering
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let newValue = e.target.value;
+      
+      // Apply field-specific input filtering
+      if (fieldName === 'mobile') {
+        // Allow only digits, spaces, hyphens, parentheses, and + at start
+        newValue = newValue.replace(/[^0-9\s\-\(\)\+]/g, '');
+      } else if (fieldName === 'name') {
+        // Allow only letters, spaces, hyphens, apostrophes, and periods
+        newValue = newValue.replace(/[^a-zA-Z\s\-'\.]/g, '');
+      }
+      
+      updateFieldValue(fieldName, newValue);
+    };
 
     return (
-      <div className="flex items-center justify-between p-3 rounded-lg border">
-        <div className="flex items-center gap-3">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <div className="flex-1">
-            <Label className="text-sm font-medium">{label}</Label>
+      <div className="flex flex-col">
+        <div className={`flex items-center justify-between p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
+          <div className="flex items-center gap-3 flex-1">
+            <Icon className={`h-4 w-4 ${hasError ? 'text-red-500' : 'text-[#6A707C]'}`} />
+            <div className="flex-1">
+              <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>{label}</Label>
+              {isEditing ? (
+                <Input
+                  type={type}
+                  value={editValue}
+                  onChange={handleInputChange}
+                  className={`mt-1 h-8 w-full border-[#E4E4E4] focus:border-[#3B43D6] ${hasError ? 'border-red-400 focus:border-red-500' : ''}`}
+                  autoFocus
+                  placeholder={`Enter ${label.toLowerCase()}`}
+                />
+              ) : (
+                <p className="text-sm text-[#6A707C] mt-1">
+                  {value || 'Not provided'}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {isEditing ? (
-              <Input
-                type={type}
-                value={editValue}
-                onChange={(e) => updateFieldValue(fieldName, e.target.value)}
-                className="mt-1 h-8 w-full"
-                autoFocus
-                placeholder={`Enter ${label.toLowerCase()}`}
-              />
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => cancelEditing(fieldName)}
+                  disabled={isSaving}
+                  className="h-9 border-[#E4E4E4] hover:bg-[#FAFAFB]"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => saveField(fieldName)}
+                  disabled={isSaving || hasError}
+                  className="h-9 bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Check className="h-3 w-3" />
+                  )}
+                </Button>
+              </>
             ) : (
-              <p className="text-sm text-muted-foreground mt-1">
-                {value || 'Not provided'}
-              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startEditing(fieldName, value)}
+                className="h-9 hover:bg-[#EFF1F6]"
+              >
+                <Edit3 className="h-3 w-3" />
+              </Button>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => cancelEditing(fieldName)}
-                disabled={isSaving}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => saveField(fieldName)}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Check className="h-3 w-3" />
-                )}
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => startEditing(fieldName, value)}
-            >
-              <Edit3 className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
+        {/* Validation error message */}
+        {hasError && validation.error && (
+          <p className="text-xs text-red-600 mt-1 ml-10 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            {validation.error}
+          </p>
+        )}
       </div>
     );
   };
@@ -640,20 +872,30 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="bg-background text-foreground min-h-screen">
+    <div className="min-h-screen bg-[#FAFAFB]">
       <div className="max-w-7xl mx-auto">
-        {/* Banner Section */}
+        {/* Banner Section - Keep existing styling */}
         <div className="relative group">
           <img
             src={bannerPreview || bannerImage}
             alt="Profile Banner"
             className="w-full h-48 md:h-64 object-cover"
           />
+          {/* Loading overlay */}
+          {isSaving && bannerPreview && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 text-white animate-spin" />
+                <p className="text-white text-sm font-medium">Uploading banner...</p>
+              </div>
+            </div>
+          )}
           <button
             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 hover:bg-black/20"
             onClick={handleBannerEdit}
             title="Edit banner"
             type="button"
+            disabled={isSaving}
           >
             <Camera className="h-6 w-6 text-white drop-shadow" />
           </button>
@@ -674,15 +916,21 @@ export default function UserProfilePage() {
                 <img
                   src={profilePicPreview || profileData?.profileImage}
                   alt={profileData?.name || "User"}
-                  className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-background object-cover"
+                  className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white object-cover shadow-md"
                 />
               ) : (
                 <div
-                  className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-background flex items-center justify-center text-white text-4xl font-bold ${
+                  className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white flex items-center justify-center text-white text-4xl font-bold shadow-md ${
                     getBgColor(profileData?.name || '')
                   }`}
                 >
                   {getInitials(profileData?.name || '')}
+                </div>
+              )}
+              {/* Loading overlay for profile picture */}
+              {isSaving && profilePicPreview && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                  <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
               )}
               <button
@@ -690,6 +938,7 @@ export default function UserProfilePage() {
                 onClick={handleProfilePicEdit}
                 title="Edit profile picture"
                 type="button"
+                disabled={isSaving}
               >
                 <div className="w-full h-full flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20">
                   <Camera className="h-4 w-4 text-white drop-shadow" />
@@ -706,14 +955,14 @@ export default function UserProfilePage() {
             
             <div className="mt-4 sm:mb-4 flex-grow">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl sm:text-3xl font-bold">
+                <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2F34]">
                   {profileData?.name || "User"}
                 </h1>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs border-[#E4E4E4] text-[#6A707C]">
                   {profileData?.status || 'Active'}
                 </Badge>
               </div>
-              <p className="text-muted-foreground">
+              <p className="text-[#6A707C]">
                 {profileData?.email || "No email provided"}
               </p>
               {error && (
@@ -724,20 +973,20 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          <Separator className="my-8" />
+          <Separator className="my-8 bg-[#E6E6E6]" />
 
           {/* Profile Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-8">
             {/* Main Profile Information */}
             <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
+              <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
+                <CardHeader className="border-b border-[#E6E6E6]">
+                  <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold">
+                    <User className="h-5 w-5 text-[#3B43D6]" />
                     Personal Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <EditableFieldComponent
                     fieldName="name"
                     label="Full Name"
@@ -776,14 +1025,14 @@ export default function UserProfilePage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5" />
+              <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
+                <CardHeader className="border-b border-[#E6E6E6]">
+                  <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold">
+                    <Briefcase className="h-5 w-5 text-[#3B43D6]" />
                     Professional Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <EditableFieldComponent
                     fieldName="designation"
                     label="Job Title"
@@ -796,12 +1045,39 @@ export default function UserProfilePage() {
                     <Label className="text-sm font-medium mb-2 block">About</Label>
                     {editableFields['about']?.isEditing ? (
                       <div className="space-y-3">
-                        <Textarea
-                          value={editableFields['about']?.value ?? profileData?.about ?? ''}
-                          onChange={(e) => updateFieldValue('about', e.target.value)}
-                          placeholder="Tell us about yourself..."
-                          className="min-h-[100px]"
-                        />
+                        <div className="relative">
+                          <Textarea
+                            value={editableFields['about']?.value ?? profileData?.about ?? ''}
+                            onChange={(e) => updateFieldValue('about', e.target.value)}
+                            placeholder="Tell us about yourself... (10-500 characters)"
+                            className={`min-h-[100px] ${
+                              (() => {
+                                const validation = validateAbout(editableFields['about']?.value ?? '');
+                                return !validation.isValid ? 'border-red-400 bg-red-50/50 focus:border-red-400' : '';
+                              })()
+                            }`}
+                          />
+                          <div className="flex justify-between items-center mt-1">
+                            <div className="flex-1">
+                              {(() => {
+                                const validation = validateAbout(editableFields['about']?.value ?? '');
+                                return !validation.isValid ? (
+                                  <p className="text-xs text-red-600 flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {validation.error}
+                                  </p>
+                                ) : null;
+                              })()}
+                            </div>
+                            <span className={`text-xs ${
+                              (editableFields['about']?.value?.length ?? 0) > 500 
+                                ? 'text-red-600 font-medium' 
+                                : 'text-muted-foreground'
+                            }`}>
+                              {editableFields['about']?.value?.length ?? 0}/500
+                            </span>
+                          </div>
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -814,7 +1090,7 @@ export default function UserProfilePage() {
                           <Button
                             size="sm"
                             onClick={() => saveField('about')}
-                            disabled={isSaving}
+                            disabled={isSaving || !validateAbout(editableFields['about']?.value ?? '').isValid}
                           >
                             {isSaving ? (
                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -846,11 +1122,11 @@ export default function UserProfilePage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Status</CardTitle>
+              <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
+                <CardHeader className="border-b border-[#E6E6E6]">
+                  <CardTitle className="text-[#2D2F34] font-semibold">Account Status</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm">Status:</span>
@@ -869,11 +1145,11 @@ export default function UserProfilePage() {
               </Card>
 
               {profileData?.reportingManager && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Reports To</CardTitle>
+                <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
+                  <CardHeader className="border-b border-[#E6E6E6]">
+                    <CardTitle className="text-[#2D2F34] font-semibold">Reports To</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6">
                     <div className="space-y-2">
                       <p className="font-medium">{profileData.reportingManager.name}</p>
                       <p className="text-sm text-muted-foreground">{profileData.reportingManager.email}</p>

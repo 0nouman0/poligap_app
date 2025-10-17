@@ -91,6 +91,7 @@ export default function HistoryPage() {
     if (userId) {
       fetchLogs(userId); // Will use cache if valid
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchLogs]);
 
   // Auto-open by logId and optional tab focus (use dialog)
@@ -121,75 +122,106 @@ export default function HistoryPage() {
   }, [selected, priorityFilter, query]);
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <HistoryIcon className="h-7 w-7" />
-          History
-        </h1>
-        <Button variant="outline" onClick={async () => {
-          // Force refresh (bypass cache)
-          const userId = getUserId();
-          if (userId) {
-            await fetchLogs(userId, true); // true = force refresh
-          }
-        }}>Refresh</Button>
-      </div>
-
-      {loading ? (
-        <p className="text-muted-foreground">Loading...</p>
-      ) : logs.length === 0 ? (
-        <div className="text-center text-muted-foreground py-16">
-          <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>No history yet. Run a compliance analysis to see it here.</p>
+    <div className="min-h-screen bg-[#FAFAFB] p-6 sm:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Modern Header Section */}
+        <div className="mb-8">
+          <div className="flex items-start gap-5 mb-6">
+            <div className="w-14 h-14 rounded-full bg-[#EFF1F6] flex items-center justify-center flex-shrink-0">
+              <HistoryIcon className="h-7 w-7 text-[#3B43D6]" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold text-[#2D2F34] mb-2">
+                History & Audit Logs
+              </h1>
+              <p className="text-sm text-[#6A707C]">
+                Review your analysis history, track compliance snapshots, and access detailed audit trails for all your activities.
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              className="bg-white border-[#E4E4E4] hover:bg-gray-50"
+              onClick={async () => {
+                const userId = getUserId();
+                if (userId) {
+                  await fetchLogs(userId, true);
+                }
+              }}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {logs
+
+        {loading ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <p className="text-[#6A707C]">Loading...</p>
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-[#EFF1F6] flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-8 w-8 text-[#3B43D6] opacity-60" />
+            </div>
+            <p className="text-[#6A707C]">No history yet. Run a compliance analysis to see it here.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {logs
             .filter(l => methodFilter === 'all' ? true : (l.analysisMethod === methodFilter))
             .filter(l => statusFilter === 'all' ? true : (l.status === statusFilter))
             .map((log) => (
-            <Card key={log._id} className="hover:shadow-sm transition-shadow cursor-pointer h-56 flex flex-col" onClick={() => { setSelected(log); setOpen(true); }}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base truncate" title={log.fileName}>{log.fileName}</CardTitle>
+            <Card 
+              key={log._id} 
+              className="bg-white hover:shadow-md transition-shadow cursor-pointer h-64 flex flex-col rounded-xl border-[#E6E6E6]" 
+              onClick={() => { setSelected(log); setOpen(true); }}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-[#2D2F34] truncate" title={log.fileName}>
+                  {log.fileName}
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 flex-1 flex flex-col">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+              <CardContent className="space-y-3 flex-1 flex flex-col">
+                <div className="flex items-center gap-2 text-xs text-[#6A707C] truncate">
                   <Calendar className="h-4 w-4 flex-shrink-0" />
                   <span className="truncate">{new Date(log.analysisDate).toLocaleString()}</span>
                 </div>
-                <div className="flex items-center gap-1 flex-wrap min-h-[1.5rem]">
-                  {/* Type badge */}
-                  <Badge variant="outline" className="text-xs">
+                <div className="flex items-center gap-2 flex-wrap min-h-[1.5rem]">
+                  <Badge variant="outline" className="text-xs border-[#E4E4E4] text-[#6A707C]">
                     {log.analysisMethod === 'policy-generator' ? 'Generated Policy' : log.analysisMethod === 'contract-review' ? 'Contract Review' : 'Policy Analysis'}
                   </Badge>
                   <Badge className={`${statusColor(log.status)} text-xs`} variant="secondary">{log.status}</Badge>
-                  <Badge variant="outline" className="text-xs">{log.score}%</Badge>
+                  <Badge variant="outline" className="text-xs border-[#E4E4E4] text-[#6A707C]">{log.score}%</Badge>
                   {log.standards.slice(0, 2).map((s) => (
-                    <Badge key={s} variant="outline" className="text-xs truncate max-w-[4rem]" title={s.toUpperCase()}>{s.toUpperCase()}</Badge>
+                    <Badge key={s} variant="outline" className="text-xs truncate max-w-[4rem] border-[#E4E4E4] text-[#6A707C]" title={s.toUpperCase()}>{s.toUpperCase()}</Badge>
                   ))}
                   {log.standards.length > 2 && (
-                    <Badge variant="outline" className="text-xs">+{log.standards.length - 2}</Badge>
+                    <Badge variant="outline" className="text-xs border-[#E4E4E4] text-[#6A707C]">+{log.standards.length - 2}</Badge>
                   )}
                 </div>
                 <div className="mt-auto">
                   {log.analysisMethod !== 'policy-generator' && (
                     <>
-                      <div className="text-sm text-muted-foreground truncate">Issues: {log.gapsCount}</div>
-                      <div className="flex gap-1 flex-col sm:flex-row">
+                      <div className="text-sm text-[#6A707C] truncate mb-2">Issues: {log.gapsCount}</div>
+                      <div className="flex gap-2 flex-col sm:flex-row">
                         <Link href={`/history?logId=${log._id}&tab=issues`} className="flex-1">
-                          <Button size="sm" variant="ghost" className="w-full text-xs">Open Full Issues</Button>
+                          <Button size="sm" variant="ghost" className="w-full text-xs h-9 bg-[#FAFAFB] hover:bg-[#EFF1F6] text-[#2D2F34]">
+                            Open Full Issues
+                          </Button>
                         </Link>
                         <Link href={`/history?logId=${log._id}&tab=suggestions`} className="flex-1">
-                          <Button size="sm" variant="ghost" className="w-full text-xs">Open Full Suggestions</Button>
+                          <Button size="sm" variant="ghost" className="w-full text-xs h-9 bg-[#FAFAFB] hover:bg-[#EFF1F6] text-[#2D2F34]">
+                            Open Full Suggestions
+                          </Button>
                         </Link>
                       </div>
                     </>
                   )}
                   {log.analysisMethod === 'policy-generator' && (
-                    <div className="flex gap-1 flex-col sm:flex-row">
+                    <div className="flex gap-2 flex-col sm:flex-row">
                       <Link href={`/history?logId=${log._id}&tab=document`} className="flex-1">
-                        <Button size="sm" variant="ghost" className="w-full text-xs">Open Document</Button>
+                        <Button size="sm" variant="ghost" className="w-full text-xs h-9 bg-[#FAFAFB] hover:bg-[#EFF1F6] text-[#2D2F34]">
+                          Open Document
+                        </Button>
                       </Link>
                     </div>
                   )}
@@ -199,7 +231,9 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
+      </div>
 
+      {/* Modern Sheet/Dialog */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-screen min-w-[720px] max-w-none p-0" aria-label="Detailed analysis report" aria-describedby="history-dialog-desc">
           {/* Sticky header for context */}

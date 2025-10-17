@@ -24,96 +24,104 @@ export default function HowToUsePage() {
   ];
 
   return (
-    <div className="w-full mx-auto p-6 space-y-8">
-      {/* Title and Intro */}
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
-          How to Use Poligap AI
-        </h1>
-        <p className="text-muted-foreground">
-          A professional guide to help you get the most out of Poligap AI. Explore feature-specific instructions, workflows, and tips.
-        </p>
-      </div>
-
-      {/* Table of Contents */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Navigation</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
-          {sections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800 hover:text-foreground transition-colors cursor-pointer shadow-sm hover:shadow flex items-center justify-between"
-            >
-              <span className="truncate pr-2">{s.title}</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </a>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Overview */}
-      <Card id="overview">
-        <CardHeader>
-          <CardTitle>Overview</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>
-            Poligap AI streamlines compliance, analysis, and productivity with a suite of features. Use the sidebar to navigate
-            between features and the top-right controls for theme and account settings.
-          </p>
-          <ul className="list-disc pl-6 space-y-1">
-            <li>All features share a consistent design and keyboard-friendly forms.</li>
-            <li>Results pages provide clear summaries, actionable insights, and export options where applicable.</li>
-            <li>Use the <span className="font-medium">History</span> section to review previous analyses and actions.</li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Chat */}
-      <Card id="chat">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><MessageCircle className="h-5 w-5"/> Chat (Poligap AI)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
-          <div>
-            <p className="font-medium text-foreground">What this tool is</p>
-            <p>Conversational workspace to ideate, research, and draft. Supports references, tool calls, and media.</p>
+    <div className="min-h-screen bg-[#FAFAFB] p-6 sm:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Modern Header Section */}
+        <div className="mb-8">
+          <div className="flex items-start gap-5 mb-6">
+            <div className="w-14 h-14 rounded-full bg-[#EFF1F6] flex items-center justify-center flex-shrink-0">
+              <BookOpen className="h-7 w-7 text-[#3B43D6]" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold text-[#2D2F34] mb-2">
+                How to Use Poligap AI
+              </h1>
+              <p className="text-sm text-[#6A707C]">
+                A comprehensive guide to help you get the most out of Poligap AI. Explore feature-specific instructions, workflows, and best practices.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-foreground">Why you need it</p>
-            <p>Central place to ask ad‑hoc questions, refine drafts, and gather sources without switching contexts.</p>
-          </div>
-          <div>
-            <p className="font-medium text-foreground">Poligap USP</p>
+        </div>
+
+        {/* Table of Contents */}
+        <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6] mb-8">
+          <CardHeader className="border-b border-[#E6E6E6]">
+            <CardTitle className="text-[#2D2F34] font-semibold">Quick Navigation</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))] pt-6">
+            {sections.map((s) => (
+              <a
+                key={s.id}
+                href={`#${s.id}`}
+                className="rounded-lg border border-[#E6E6E6] px-4 py-3 text-sm text-[#2D2F34] hover:bg-[#EFF1F6] transition-colors cursor-pointer shadow-sm hover:shadow flex items-center justify-between bg-white"
+              >
+                <span className="truncate pr-2 font-medium">{s.title}</span>
+                <ChevronRight className="h-4 w-4 text-[#6A707C]" />
+              </a>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Overview */}
+        <Card id="overview" className="bg-white rounded-xl shadow-sm border-[#E6E6E6] mb-6">
+          <CardHeader className="border-b border-[#E6E6E6]">
+            <CardTitle className="text-[#2D2F34] font-semibold">Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-[#6A707C] pt-6">
+            <p>
+              Poligap AI streamlines compliance, analysis, and productivity with a suite of features. Use the sidebar to navigate
+              between features and the top-right controls for theme and account settings.
+            </p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Structured tabs for <span className="font-medium">Sources</span>, <span className="font-medium">Tasks</span>, and <span className="font-medium">Media</span>.</li>
-              <li>Streaming outputs with tool-call visualization.</li>
-              <li>Conversation titling and history organization.</li>
+              <li>All features share a consistent design and keyboard-friendly forms.</li>
+              <li>Results pages provide clear summaries, actionable insights, and export options where applicable.</li>
+              <li>Use the <span className="font-medium text-[#2D2F34]">History</span> section to review previous analyses and actions.</li>
             </ul>
-          </div>
-          <div>
-            <p className="font-medium text-foreground">Steps</p>
-            <ol className="list-decimal pl-6 space-y-1">
-              <li>Open Chat and type your question or paste context.</li>
-              <li>Attach files if needed; submit to generate.</li>
-              <li>Review tabs for sources, media, and tasks while it streams.</li>
-              <li>Rename conversation and continue iterating.</li>
-            </ol>
-          </div>
-          <div>
-            <p className="font-medium text-foreground">Output & interpretation</p>
-            <ul className="list-disc pl-6 space-y-1">
-              <li><span className="font-medium">Content</span>: the response with inline structure.</li>
-              <li><span className="font-medium">Sources</span>: links and citations; check credibility.</li>
-              <li><span className="font-medium">Tasks</span>: actionable items inferred by the agent.</li>
-            </ul>
-          </div>
-          <Link href="/chat"><Button variant="outline" className="mt-2 cursor-pointer">Open Chat</Button></Link>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Chat */}
+        <Card id="chat" className="bg-white rounded-xl shadow-sm border-[#E6E6E6] mb-6">
+          <CardHeader className="border-b border-[#E6E6E6]">
+            <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold"><MessageCircle className="h-5 w-5 text-[#3B43D6]"/> Chat (Poligap AI)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm text-[#6A707C] pt-6">
+            <div>
+              <p className="font-medium text-[#2D2F34]">What this tool is</p>
+              <p>Conversational workspace to ideate, research, and draft. Supports references, tool calls, and media.</p>
+            </div>
+            <div>
+              <p className="font-medium text-[#2D2F34]">Why you need it</p>
+              <p>Central place to ask ad‑hoc questions, refine drafts, and gather sources without switching contexts.</p>
+            </div>
+            <div>
+              <p className="font-medium text-[#2D2F34]">Poligap USP</p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Structured tabs for <span className="font-medium text-[#2D2F34]">Sources</span>, <span className="font-medium text-[#2D2F34]">Tasks</span>, and <span className="font-medium text-[#2D2F34]">Media</span>.</li>
+                <li>Streaming outputs with tool-call visualization.</li>
+                <li>Conversation titling and history organization.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium text-[#2D2F34]">Steps</p>
+              <ol className="list-decimal pl-6 space-y-1">
+                <li>Open Chat and type your question or paste context.</li>
+                <li>Attach files if needed; submit to generate.</li>
+                <li>Review tabs for sources, media, and tasks while it streams.</li>
+                <li>Rename conversation and continue iterating.</li>
+              </ol>
+            </div>
+            <div>
+              <p className="font-medium text-[#2D2F34]">Output & interpretation</p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li><span className="font-medium text-[#2D2F34]">Content</span>: the response with inline structure.</li>
+                <li><span className="font-medium text-[#2D2F34]">Sources</span>: links and citations; check credibility.</li>
+                <li><span className="font-medium text-[#2D2F34]">Tasks</span>: actionable items inferred by the agent.</li>
+              </ul>
+            </div>
+            <Link href="/chat"><Button variant="outline" className="mt-2 cursor-pointer bg-white border-[#E4E4E4] hover:bg-[#EFF1F6] text-[#2D2F34]">Open Chat</Button></Link>
+          </CardContent>
+        </Card>
 
       {/* Compliance Check */}
       <Card id="compliance-check">
@@ -473,8 +481,9 @@ export default function HowToUsePage() {
         </CardContent>
       </Card>
 
-      <div className="text-center text-xs text-muted-foreground pt-2 pb-6">
-        © {new Date().getFullYear()} Poligap AI — All rights reserved.
+        <div className="text-center text-xs text-[#6A707C] pt-2 pb-6">
+          © {new Date().getFullYear()} Poligap AI — All rights reserved.
+        </div>
       </div>
     </div>
   );

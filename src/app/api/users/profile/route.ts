@@ -198,10 +198,17 @@ export async function PUT(req: NextRequest) {
       profileCreatedOn: updatedProfile.profile_created_on || updatedProfile.created_at || new Date().toISOString(),
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: transformedProfile,
     });
+
+    // Add cache-busting headers for immediate refresh
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error: any) {
     console.error('Profile UPDATE error:', error);

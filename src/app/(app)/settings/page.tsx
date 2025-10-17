@@ -187,148 +187,155 @@ function SettingsPage() {
 
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Settings className="h-6 w-6" />
-            Profile Settings
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Update your personal information
-          </p>
-        </div>
-        <Button
-          onClick={optimizedSaveProfile}
-          disabled={isSaving || !isEditing || !isProfileChanged}
-          className="flex items-center gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </div>
-
-      {/* Profile Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Personal Information
+    <div className="min-h-screen bg-[#FAFAFB] p-6 sm:p-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Modern Header Section */}
+        <div className="mb-8">
+          <div className="flex items-start gap-5 mb-6">
+            <div className="w-14 h-14 rounded-full bg-[#EFF1F6] flex items-center justify-center flex-shrink-0">
+              <Settings className="h-7 w-7 text-[#3B43D6]" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold text-[#2D2F34] mb-2">
+                Profile Settings
+              </h1>
+              <p className="text-sm text-[#6A707C]">
+                Manage your personal information and account preferences. Keep your profile up-to-date for better collaboration.
+              </p>
             </div>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={isEditing ? cancelEditing : startEditing}
-              className="flex items-center gap-2"
+              onClick={optimizedSaveProfile}
+              disabled={isSaving || !isEditing || !isProfileChanged}
+              className="flex items-center gap-2 bg-[#605BFF] hover:bg-[#4D47CC] text-white h-9 px-4"
             >
-              <Edit3 className="h-4 w-4" />
-              {isEditing ? 'Cancel' : 'Edit'}
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4">
-            {/* Full Name */}
-            <FormField label="Full Name" icon={User}>
-              {isEditing ? (
-                <Input
-                  value={profile.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="Enter your full name"
-                  className="mt-1"
-                />
-              ) : (
-                <p className="text-muted-foreground mt-1">{profile.name || 'Not provided'}</p>
-              )}
-            </FormField>
-
-            {/* Email Address */}
-            <FormField label="Email Address" icon={Mail}>
-              {isEditing ? (
-                <Input
-                  type="email"
-                  value={profile.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="Enter your email"
-                  className="mt-1"
-                />
-              ) : (
-                <p className="text-muted-foreground mt-1">{profile.email || 'Not provided'}</p>
-              )}
-            </FormField>
-
-            {/* Phone Number */}
-            <FormField label="Phone Number" icon={Phone}>
-              {isEditing ? (
-                <Input
-                  type="tel"
-                  value={profile.mobile}
-                  onChange={(e) => {
-                    console.log('Phone changing to:', e.target.value);
-                    handleChange('mobile', e.target.value);
-                  }}
-                  placeholder="Enter your phone number"
-                  autoComplete="tel"
-                  className="mt-1"
-                />
-              ) : (
-                <p className="text-muted-foreground mt-1">{profile.mobile || 'Not provided'}</p>
-              )}
-            </FormField>
-
-            {/* Country */}
-            <FormField label="Country" icon={MapPin}>
-              {isEditing ? (
-                <Select
-                  value={profile.country}
-                  onValueChange={(value: string) => handleChange('country', value)}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select your country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countriesOptions.map((country) => (
-                      <SelectItem key={country.code} value={country.value}>
-                        {country.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-muted-foreground mt-1">{profile.country || 'Not provided'}</p>
-              )}
-            </FormField>
-
-            {/* Edit Controls */}
-            {isEditing && (
-              <div className="flex gap-2 pt-4 border-t">
-                <Button
-                  size="sm"
-                  onClick={optimizedSaveProfile}
-                  disabled={isSaving || !isProfileChanged}
-                  className="flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={cancelEditing}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </Button>
-              </div>
-            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Debug Info */}
-      <DebugPanel isEditing={isEditing} profile={profile} />
+        {/* Profile Card */}
+        <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
+          <CardHeader className="border-b border-[#E6E6E6] pb-4">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-[#2D2F34]">
+                <User className="h-5 w-5 text-[#3B43D6]" />
+                <span className="font-semibold">Personal Information</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={isEditing ? cancelEditing : startEditing}
+                className="flex items-center gap-2 h-9 hover:bg-[#EFF1F6]"
+              >
+                <Edit3 className="h-4 w-4" />
+                {isEditing ? 'Cancel' : 'Edit'}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <div className="grid gap-4">
+              {/* Full Name */}
+              <FormField label="Full Name" icon={User}>
+                {isEditing ? (
+                  <Input
+                    value={profile.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    placeholder="Enter your full name"
+                    className="mt-1 border-[#E4E4E4] focus:border-[#3B43D6]"
+                  />
+                ) : (
+                  <p className="text-[#6A707C] mt-1">{profile.name || 'Not provided'}</p>
+                )}
+              </FormField>
+
+              {/* Email Address */}
+              <FormField label="Email Address" icon={Mail}>
+                {isEditing ? (
+                  <Input
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    placeholder="Enter your email"
+                    className="mt-1 border-[#E4E4E4] focus:border-[#3B43D6]"
+                  />
+                ) : (
+                  <p className="text-[#6A707C] mt-1">{profile.email || 'Not provided'}</p>
+                )}
+              </FormField>
+
+              {/* Phone Number */}
+              <FormField label="Phone Number" icon={Phone}>
+                {isEditing ? (
+                  <Input
+                    type="tel"
+                    value={profile.mobile}
+                    onChange={(e) => {
+                      console.log('Phone changing to:', e.target.value);
+                      handleChange('mobile', e.target.value);
+                    }}
+                    placeholder="Enter your phone number"
+                    autoComplete="tel"
+                    className="mt-1 border-[#E4E4E4] focus:border-[#3B43D6]"
+                  />
+                ) : (
+                  <p className="text-[#6A707C] mt-1">{profile.mobile || 'Not provided'}</p>
+                )}
+              </FormField>
+
+              {/* Country */}
+              <FormField label="Country" icon={MapPin}>
+                {isEditing ? (
+                  <Select
+                    value={profile.country}
+                    onValueChange={(value: string) => handleChange('country', value)}
+                  >
+                    <SelectTrigger className="mt-1 border-[#E4E4E4] focus:border-[#3B43D6]">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countriesOptions.map((country) => (
+                        <SelectItem key={country.code} value={country.value}>
+                          {country.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-[#6A707C] mt-1">{profile.country || 'Not provided'}</p>
+                )}
+              </FormField>
+
+              {/* Edit Controls */}
+              {isEditing && (
+                <div className="flex gap-3 pt-4 border-t border-[#E6E6E6]">
+                  <Button
+                    size="sm"
+                    onClick={optimizedSaveProfile}
+                    disabled={isSaving || !isProfileChanged}
+                    className="flex items-center gap-2 bg-[#605BFF] hover:bg-[#4D47CC] text-white h-9"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={cancelEditing}
+                    disabled={isSaving}
+                    className="h-9 border-[#E4E4E4] hover:bg-[#FAFAFB]"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Debug Info */}
+        <DebugPanel isEditing={isEditing} profile={profile} />
+      </div>
     </div>
   );
 }

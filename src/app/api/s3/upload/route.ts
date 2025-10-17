@@ -79,41 +79,64 @@ export async function POST(req: NextRequest) {
       updateData.profile_image = publicUrl;
     } else if (type === 'banner') {
       // Get current banner data and update only the image
-      const { data: currentProfile } = await supabase
+      const { data: currentProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('banner')
         .eq('id', userId)
         .single();
       
+      if (fetchError) {
+        console.error('Error fetching current profile:', fetchError);
+      }
+      
       updateData.banner = {
         ...(currentProfile?.banner || {}),
         image: publicUrl,
+        type: currentProfile?.banner?.type || 'image',
+        color: currentProfile?.banner?.color || '#FFFFFF',
       };
     }
 
-    // Update profile in database
+    // Update profile in database and fetch the updated record
     const { data: updatedProfile, error: updateError } = await supabase
       .from('profiles')
-      .update(updateData)
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', userId)
-      .select()
+      .select('*')
       .single();
 
     if (updateError) {
       console.error('Profile update error:', updateError);
-      // Still return success for upload, but log the error
-      console.warn('Image uploaded but profile update failed:', updateError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Image uploaded but database update failed: ${updateError.message}` 
+        },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({
+    // Return success with the updated profile data
+    const response = NextResponse.json({
       success: true,
       data: {
         fileUrl: publicUrl,
         fileName: fileName,
         type: type,
+        profile: updatedProfile, // Include full updated profile
       },
-      message: `${type === 'profileImage' ? 'Profile picture' : 'Banner'} uploaded successfully`,
+      message: `${type === 'profileImage' ? 'Profile picture' : 'Banner'} updated successfully`,
     });
+
+    // Add cache-busting headers for immediate refresh
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error: any) {
     console.error('Upload error:', error);

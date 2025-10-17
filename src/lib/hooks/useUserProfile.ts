@@ -211,15 +211,20 @@ export function useUserProfile(): UseUserProfileReturn {
       }
 
       const updatedProfile = result.data as UserProfile;
+      
+      // IMMEDIATELY clear the cache before setting new data
+      const cacheKey = CACHE_KEYS.USER_PROFILE(userId);
+      apiCache.delete(cacheKey);
+      
+      // Set the updated profile state
       setProfile(updatedProfile);
       
-      // Invalidate and update cache
-      const cacheKey = CACHE_KEYS.USER_PROFILE(userId);
+      // Set fresh cache with updated data
       apiCache.set(cacheKey, updatedProfile, 300);
       
-      // Update the user store with fresh data
+      // Update the user store with fresh data IMMEDIATELY
       if (setUserData && updatedProfile) {
-        setUserData({
+        const freshUserData = {
           _id: updatedProfile._id,
           userId: updatedProfile.userId,
           email: updatedProfile.email,
@@ -227,6 +232,8 @@ export function useUserProfile(): UseUserProfileReturn {
           profileImage: updatedProfile.profileImage || '',
           banner: {
             image: updatedProfile.banner?.image || '',
+            color: updatedProfile.banner?.color || '#FFFFFF',
+            type: updatedProfile.banner?.type || 'image',
           },
           about: updatedProfile.about || '',
           country: updatedProfile.country || '',
@@ -242,7 +249,10 @@ export function useUserProfile(): UseUserProfileReturn {
           updatedAt: updatedProfile.updatedAt,
           status: updatedProfile.status,
           profileCreatedOn: updatedProfile.profileCreatedOn || '',
-        });
+        };
+        
+        setUserData(freshUserData);
+        console.log('✅ User store updated immediately with fresh data');
       }
       
       toastSuccess('Profile Updated', 'Your profile has been updated successfully');
