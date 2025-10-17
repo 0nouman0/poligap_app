@@ -11,6 +11,7 @@ import { Upload, Plus, FileText, Tag, Trash2, Download, Search, Pencil, Sparkles
 import { Switch } from "@/components/ui/switch";
 import { useRulebaseStore } from "@/stores/rulebase-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
 
 interface RuleItem {
   _id?: string;
@@ -172,6 +173,9 @@ export default function RuleBasePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [addingTemplates, setAddingTemplates] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"my-rules" | "templates">("my-rules");
+  // Dual-check delete dialog
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteRule, setPendingDeleteRule] = useState<RuleItem | null>(null);
 
   // Fetch rules using Zustand store (with caching)
   useEffect(() => {
@@ -283,34 +287,33 @@ export default function RuleBasePage() {
     } catch {}
   };
 
-  const handleDelete = async (rule: RuleItem) => {
-    if (!rule._id) return;
-    const ok = window.confirm(`Delete rule "${rule.name}"? This cannot be undone.`);
-    if (!ok) return;
-    
-    // Optimistically remove from UI
-    const ruleId = rule._id;
+  const requestDelete = (rule: RuleItem) => {
+    if (!rule?._id) return;
+    setPendingDeleteRule(rule);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteRule?._id) return;
+    const ruleId = pendingDeleteRule._id;
+    // Optimistic remove
     deleteRuleFromStore(ruleId);
-    
     try {
       const res = await fetch("/api/rulebase", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: ruleId })
       });
-      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || 'Delete failed');
       }
-      
-      const data = await res.json();
-      console.log('✅ Rule deleted successfully:', data);
     } catch (e) {
       console.error('❌ Delete failed:', e);
-      // Revert by refetching all rules
       fetchRules(true);
-      alert(e instanceof Error ? e.message : 'Failed to delete rule. Please try again.');
+    } finally {
+      setConfirmOpen(false);
+      setPendingDeleteRule(null);
     }
   };
 
@@ -370,6 +373,16 @@ export default function RuleBasePage() {
 
   return (
     <div className="w-full min-h-screen bg-[#FAFAFB] py-6 px-4">
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete rule?"
+        description={`This will permanently remove "${pendingDeleteRule?.name || 'this rule'}" from your RuleBase.`}
+        confirmText="Delete Rule"
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteRule(null); }}
+        onConfirm={confirmDelete}
+        requireAcknowledge
+        acknowledgeLabel="I understand this action cannot be undone"
+      />
       <div className="max-w-[1646px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -521,7 +534,7 @@ export default function RuleBasePage() {
                           
                           {/* Delete Button */}
                           <button
-                            onClick={() => handleDelete(rule)}
+                            onClick={() => requestDelete(rule)}
                             className="w-6 h-6 flex items-center justify-center"
                             aria-label="Delete rule"
                           >

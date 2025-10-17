@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUserStore } from "@/stores/user-store";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useTasksStore, type Task } from "@/stores/tasks-store";
+import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
 import { useTasksList, useCreateTask, useUpdateTask, useDeleteTask } from "@/lib/queries/useTasks";
 
 export default function MyTasksPage() {
@@ -62,6 +63,9 @@ export default function MyTasksPage() {
   const [infoTask, setInfoTask] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  // Delete confirm modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
 
   // Tabs underline indicator positioning
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -215,21 +219,25 @@ export default function MyTasksPage() {
     }
   };
 
-  const deleteTask = async (task: Task) => {
-    const id = task._id || task.id;
+  const requestDeleteTask = (task: Task) => {
+    setPendingDeleteTask(task);
+    setConfirmOpen(true);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!pendingDeleteTask) return;
+    const id = pendingDeleteTask._id || pendingDeleteTask.id;
     if (!id) return;
-    
-    // Optimistic delete
     deleteTaskFromStore(id);
-    
     try {
       await deleteTaskMutation.mutateAsync(id);
       toastSuccess('Task Deleted', 'Task removed successfully!');
     } catch (e) {
       console.error('Delete task failed', e);
       toastError('Delete Failed', e instanceof Error ? e.message : 'Failed to delete task');
-      // Revert on error by refetching
-      // Query invalidation will refresh; no manual reload needed
+    } finally {
+      setConfirmOpen(false);
+      setPendingDeleteTask(null);
     }
   };
 
@@ -243,7 +251,18 @@ export default function MyTasksPage() {
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-card dark:bg-card shadow-sm flex items-center justify-center border border-border dark:border-border">
                 <CheckSquare className="h-6 w-6 text-primary dark:text-primary" />
-              </div>
+                {/* Delete Task Confirmation */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete task?"
+        description={`This will permanently remove "${pendingDeleteTask?.title || 'this task'}".`}
+        confirmText="Delete Task"
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteTask(null); }}
+        onConfirm={confirmDeleteTask}
+        requireAcknowledge
+        acknowledgeLabel="I understand this action cannot be undone"
+      />
+    </div>
               <div>
                 <h1 className="text-base font-semibold text-foreground dark:text-foreground">My Tasks</h1>
                 <p className="text-xs text-muted-foreground dark:text-muted-foreground">Manage your compliance and contract review tasks</p>
@@ -551,7 +570,7 @@ export default function MyTasksPage() {
                         )}
                         
                         <button
-                          onClick={() => deleteTask(task)}
+                          onClick={() => requestDeleteTask(task)}
                           className="text-[#FF3465] dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors p-1"
                           title="Delete task"
                         >

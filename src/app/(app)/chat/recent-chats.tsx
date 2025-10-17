@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import RecentChatIcon from "@/assets/icons/doc-comment-icon.svg";
 import { Button } from "@/components/ui/button";
 import { Trash2, X, MessageCircle } from "lucide-react";
@@ -11,6 +11,7 @@ import useGlobalChatStore from "./store/global-chat-store";
 import { PlaygroundChatMessage } from "@/types/agent";
 import { useCompanyStore } from "@/stores/company-store";
 import { useUserStore } from "@/stores/user-store";
+import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
 
 type Props = {
   isMobile: boolean;
@@ -69,6 +70,10 @@ const RecentChats = ({
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const companyId = selectedCompany?.companyId;
 
+  // Confirm dialog state for delete
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   // Use fallback values if missing or "undefined"
   const storedUserId = localStorage.getItem('user_id');
   const actualUserId = (userId && userId !== "undefined") ? userId : 
@@ -93,17 +98,9 @@ const RecentChats = ({
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log("🗑️ handleDeleteConversation called with ID:", chatdata_id);
-    
-    // Validate chatdata_id
-    if (!chatdata_id || chatdata_id === "undefined") {
-      console.error("❌ No valid chat ID provided to handleDeleteConversation");
-      return;
-    }
-    
-    await deleteConversationAPI({ conversationId: chatdata_id }); // pass as object with conversationId property
-    getConversationListsAPI(actualCompanyId, actualUserId);
+    // Open confirm modal with pending id
+    setPendingDeleteId(chatdata_id);
+    setConfirmOpen(true);
   };
 
   const handleNewChat = async () => {
@@ -155,6 +152,22 @@ const RecentChats = ({
   console.log("globalConversationList ==>", globalConversationList);
   return (
     <>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete conversation?"
+        description="This will permanently remove the conversation and its messages. This action cannot be undone."
+        confirmText="Delete Conversation"
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+        onConfirm={async () => {
+          if (!pendingDeleteId) return;
+          await deleteConversationAPI({ conversationId: pendingDeleteId });
+          setConfirmOpen(false);
+          setPendingDeleteId(null);
+          getConversationListsAPI(actualCompanyId, actualUserId);
+        }}
+        requireAcknowledge
+        acknowledgeLabel="I understand this will permanently delete the conversation"
+      />
       {/* Mobile sidebar overlay */}
       {recentChatsOpen && isMobile && (
         <div

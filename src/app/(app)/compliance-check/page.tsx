@@ -1189,24 +1189,62 @@ export default function ComplianceCheckPage() {
 
               {/* Analysis Progress */}
               {isAnalyzing && (
-                <div className="w-full space-y-4">
-                  <div className="text-center">
-                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-full">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
-                      <span className="text-primary font-medium">Analyzing Document...</span>
+                <div className="w-full space-y-6">
+                  {/* Header indicator */}
+                  <div className="text-center space-y-2">
+                    <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-violet-500/15 via-fuchsia-500/15 to-indigo-500/15">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-fuchsia-400 border-t-transparent" />
+                      <span className="font-medium bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">Analyzing Document...</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">Parsing file, extracting sections and scanning for compliance gaps…</p>
                   </div>
-                  <div className="max-w-md mx-auto">
-                    <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                      <span>Analysis Progress</span>
-                      <span>Processing...</span>
+
+                  {/* Document parsing skeleton */}
+                  <div className="max-w-2xl mx-auto w-full">
+                    <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+                      {/* Title */}
+                      <div className="h-5 w-2/3 rounded mb-4 bg-gradient-to-r from-sky-200/60 via-fuchsia-200/60 to-emerald-200/60 dark:from-sky-300/20 dark:via-fuchsia-300/20 dark:to-emerald-300/20 animate-pulse"></div>
+                      {/* Meta row */}
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="h-3 w-20 rounded bg-gradient-to-r from-indigo-200/60 to-purple-200/60 dark:from-indigo-300/20 dark:to-purple-300/20 animate-pulse"></div>
+                        <div className="h-3 w-16 rounded bg-gradient-to-r from-fuchsia-200/60 to-pink-200/60 dark:from-fuchsia-300/20 dark:to-pink-300/20 animate-pulse"></div>
+                        <div className="h-3 w-24 rounded bg-gradient-to-r from-cyan-200/60 to-sky-200/60 dark:from-cyan-300/20 dark:to-sky-300/20 animate-pulse"></div>
+                      </div>
+                      {/* Paragraph lines */}
+                      <div className="space-y-2 mb-6">
+                        <div className="h-3 w-full rounded bg-gradient-to-r from-slate-200/70 via-slate-300/70 to-slate-200/70 dark:from-slate-500/20 dark:via-slate-600/20 dark:to-slate-500/20 animate-pulse"></div>
+                        <div className="h-3 w-11/12 rounded bg-gradient-to-r from-slate-200/70 via-slate-300/70 to-slate-200/70 dark:from-slate-500/20 dark:via-slate-600/20 dark:to-slate-500/20 animate-pulse"></div>
+                        <div className="h-3 w-10/12 rounded bg-gradient-to-r from-slate-200/70 via-slate-300/70 to-slate-200/70 dark:from-slate-500/20 dark:via-slate-600/20 dark:to-slate-500/20 animate-pulse"></div>
+                        <div className="h-3 w-9/12 rounded bg-gradient-to-r from-slate-200/70 via-slate-300/70 to-slate-200/70 dark:from-slate-500/20 dark:via-slate-600/20 dark:to-slate-500/20 animate-pulse"></div>
+                      </div>
+                      {/* Section heading */}
+                      <div className="h-4 w-1/3 rounded mb-3 bg-gradient-to-r from-amber-200/60 to-orange-200/60 dark:from-amber-300/20 dark:to-orange-300/20 animate-pulse"></div>
+                      {/* Bulleted-ish lines */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-fuchsia-300/60 dark:bg-fuchsia-400/30 animate-pulse"></div>
+                          <div className="h-3 w-10/12 rounded bg-gradient-to-r from-fuchsia-200/60 to-purple-200/60 dark:from-fuchsia-300/20 dark:to-purple-300/20 animate-pulse"></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-sky-300/60 dark:bg-sky-400/30 animate-pulse"></div>
+                          <div className="h-3 w-9/12 rounded bg-gradient-to-r from-sky-200/60 to-indigo-200/60 dark:from-sky-300/20 dark:to-indigo-300/20 animate-pulse"></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-emerald-300/60 dark:bg-emerald-400/30 animate-pulse"></div>
+                          <div className="h-3 w-8/12 rounded bg-gradient-to-r from-emerald-200/60 to-teal-200/60 dark:from-emerald-300/20 dark:to-teal-300/20 animate-pulse"></div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
+
+                    {/* Subtle indeterminate bar */}
+                    <div className="mt-5">
+                      <div className="w-full h-2 rounded-full overflow-hidden bg-gradient-to-r from-slate-200/70 via-slate-300/70 to-slate-200/70 dark:from-slate-600/30 dark:via-slate-700/30 dark:to-slate-600/30">
+                        <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-fuchsia-500 to-indigo-500 animate-pulse"></div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        AI is reviewing your document against selected compliance standards
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      AI is reviewing your document against selected compliance standards
-                    </p>
                   </div>
                 </div>
               )}
@@ -1717,7 +1755,7 @@ export default function ComplianceCheckPage() {
                     currentStep === 5 ||
                     isAnalyzing
                   }
-                  className="flex items-center gap-[5px] px-[15px] py-0 h-9 bg-[#6E72FF] rounded-[5px] hover:bg-[#5B5FE6] transition-colors text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-[5px] px-[15px] py-0 h-9 rounded-[5px] transition-colors text-white shadow-sm bg-[#585CFF] hover:bg-[#4B50E6] disabled:bg-[#C8CAF9] disabled:text-white disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   <span className="text-xs font-semibold">
                     {currentStep === 3 ? 'Analyze' : 'Next'}

@@ -21,6 +21,7 @@ import { LogOut, User, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { useUserProfileDetails } from "@/lib/queries/useUserProfileDetails";
 import { getInitials } from "@/utils/user.util";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
 
 
 // Memoized CompanyDropdown component for better performance
@@ -120,6 +121,7 @@ export const Header = memo(function Header() {
   const { logout } = useAuth();
   const { setCompanies, setSelectedCompany } = useCompanyStore();
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
+  const [confirmSignOutOpen, setConfirmSignOutOpen] = useState(false);
 
   // Get user data from user store
   const { userData } = useUserStore();
@@ -167,9 +169,9 @@ export const Header = memo(function Header() {
 
   // Theme is handled via <ThemeToggle /> component
 
-  const handleSignOut = useCallback(async () => {
-    // Use the new auth hook logout method which handles everything
+  const handleSignOutConfirm = useCallback(async () => {
     await logout();
+    setConfirmSignOutOpen(false);
   }, [logout]);
 
   // Memoized values for performance
@@ -200,6 +202,15 @@ export const Header = memo(function Header() {
   return (
     <header className="bg-[#FAFAFB] dark:bg-background shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] sticky top-0 z-50 mx-[17px] mt-[15px] rounded-[10px]">
       <div className="w-full flex items-center justify-between h-14 px-3 sm:px-4 md:px-6 lg:px-8">
+        <ConfirmDialog
+          open={confirmSignOutOpen}
+          title="Sign out?"
+          description="You'll be signed out of Poligap and will need to log in again."
+          confirmText="Sign Out"
+          confirmVariant="destructive"
+          onCancel={() => setConfirmSignOutOpen(false)}
+          onConfirm={handleSignOutConfirm}
+        />
         {/* Logo Section */}
         <div className="flex items-center flex-shrink-0 min-w-0">
           <img
@@ -305,7 +316,7 @@ export const Header = memo(function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer px-0 rounded-none hover:bg-gray-50 focus:bg-gray-50 focus:text-gray-900"
-                onClick={handleSignOut}
+                onClick={() => setConfirmSignOutOpen(true)}
               >
                 <div className="px-4 w-full flex items-center">
                   <LogOut className="mr-2 h-4 w-4" /> Log out
