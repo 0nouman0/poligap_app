@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
@@ -439,7 +439,8 @@ export default function ComplianceCheckPage() {
   const [appliedRuleBase, setAppliedRuleBase] = useState<boolean>(false);
   const [rulebaseCount, setRulebaseCount] = useState<number>(0);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>("all");
-  const [showIssues, setShowIssues] = useState(true);
+  // dialogMode controls whether the Audit Log dialog shows 'issues' or 'suggestions'
+  const [dialogMode, setDialogMode] = useState<'issues' | 'suggestions'>('issues');
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLog | null>(null);
   const [addedTaskKeys, setAddedTaskKeys] = useState<Set<string>>(new Set());
@@ -939,25 +940,29 @@ export default function ComplianceCheckPage() {
               </div>
               
               {/* Stepper */}
-              <div className="flex items-center gap-3">
-                {steps.map((step, index) => (
-                  <div key={step.id} className="flex items-center">
-                    <div className={"flex items-center justify-center w-9 h-9 rounded-full transition-all " + (
-                      currentStep >= step.id
-                        ? 'bg-[#3B43D6] text-white'
-                        : 'bg-white dark:bg-gray-800 border border-[#D9D9D9] dark:border-gray-600 text-[#717171] dark:text-gray-400'
-                    )}>
-                      <span className="text-sm font-semibold">
-                        {String(step.id).padStart(2, '0')}
-                      </span>
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-3">
+                  {steps.map((step, index) => (
+                    <div key={step.id} className="flex items-center">
+                      <div className={"flex items-center justify-center w-9 h-9 rounded-full transition-all " + (
+                        currentStep >= step.id
+                          ? 'bg-[#3B43D6] text-white'
+                          : 'bg-white dark:bg-gray-800 border border-[#D9D9D9] dark:border-gray-600 text-[#717171] dark:text-gray-400'
+                      )}>
+                        <span className="text-sm font-semibold">
+                          {String(step.id).padStart(2, '0')}
+                        </span>
+                      </div>
+                      {index < steps.length - 1 && (
+                        <svg className="w-14 h-9 mx-0" viewBox="0 0 56 36">
+                          <line x1="0" y1="18" x2="56" y2="18" stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} strokeWidth="1" strokeDasharray="2 2" />
+                        </svg>
+                      )}
                     </div>
-                    {index < steps.length - 1 && (
-                      <svg className="w-14 h-9 mx-0" viewBox="0 0 56 36">
-                        <line x1="0" y1="18" x2="56" y2="18" stroke={currentStep > step.id ? '#3B43D6' : '#A0A8C2'} strokeWidth="1" strokeDasharray="2 2" />
-                      </svg>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                {/* (Button removed here; aligned with search bar instead) */}
               </div>
             </div>
           </div>
@@ -965,7 +970,7 @@ export default function ComplianceCheckPage() {
           {/* Fixed Search Bar - Only visible on Step 1 */}
           {currentStep === 1 && (
             <div className="flex-shrink-0 px-6 pb-3 border-b border-border dark:border-border">
-              <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 {/* Search Bar */}
                 <div className="relative w-[280px]">
                   <Input
@@ -989,13 +994,29 @@ export default function ComplianceCheckPage() {
                   )}
                 </div>
 
-                {/* Results count */}
-                {searchQuery && filteredStandards.length > 0 && (
-                  <p className="text-xs text-[#6A707C] dark:text-gray-400">
-                    Found {filteredStandards.length} standard{filteredStandards.length !== 1 ? 's' : ''}
-                  </p>
+                {/* Deselect All aligned right like the search bar */}
+                {selectedStandards.length > 0 && (
+                  <div className="ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedStandards([]);
+                        setIsLogsCollapsed(true);
+                      }}
+                    >
+                      Deselect All
+                    </Button>
+                  </div>
                 )}
               </div>
+
+              {/* Results count */}
+              {searchQuery && filteredStandards.length > 0 && (
+                <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-2">
+                  Found {filteredStandards.length} standard{filteredStandards.length !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           )}
 
@@ -1145,9 +1166,9 @@ export default function ComplianceCheckPage() {
                   </div>
                   <Button
                     onClick={() => setUploadedFile(null)}
-                    className="bg-[#3B43D6] hover:bg-[#2F36B0] text-white h-9 px-4 rounded-[5px] text-xs font-semibold"
+                    className="bg-white border border-border text-[#3B43D6] hover:bg-gray-50 h-9 px-4 rounded-[5px] text-xs font-semibold"
                   >
-                    Choose File
+                    Remove File
                   </Button>
                 </div>
               )}
@@ -1906,7 +1927,7 @@ export default function ComplianceCheckPage() {
                               ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
                               : 'hover:bg-accent dark:hover:bg-accent border-border dark:border-border hover:border-primary dark:hover:border-primary'
                           }`}
-                          onClick={() => { setSelectedAuditLog(log); setIsLogDialogOpen(true); }}
+                          onClick={() => { setSelectedAuditLog(log); setDialogMode('issues'); setIsLogDialogOpen(true); }}
                         >
                           <div className="space-y-3">
                             <div className="flex items-start justify-between">
@@ -2017,9 +2038,9 @@ export default function ComplianceCheckPage() {
             <DialogDescription className="flex items-center justify-between gap-4">
               <span>Review the historical compliance result snapshot</span>
               <div className="flex items-center gap-2">
-                <span className={`text-xs ${showIssues ? 'font-semibold' : ''}`}>Issues</span>
-                <Switch checked={!showIssues} onCheckedChange={(val)=> setShowIssues(!val)} />
-                <span className={`text-xs ${!showIssues ? 'font-semibold' : ''}`}>Suggestions</span>
+                <span className={`text-xs ${dialogMode === 'issues' ? 'font-semibold' : ''}`}>Issues</span>
+                <Switch checked={dialogMode === 'suggestions'} onCheckedChange={(val)=> setDialogMode(val ? 'suggestions' : 'issues')} />
+                <span className={`text-xs ${dialogMode === 'suggestions' ? 'font-semibold' : ''}`}>Suggestions</span>
               </div>
             </DialogDescription>
           </DialogHeader>
@@ -2048,7 +2069,7 @@ export default function ComplianceCheckPage() {
                 </div>
               </div>
 
-              {showIssues ? (
+              {dialogMode === 'issues' ? (
                 <div>
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
@@ -2102,9 +2123,7 @@ export default function ComplianceCheckPage() {
           </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsLogDialogOpen(false)}>Close</Button>
-          </DialogFooter>
+          {/* Footer intentionally removed per UI request (dialog closes via outside click or ESC). */}
         </DialogContent>
       </Dialog>
     </div>

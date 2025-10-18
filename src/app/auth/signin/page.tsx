@@ -120,27 +120,28 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen flex bg-white text-gray-900">
-      {/* Left Side - Sign In Form */}
-      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
-          <div className="text-center mb-10">
-            <div className="flex items-center justify-center">
-              <Image
-                src={krooloLogoSrc}
-                alt="PoliGap AI Logo"
-                width={1600}
-                height={1600}
-                priority
-                className="object-contain"
-                style={{ width: 'auto', height: 'auto', maxWidth: '1200px' }}
-              />
-            </div>
-          </div>
+      <div className="flex flex-col lg:flex-row w-full h-screen">
+          {/* Left: Card with form */}
+          <div className="w-full lg:w-2/3 flex items-center justify-center p-6 lg:p-12">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-sm border border-border p-8">
+              {/* Logo */}
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center">
+                  <Image
+                    src={krooloLogoSrc}
+                    alt="PoliGap AI Logo"
+                    width={320}
+                    height={64}
+                    priority
+                    className="object-contain"
+                    style={{ width: '180px', height: 'auto' }}
+                  />
+                </div>
+              </div>
 
-          {/* Sign In Form */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-medium text-center">Sign in</h2>
+              {/* Sign In Form */}
+              <div className="space-y-6">
+                <h2 className="text-lg font-semibold text-center">Sign In</h2>
             
             {/* Email Verification Success Banner */}
             {verificationSuccess && (
@@ -240,18 +241,33 @@ export default function SignInPage() {
                 )}
               </Button>
             </form>
-            <div className="mt-4 text-center text-xs text-gray-500">
-              {"Don't have an account? "}
-              <Link
-                href="/auth/signup"
-                className="text-base-purple hover:text-base-purple-hover font-medium"
-              >
-                Sign up
-              </Link>
+                <div className="mt-4 text-center text-xs text-gray-500">
+                  {"Don't have an account? "}
+                  <Link
+                    href="/auth/signup"
+                    className="text-base-purple hover:text-base-purple-hover font-medium"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Illustration panel (purple background) */}
+          <div className="hidden lg:flex w-full lg:w-[40%] items-center justify-center bg-[rgba(223,214,244,1)] p-0">
+            <div className="relative w-full h-full rounded-lg overflow-hidden">
+              {/* Illustration image slightly shifted left and covering the panel */}
+              <Image
+                src="/sso-login.webp"
+                alt="Sign in illustration"
+                fill
+                className="object-cover object-left -translate-x-6 w-full h-full"
+                priority
+              />
             </div>
           </div>
         </div>
       </div>
-    </div>
   );
 }

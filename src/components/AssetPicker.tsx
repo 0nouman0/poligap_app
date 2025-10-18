@@ -166,28 +166,28 @@ export function AssetPicker({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[1100px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">{description}</DialogDescription>
         </DialogHeader>
 
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 py-4 border-b">
+        <div className="flex flex-col sm:flex-row gap-3 py-3 border-b items-center">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-primary" />
               <Input
                 placeholder="Search assets..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-8 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
-          
+
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Category" />
+            <SelectTrigger className="w-[160px] h-8 text-sm">
+              <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
@@ -202,6 +202,7 @@ export function AssetPicker({
           <Button
             variant="outline"
             size="sm"
+            className="h-8 text-primary"
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
           >
             {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
@@ -210,14 +211,14 @@ export function AssetPicker({
 
         {/* Asset List */}
         <div className="flex-1 overflow-y-auto">
-          {loading ? (
+              {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : filteredAssets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No assets found</h3>
+              <Upload className="h-12 w-12 text-primary/70 mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-foreground">No assets found</h3>
               <p className="text-muted-foreground">
                 {assets.length === 0 
                   ? "Upload some assets first to use them here" 
@@ -226,8 +227,8 @@ export function AssetPicker({
             </div>
           ) : (
             <div className={viewMode === 'grid' 
-              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4"
-              : "space-y-2 p-4"
+              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-3"
+              : "space-y-2 p-3"
             }>
               {filteredAssets.map((asset) => {
                 const isSelected = selectedAssets.find(a => a._id === asset._id);
@@ -245,12 +246,12 @@ export function AssetPicker({
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
                             {getFileIcon(asset.mimetype)}
-                            {multiple && (
-                              <Checkbox
-                                checked={!!isSelected}
-                                onChange={() => {}} // Handled by card click
-                              />
-                            )}
+                              {multiple && (
+                                <Checkbox
+                                  checked={!!isSelected}
+                                  onChange={() => {}} // Handled by card click
+                                />
+                              )}
                           </div>
                           {isSelected && (
                             <div className="bg-primary text-primary-foreground rounded-full p-1">
@@ -260,7 +261,7 @@ export function AssetPicker({
                         </div>
                         
                         {asset.mimetype.startsWith('image/') && asset.thumbnailUrl && (
-                          <div className="w-full h-20 bg-muted rounded-md mb-2 overflow-hidden">
+                            <div className="w-full h-20 bg-muted rounded-md mb-2 overflow-hidden">
                             <img 
                               src={asset.thumbnailUrl} 
                               alt={asset.originalName}
@@ -271,11 +272,11 @@ export function AssetPicker({
                         
                         <div className="space-y-2">
                           <div className="min-w-0">
-                            <h4 className="font-medium leading-snug text-[clamp(0.85rem,1vw,1rem)] line-clamp-2 break-words" title={asset.originalName}>
+                            <h4 className="font-medium leading-snug text-sm line-clamp-2 break-words" title={asset.originalName}>
                               {asset.originalName}
                             </h4>
                           </div>
-                          <div className="flex items-center gap-2 text-[clamp(0.7rem,0.9vw,0.85rem)] text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
                             <span className="shrink-0">{formatFileSize(asset.size)}</span>
                             <span className="shrink-0">•</span>
                             <span className="shrink-0">{new Date(asset.uploadDate).toLocaleDateString()}</span>
@@ -306,8 +307,8 @@ export function AssetPicker({
                         )}
                         {getFileIcon(asset.mimetype)}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium whitespace-normal break-words text-[clamp(0.85rem,1vw,1rem)]">{asset.originalName}</h4>
-                          <div className="flex items-center gap-3 text-[clamp(0.75rem,0.95vw,0.9rem)] text-muted-foreground flex-wrap">
+                          <h4 className="font-medium whitespace-normal break-words text-sm">{asset.originalName}</h4>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                             <span>{formatFileSize(asset.size)}</span>
                             <span>{new Date(asset.uploadDate).toLocaleDateString()}</span>
                             <span className="capitalize">{asset.category}</span>
@@ -344,12 +345,13 @@ export function AssetPicker({
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={handleCancel} className="h-8 text-sm">
               Cancel
             </Button>
             <Button 
               onClick={handleConfirmSelection}
               disabled={selectedAssets.length === 0}
+              className="h-8 text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
               Select {selectedAssets.length > 0 && `(${selectedAssets.length})`}
             </Button>
