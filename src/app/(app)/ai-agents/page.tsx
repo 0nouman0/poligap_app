@@ -188,15 +188,15 @@ export default function AIAgentsPage() {
                 <span className="text-[12px] font-medium text-[#47AF47] leading-[14.52px] text-center">Active</span>
               </div>
             </div>
-            <div className="flex flex-col gap-[5px]">
+            <div className="flex-1 flex flex-col gap-[5px]">
               <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">Email Notifier</h3>
-              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px]">
+              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px] line-clamp-2">
                 Automate email alerts and notifications for key events and policy changes.
               </p>
             </div>
             <button
               onClick={() => openAgent("Email Notifier")}
-              className="w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
+              className="mt-auto w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
             >
               Use Agent
             </button>
@@ -212,15 +212,15 @@ export default function AIAgentsPage() {
                 <span className="text-[12px] font-medium text-[#47AF47] leading-[14.52px] text-center">Active</span>
               </div>
             </div>
-            <div className="flex flex-col gap-[5px]">
+            <div className="flex-1 flex flex-col gap-[5px]">
               <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">Law Scanner</h3>
-              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px]">
+              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px] line-clamp-2">
                 Scan documents for legal clauses, risks, and compliance issues.
               </p>
             </div>
             <button
               onClick={() => openAgent("Law Scanner")}
-              className="w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
+              className="mt-auto w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
             >
               Use Agent
             </button>
@@ -236,15 +236,15 @@ export default function AIAgentsPage() {
                 <span className="text-[12px] font-medium text-[#717171] leading-[14.52px] text-center">Coming Soon</span>
               </div>
             </div>
-            <div className="flex flex-col gap-[5px]">
+            <div className="flex-1 flex flex-col gap-[5px]">
               <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">More Agents</h3>
-              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px]">
+              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px] line-clamp-2">
                 New specialized agents are in development. Stay tuned for updates!
               </p>
             </div>
             <button
               disabled
-              className="w-full py-[7px] bg-[#DADADA] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px] cursor-not-allowed"
+              className="mt-auto w-full py-[7px] bg-[#DADADA] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px] cursor-not-allowed"
             >
               In Development
             </button>
@@ -425,7 +425,7 @@ export default function AIAgentsPage() {
                           <input type="text" value={lawKeywords} onChange={(e)=>setLawKeywords(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" placeholder="e.g., privacy, payments, aml" />
                         </div>
                         <div className="flex items-center gap-3">
-                          <button onClick={scanUpdates} disabled={lawLoading} className="px-4 py-2 rounded-md text-sm text-white bg-black disabled:opacity-50">{lawLoading? 'Scanning…' : 'Scan Updates'}</button>
+                          <button onClick={scanUpdates} disabled={lawLoading} className="px-4 py-2 rounded-md text-sm text-white bg-[#3B43D6] disabled:opacity-50 disabled:cursor-not-allowed">{lawLoading? 'Scanning…' : 'Scan Updates'}</button>
                           {lawCount != null && (
                             <div className="text-xs text-gray-600">Found <span className="font-semibold">{lawCount}</span> recent updates</div>
                           )}

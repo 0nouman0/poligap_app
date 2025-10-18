@@ -1,6 +1,6 @@
 import type { MessageProps, PlaygroundChatMessage } from "@/types/agent";
 import React, { useCallback, useState } from "react";
-import { Copy, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +27,6 @@ export const ActionTab = ({
   handleCreateProject,
   handleCreateDoc,
 }: MessageProps) => {
-  const [isLiked, setIsLiked] = useState(false);
-  const [isDisliked, setIsDisliked] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isExporting, setIsExporting] = useState("");
   const [isCreatingDocument, setIsCreatingDocument] = useState("");
@@ -94,23 +92,7 @@ export const ActionTab = ({
     }
   };
 
-  const handleLike = useCallback(() => {
-    if (isLiked) {
-      setIsLiked(false);
-    } else {
-      setIsLiked(true);
-      setIsDisliked(false);
-    }
-  }, [isLiked]);
-
-  const handleDislike = useCallback(() => {
-    if (isDisliked) {
-      setIsDisliked(false);
-    } else {
-      setIsDisliked(true);
-      setIsLiked(false);
-    }
-  }, [isDisliked]);
+  
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(message.content ?? "");
@@ -262,51 +244,6 @@ export const ActionTab = ({
         </div>
 
         <div className="flex items-center space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <button
-                  onClick={handleLike}
-                  className={`cursor-pointer rounded-lg p-2 transition-colors hover:bg-[var(--agent-background-color)] ${
-                    isLiked
-                      ? "text-green-500"
-                      : "text-[var(--secondary-text-color)]"
-                  }`}
-                >
-                  <ThumbsUp
-                    size={16}
-                    fill={isLiked ? "currentColor" : "none"}
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent style={{ zIndex: 1600 }}>
-                {isLiked ? "Liked" : "Like"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <button
-                  onClick={handleDislike}
-                  className={`cursor-pointer rounded-lg p-2 transition-colors hover:bg-[var(--agent-background-color)] ${
-                    isDisliked
-                      ? "text-red-500"
-                      : "text-[var(--secondary-text-color)]"
-                  }`}
-                >
-                  <ThumbsDown
-                    size={16}
-                    fill={isDisliked ? "currentColor" : "none"}
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent style={{ zIndex: 1600 }}>
-                {isDisliked ? "Disliked" : "Dislike"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
