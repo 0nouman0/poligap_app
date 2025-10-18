@@ -12,7 +12,6 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       enableSystem
       disableTransitionOnChange={false}
       storageKey="poligap-theme"
-      suppressHydrationWarning
       {...props}
     >
       {children}

@@ -14,6 +14,7 @@ import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useTasksStore, type Task } from "@/stores/tasks-store";
 import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
 import { useTasksList, useCreateTask, useUpdateTask, useDeleteTask } from "@/lib/queries/useTasks";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyTasksPage() {
   const userData = useUserStore((state) => state.userData);
@@ -81,7 +82,7 @@ export default function MyTasksPage() {
     if (!container || !btn) return;
     const cRect = container.getBoundingClientRect();
     const bRect = btn.getBoundingClientRect();
-    let left = bRect.left - cRect.left;
+    const left = bRect.left - cRect.left;
     let width = btn.offsetWidth;
     // Clamp to avoid overflow
     const maxWidth = Math.max(0, cRect.width - left);
@@ -251,18 +252,7 @@ export default function MyTasksPage() {
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-card dark:bg-card shadow-sm flex items-center justify-center border border-border dark:border-border">
                 <CheckSquare className="h-6 w-6 text-primary dark:text-primary" />
-                {/* Delete Task Confirmation */}
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Delete task?"
-        description={`This will permanently remove "${pendingDeleteTask?.title || 'this task'}".`}
-        confirmText="Delete Task"
-        onCancel={() => { setConfirmOpen(false); setPendingDeleteTask(null); }}
-        onConfirm={confirmDeleteTask}
-        requireAcknowledge
-        acknowledgeLabel="I understand this action cannot be undone"
-      />
-    </div>
+              </div>
               <div>
                 <h1 className="text-base font-semibold text-foreground dark:text-foreground">My Tasks</h1>
                 <p className="text-xs text-muted-foreground dark:text-muted-foreground">Manage your compliance and contract review tasks</p>
@@ -336,20 +326,44 @@ export default function MyTasksPage() {
               </div>
             
               {/* All Sources Dropdown */}
-              <button className="h-8 px-2.5 flex items-center gap-2 text-xs font-medium text-muted-foreground dark:text-muted-foreground bg-card dark:bg-card border border-border dark:border-border rounded-[5px] hover:bg-accent dark:hover:bg-accent">
-                All Sources
-                <ChevronDown className="h-3 w-3" />
-              </button>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="h-8 px-2.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground bg-card dark:bg-card border border-border dark:border-border rounded-[5px] hover:bg-accent dark:hover:bg-accent w-[140px]">
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="compliance">Compliance</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                </SelectContent>
+              </Select>
               
               {/* All Priorities Dropdown */}
-              <button className="h-8 px-2.5 flex items-center gap-2 text-xs font-medium text-muted-foreground dark:text-muted-foreground bg-card dark:bg-card border border-border dark:border-border rounded-[5px] hover:bg-accent dark:hover:bg-accent">
-                All Priorities
-                <ChevronDown className="h-3 w-3" />
-              </button>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="h-8 px-2.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground bg-card dark:bg-card border border-border dark:border-border rounded-[5px] hover:bg-accent dark:hover:bg-accent w-[140px]">
+                  <SelectValue placeholder="All Priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
               
-              {/* Apply Button */}
-              <button className="h-8 px-4 text-xs font-semibold text-white rounded-[5px] transition-colors hover:bg-[#2F36B0]" style={{ backgroundColor: '#3B43D6' }}>
-                Apply
+              {/* Apply Button - Reset Filters */}
+              <button 
+                onClick={() => {
+                  setSearchTerm('');
+                  setPriorityFilter('all');
+                  setSourceFilter('all');
+                  toastSuccess('Filters Reset', 'All filters have been cleared');
+                }}
+                className="h-8 px-4 text-xs font-semibold text-white rounded-[5px] transition-colors hover:bg-[#2F36B0]" 
+                style={{ backgroundColor: '#3B43D6' }}
+              >
+                Reset
               </button>
             </div>
           </div>
@@ -437,8 +451,29 @@ export default function MyTasksPage() {
 
           <div className="space-y-[30px]">
           {loading && (
-            <div className="bg-card dark:bg-card rounded-[10px] shadow-sm p-8 text-center text-muted-foreground dark:text-muted-foreground text-sm border border-border dark:border-border">
-              Loading tasks…
+            <div className="space-y-[30px]">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-card dark:bg-card rounded-[10px] shadow-sm p-5 border border-border dark:border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="h-6 w-16" />
+                      </div>
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-6 w-32" />
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           {!loading && filteredTasks.length === 0 ? (
@@ -629,6 +664,18 @@ export default function MyTasksPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Task Confirmation */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete task?"
+        description={`This will permanently remove "${pendingDeleteTask?.title || 'this task'}".`}
+        confirmText="Delete Task"
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteTask(null); }}
+        onConfirm={confirmDeleteTask}
+        requireAcknowledge
+        acknowledgeLabel="I understand this action cannot be undone"
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { useUserStore } from "@/stores/user-store";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Lightweight UI primitives (searchable multi-select and searchable select)
 function MultiSelect({
@@ -95,7 +96,7 @@ function SearchSelect({
       <button 
         type="button" 
         onClick={()=>setOpen(!open)} 
-        className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] flex items-center justify-between"
+        className="w-full h-[40px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] flex items-center justify-between"
       >
         <span className={current ? '' : 'text-[#595959]'}>{current || placeholder}</span>
         <ChevronDown className="w-[18px] h-[18px]" />
@@ -326,9 +327,9 @@ export default function PolicyGeneratorPage() {
 
   return (
     <div className="w-full h-screen bg-[#FAFAFB] py-4 md:py-6 px-3 md:px-4 overflow-x-hidden overflow-y-hidden flex flex-col">
-      <div className="w-full max-w-[1903px] mx-auto overflow-x-hidden flex-1 flex flex-col overflow-y-hidden">
+      <div className="w-full max-w-[1648px] mx-auto overflow-x-hidden flex-1 flex flex-col overflow-y-hidden">
         {/* Header Section */}
-        <div className="w-full max-w-full xl:max-w-[1646px] flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-[32px] gap-4 md:gap-0">
+        <div className="w-full max-w-[1648px] flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-[32px] gap-4 md:gap-0">
           {/* Left: Title and Description */}
           <div className="flex items-center gap-3 md:gap-[15px]">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#3B43D6] flex items-center justify-center flex-shrink-0">
@@ -380,11 +381,13 @@ export default function PolicyGeneratorPage() {
         {/* Main Content Area with Right Sidebar */}
         <div className="flex flex-col lg:flex-row gap-4 md:gap-[25px] overflow-x-hidden flex-1 overflow-y-hidden">
           {/* Main Form Area */}
-          <div className={`flex-1 w-full max-w-full lg:max-w-[1290px] min-w-0 ${currentStep === 4 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
+          <div className={`flex-1 w-full max-w-[1648px] min-w-0 ${currentStep === 4 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
           {currentStep === 1 && (
             <div className="flex flex-col gap-4 md:gap-[25px]">
+              {/* Input Fields Card */}
+              <div className="bg-white rounded-[10px] border border-[#DEE3ED] p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
               {/* First Row */}
-              <div className="flex flex-col md:flex-row gap-4 md:gap-[25px]">
+              <div className="flex flex-col md:flex-row gap-4 md:gap-[25px] mb-4 md:mb-[25px]">
                 {/* Policy Type */}
                 <div className="flex-1 flex flex-col gap-3 md:gap-[18px]">
                   <label className="text-xs md:text-[14px] font-medium text-[#595959]">Policy Type</label>
@@ -392,7 +395,7 @@ export default function PolicyGeneratorPage() {
                     <select 
                       value={inputs.policyType} 
                       onChange={(e)=>setInputs({...inputs, policyType:e.target.value})} 
-                      className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] appearance-none cursor-pointer"
+                      className="w-full h-[40px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] appearance-none cursor-pointer"
                     >
                       {[
                         "Privacy Policy",
@@ -411,7 +414,7 @@ export default function PolicyGeneratorPage() {
                 <div className="flex-1 flex flex-col gap-3 md:gap-[18px]">
                   <label className="text-xs md:text-[14px] font-medium text-[#595959]">Industry / Domain</label>
                   <input 
-                    className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] placeholder:text-[#595959]" 
+                    className="w-full h-[40px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] placeholder:text-[#595959]" 
                     value={inputs.industry} 
                     onChange={(e)=>setInputs({...inputs, industry:e.target.value})} 
                     placeholder="e.g. SaaS, FinTech" 
@@ -420,7 +423,7 @@ export default function PolicyGeneratorPage() {
               </div>
 
               {/* Second Row */}
-              <div className="flex flex-col md:flex-row gap-4 md:gap-[25px]">
+              <div className="flex flex-col md:flex-row gap-4 md:gap-[25px] mb-4 md:mb-[25px]">
                 {/* Region / Country */}
                 <div className="flex-1 flex flex-col gap-3 md:gap-[18px]">
                   <label className="text-xs md:text-[14px] font-medium text-[#595959]">Region / Country</label>
@@ -441,7 +444,7 @@ export default function PolicyGeneratorPage() {
                     <select 
                       value={inputs.orgType} 
                       onChange={(e)=>setInputs({...inputs, orgType:e.target.value})} 
-                      className="w-full h-[52px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] appearance-none cursor-pointer"
+                      className="w-full h-[40px] bg-white border border-[#E6E6E6] rounded-[5px] px-5 text-[14px] font-medium text-[#595959] appearance-none cursor-pointer"
                     >
                       <option value="">Select</option>
                       <option value="startup">Startup</option>
@@ -456,9 +459,9 @@ export default function PolicyGeneratorPage() {
               </div>
 
               {/* Frameworks */}
-              <div className="flex flex-col gap-3 md:gap-[18px]">
+              <div className="flex flex-col gap-3 md:gap-[18px] mb-4 md:mb-[25px]">
                 <label className="text-xs md:text-[14px] font-medium text-[#595959]">Frameworks</label>
-                <div className="bg-white border border-[#E6E6E6] rounded-[5px] p-[15px] flex flex-wrap gap-[10px] min-h-[82px]">
+                <div className="bg-white border border-[#E6E6E6] rounded-[5px] p-[10px] flex flex-wrap gap-[8px]">
                   {['GDPR', 'ISO 27001', 'SOC 2', 'CCPA', 'DPDP Act', 'HIPAA'].map(fw => (
                     <button
                       key={fw}
@@ -483,26 +486,26 @@ export default function PolicyGeneratorPage() {
               </div>
 
               {/* Apply RuleBase */}
-              <div className="h-[48px] flex items-center gap-[10px]">
+              <div className="flex items-center gap-[10px] mb-4 md:mb-[25px]">
                 <input 
                   type="checkbox" 
                   id="applyRuleBase"
                   checked={inputs.applyRuleBase} 
                   onChange={(e)=>setInputs({...inputs, applyRuleBase:e.target.checked})}
-                  className="w-6 h-6 border-2 border-black rounded cursor-pointer accent-[#3B43D6]"
+                  className="w-5 h-5 border-2 border-black rounded cursor-pointer accent-[#3B43D6]"
                 />
                 <div>
-                  <label htmlFor="applyRuleBase" className="text-[16px] font-semibold text-[#2D2F34] cursor-pointer">
+                  <label htmlFor="applyRuleBase" className="text-[14px] font-semibold text-[#2D2F34] cursor-pointer">
                     Apply RuleBase during generation
                   </label>
-                  <p className="text-[12px] text-[#6A707C] mt-[5px]">
+                  <p className="text-[11px] text-[#6A707C] mt-[3px]">
                     RuleBase guides clause selection and phrasing to your compliance profile.
                   </p>
                 </div>
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-end gap-[15px] mt-[25px]">
+              <div className="flex justify-end gap-[15px]">
                 <button
                   onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
                   disabled={currentStep === 1}
@@ -520,13 +523,16 @@ export default function PolicyGeneratorPage() {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
+              </div>
             </div>
           )}
 
           {currentStep === 2 && (
             <div className="flex flex-col gap-4 md:gap-[25px]">
+              {/* Knowledge Base & Custom Rules Card */}
+              <div className="bg-white rounded-[10px] border border-[#DEE3ED] p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
               {/* Knowledge Base Notes */}
-              <div className="flex flex-col gap-3 md:gap-[18px]">
+              <div className="flex flex-col gap-3 md:gap-[18px] mb-4 md:mb-[25px]">
                 <label className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Knowledge Base Notes</label>
                 <textarea 
                   rows={5} 
@@ -538,7 +544,7 @@ export default function PolicyGeneratorPage() {
               </div>
 
               {/* Custom Rules */}
-              <div className="flex flex-col gap-3 md:gap-[18px]">
+              <div className="flex flex-col gap-3 md:gap-[18px] mb-4 md:mb-[25px]">
                 <label className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Custom Rules</label>
                 <textarea 
                   rows={5} 
@@ -549,12 +555,12 @@ export default function PolicyGeneratorPage() {
                 />
               </div>
 
-              <div className="text-[12px] text-[#6A707C]">
+              <div className="text-[12px] text-[#6A707C] mb-4 md:mb-[25px]">
                 Tip: You can later move your notes to a proper Knowledge Base page and select assets for reuse.
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-end gap-3 md:gap-[15px] mt-4 md:mt-[25px]">
+              <div className="flex justify-end gap-3 md:gap-[15px]">
                 <button
                   onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
                   className="h-10 md:h-9 px-4 md:px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-xs md:text-[12px] font-semibold text-[#717171] flex items-center gap-[5px]"
@@ -571,18 +577,19 @@ export default function PolicyGeneratorPage() {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
+              </div>
             </div>
           )}
 
           {currentStep === 3 && (
-            <div className="flex flex-col gap-4 md:gap-[28px]">
+            <div className="flex flex-col gap-4 md:gap-[20px]">
               {/* Statutory Warning */}
-              <div className="min-h-[100px] bg-[#FFFCE9] border border-[#FFBF71] rounded-[10px] p-4 md:p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
-                <div className="flex gap-3 md:gap-[10px]">
-                  <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 text-[#E55400] flex-shrink-0" strokeWidth={2} />
-                  <div className="flex flex-col gap-2 md:gap-[10px]">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#E55400]">Statutory Warning</div>
-                    <div className="text-xs md:text-[12px] text-[#2D2F34] leading-relaxed">
+              <div className="bg-[#FFFCE9] border border-[#FFBF71] rounded-[10px] p-3 md:p-4 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
+                <div className="flex gap-2 md:gap-[10px]">
+                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-[#E55400] flex-shrink-0 mt-0.5" strokeWidth={2} />
+                  <div className="flex flex-col gap-1 md:gap-[8px]">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#E55400]">Statutory Warning</div>
+                    <div className="text-[11px] md:text-[12px] text-[#2D2F34] leading-relaxed">
                       This Policy Generator produces draft content for reference only. It is not legal advice and should not be used as-is in real-world scenarios. Use responsibly and have your organization's legal/compliance team review before any adoption.
                     </div>
                   </div>
@@ -590,39 +597,39 @@ export default function PolicyGeneratorPage() {
               </div>
 
               {/* Context and Configuration */}
-              <div className="min-h-[400px] bg-white rounded-[10px] p-4 md:p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] flex flex-col gap-4 md:gap-5">
+              <div className="bg-white rounded-[10px] border border-[#DEE3ED] p-4 md:p-5 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] flex flex-col gap-3 md:gap-4">
                 {/* Context Section */}
-                <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Context</div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-[36px]">
-                  <div className="min-h-[44px] min-w-0">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Type</div>
-                    <div className="text-xs md:text-[12px] text-[#6A707C] mt-2 md:mt-[10px] break-words">{inputs.policyType || 'Cookie Policy'}</div>
+                <div className="text-sm md:text-[14px] font-semibold text-[#2D2F34]">Context</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-[24px]">
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">Type</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.policyType || 'Cookie Policy'}</div>
                   </div>
-                  <div className="min-h-[44px] min-w-0">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Industry</div>
-                    <div className="text-xs md:text-[12px] text-[#6A707C] mt-2 md:mt-[10px] break-words">{inputs.industry || 'SaaS'}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">Industry</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.industry || 'SaaS'}</div>
                   </div>
-                  <div className="min-h-[44px] min-w-0">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Region</div>
-                    <div className="text-xs md:text-[12px] text-[#6A707C] mt-2 md:mt-[10px] break-words">{inputs.region || 'United State'}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">Region</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.region || 'United State'}</div>
                   </div>
-                  <div className="min-h-[44px] min-w-0">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">ORG</div>
-                    <div className="text-xs md:text-[12px] text-[#6A707C] mt-2 md:mt-[10px] break-words">{inputs.orgType || 'smb'}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">ORG</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.orgType || 'smb'}</div>
                   </div>
-                  <div className="min-h-[44px] min-w-0">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Generated On</div>
-                    <div className="text-xs md:text-[12px] text-[#6A707C] mt-2 md:mt-[10px] break-words">{new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">Generated On</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</div>
                   </div>
-                  <div className="min-h-[44px] min-w-0">
-                    <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">RuleBase</div>
-                    <div className="text-xs md:text-[12px] text-[#6A707C] mt-2 md:mt-[10px] break-words">{inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">RuleBase</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
                   </div>
                 </div>
 
                 {/* Configuration Section */}
-                <div className="text-sm md:text-[16px] font-semibold text-[#2D2F34]">Configuration</div>
-                <div className="flex flex-wrap gap-[10px] py-[15px]">
+                <div className="text-sm md:text-[14px] font-semibold text-[#2D2F34]">Configuration</div>
+                <div className="flex flex-wrap gap-[8px] py-[10px]">
                   {inputs.frameworks.length > 0 ? (
                     inputs.frameworks.map(fw => (
                       <div key={fw} className="px-[7px] py-[5px] bg-[#EFF1F6] rounded-[20px] text-xs md:text-[14px] font-medium text-[#595959]">
@@ -642,14 +649,14 @@ export default function PolicyGeneratorPage() {
                 </div>
 
                 {/* Knowledge Notes */}
-                <div className="text-[16px] font-semibold text-[#2D2F34]">Knowledge Notes</div>
-                <div className="text-[12px] text-[#6A707C]">
+                <div className="text-sm md:text-[14px] font-semibold text-[#2D2F34]">Knowledge Notes</div>
+                <div className="text-[11px] md:text-[12px] text-[#6A707C]">
                   {inputs.kbNotes || 'Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.'}
                 </div>
 
                 {/* Custom Rules */}
-                <div className="text-[16px] font-semibold text-[#2D2F34]">Custom Rules</div>
-                <div className="text-[12px] text-[#6A707C]">
+                <div className="text-sm md:text-[14px] font-semibold text-[#2D2F34]">Custom Rules</div>
+                <div className="text-[11px] md:text-[12px] text-[#6A707C]">
                   {inputs.customRules || 'Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.'}
                 </div>
               </div>
@@ -666,9 +673,19 @@ export default function PolicyGeneratorPage() {
                 <button
                   onClick={generatePolicy}
                   disabled={!canGenerate}
-                  className="h-10 md:h-9 px-4 md:px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-xs md:text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
+                  className="h-10 md:h-9 px-4 md:px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-xs md:text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50 transition-opacity"
                 >
-                  Generate Policy
+                  {isGenerating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Policy'
+                  )}
                 </button>
               </div>
             </div>
@@ -683,7 +700,7 @@ export default function PolicyGeneratorPage() {
               </div>
 
               {/* Content Card */}
-              <div className="bg-white border border-[#E6E6E6] rounded-[10px] p-4 md:p-6 max-h-[500px] overflow-y-auto shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
+              <div className="bg-white border border-[#DEE3ED] rounded-[10px] p-4 md:p-6 max-h-[500px] overflow-y-auto shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
                 <div className="prose prose-sm max-w-none">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{result || 'No content.'}</ReactMarkdown>
                 </div>
@@ -720,7 +737,7 @@ export default function PolicyGeneratorPage() {
         </div>
 
         {/* Audit Logs Sidebar */}
-        <div className="w-full lg:w-[322px] lg:max-w-[322px] lg:h-[500px] bg-white rounded-[10px] p-6 flex-shrink-0 min-w-0 overflow-y-hidden flex flex-col">
+        <div className="w-full lg:w-[322px] lg:max-w-[322px] lg:h-[500px] bg-white rounded-[10px] border border-[#DEE3ED] p-6 flex-shrink-0 min-w-0 overflow-y-hidden flex flex-col shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
           <div className="flex items-center gap-2 mb-1">
             <RotateCcw className="w-5 h-5 text-[#717171]" strokeWidth={1.67} />
             <div className="text-[16px] font-semibold text-[#2D2F34]">Audit Logs</div>
@@ -730,7 +747,27 @@ export default function PolicyGeneratorPage() {
           </div>
 
           {logsLoading && (
-            <div className="text-[12px] text-[#6A707C] text-center mt-20">Loading logs…</div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-[10px] border border-[#DEE3ED] p-4 shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)]">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-5/6" />
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-6 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {!logsLoading && logsError && (
@@ -756,8 +793,8 @@ export default function PolicyGeneratorPage() {
 
           {!logsLoading && !logsError && policyLogs.length > 0 && (
             <div className="space-y-2 max-h-[370px] overflow-y-auto pr-1">
-              {policyLogs.map((log: any) => (
-                <div key={log._id} className="border border-border rounded-md p-3 hover:bg-accent/50 transition-colors bg-card">
+              {policyLogs.map((log: any, index: number) => (
+                <div key={log._id ? `${log._id}-${index}` : `log-${index}`} className="border border-border rounded-md p-3 hover:bg-accent/50 transition-colors bg-card">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium truncate text-foreground">
                       {log.fileName || inputs.policyType}
@@ -787,8 +824,8 @@ export default function PolicyGeneratorPage() {
                   </div>
                   {Array.isArray(log.standards) && log.standards.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {log.standards.slice(0, 3).map((s: string) => (
-                        <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {log.standards.slice(0, 3).map((s: string, idx: number) => (
+                        <span key={`${s}-${idx}`} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                           {s}
                         </span>
                       ))}

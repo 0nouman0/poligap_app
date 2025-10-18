@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback, useDeferredValue } from "react";
-import { Shield, ChevronRight, ChevronLeft, BookOpen, Award, CheckCircle, RotateCcw, Upload, FolderOpen, FileText, Info, Trash2, AlertTriangle, Clock } from "lucide-react";
+import React, { useState, useMemo, useRef, useCallback, useDeferredValue, useEffect } from "react";
+import { Shield, ChevronRight, ChevronLeft, BookOpen, Award, CheckCircle, RotateCcw, Upload, FolderOpen, FileText, Info, Trash2, AlertTriangle, Clock, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { useContractReviewStore } from "@/store/contractReview";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RequiredSection {
   title: string;
@@ -690,7 +691,7 @@ const templatePreviewSections: TemplatePreviewSection[] = [
 
 export default function ContractReview() {
   const { userData } = useUserStore();
-  const { logs: allAuditLogs, isLoading: logsLoading } = useAuditLogsStore();
+  const { logs: allAuditLogs, isLoading: logsLoading, addLog, fetchLogs } = useAuditLogsStore();
   const crStore = useContractReviewStore();
 
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
@@ -716,13 +717,36 @@ export default function ContractReview() {
   const [finalInstructions, setFinalInstructions] = useState<string>("");
   const deviceFileInputRef = useRef<HTMLInputElement | null>(null);
   const [deviceInputKey, setDeviceInputKey] = useState(0);
+  const customTemplateInputRef = useRef<HTMLInputElement | null>(null);
+  const [customTemplateInputKey, setCustomTemplateInputKey] = useState(0);
+  const [customTemplateFile, setCustomTemplateFile] = useState<File | null>(null);
+
+  // Fetch audit logs on mount
+  useEffect(() => {
+    if (userData?.userId) {
+      fetchLogs(userData.userId);
+    }
+  }, [userData?.userId, fetchLogs]);
 
   // Filter template logs based on selected template
   const templateLogs = useMemo(() => {
-    if (!selectedTemplate?.id) return [];
-    return allAuditLogs.filter(log => 
-      (log as any).templateId === selectedTemplate.id
-    ).slice(0, 20);
+    if (!selectedTemplate?.name) return [];
+    
+    // Filter by template name in standards array OR templateId in snapshot
+    return allAuditLogs.filter(log => {
+      const standards = (log as any).standards || [];
+      const templateId = (log as any).snapshot?.templateId;
+      const templateName = (log as any).snapshot?.templateName;
+      const analysisMethod = (log as any).analysisMethod;
+      
+      // Only show contract review logs
+      if (analysisMethod !== 'contract_review') return false;
+      
+      // Match by template name in standards or snapshot
+      return standards.includes(selectedTemplate.name) || 
+             templateName === selectedTemplate.name ||
+             templateId === selectedTemplate.id;
+    }).slice(0, 20);
   }, [allAuditLogs, selectedTemplate]);
 
   const steps = [
@@ -748,6 +772,14 @@ export default function ContractReview() {
       setExtractedDocument(null);
       crStore.setExtractedDocument(null);
       crStore.setSuggestions([]);
+    }
+  };
+
+  const handleCustomTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCustomTemplateFile(file);
+      toastSuccess('Template Uploaded', `Custom template "${file.name}" has been uploaded successfully.`);
     }
   };
 
@@ -888,14 +920,203 @@ export default function ContractReview() {
       
       crStore.setSuggestions(suggestions as any);
 
+      // Save to audit logs
+      try {
+        const auditLogPayload = {
+          fileName: uploadedFile.name,
+          standards: [selectedTemplate?.name || 'Custom Template'],
+          score: document.overallScore,
+          status: 'success',
+          gapsCount: document.gaps?.length || 0,
+          fileSize: uploadedFile.size || 0,
+          analysisMethod: 'contract_review',
+          userId: userData?.userId,
+          sessionId: document.id,
+          snapshot: {
+            templateName: selectedTemplate?.name || 'Custom Template',
+            templateId: selectedTemplate?.id,
+            totalIssues: document.gaps?.length || 0,
+            criticalIssues: document.gaps?.filter(g => g.severity === 'critical').length || 0,
+            highIssues: document.gaps?.filter(g => g.severity === 'high').length || 0,
+            mediumIssues: document.gaps?.filter(g => g.severity === 'medium').length || 0,
+            lowIssues: document.gaps?.filter(g => g.severity === 'low').length || 0,
+            analysisDate: new Date().toISOString(),
+            applyRuleBase: applyRuleBase,
+          }
+        };
+
+        const logResponse = await fetch('/api/audit-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(auditLogPayload)
+        });
+
+        if (logResponse.ok) {
+          const logData = await logResponse.json();
+          if (logData.log) {
+            addLog(logData.log);
+          }
+        }
+      } catch (logError) {
+        console.error('Failed to save audit log:', logError);
+        // Don't block the main flow if audit log fails
+      }
+
       toastSuccess('Analysis Complete', 'Your contract has been analyzed successfully');
     } catch (error) {
       console.error('Document extraction and analysis failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toastError('Analysis Failed', `Document processing failed: ${errorMessage}`);
+      
+      // Log the failure to audit logs
+      try {
+        const errorLogPayload = {
+          fileName: uploadedFile?.name || 'Unknown file',
+          standards: [selectedTemplate?.name || 'Custom Template'],
+          score: 0,
+          status: 'error',
+          gapsCount: 0,
+          fileSize: uploadedFile?.size || 0,
+          analysisMethod: 'contract_review',
+          userId: userData?.userId,
+          sessionId: `error-${Date.now()}`,
+          snapshot: {
+            error: errorMessage,
+            templateName: selectedTemplate?.name || 'Custom Template',
+            templateId: selectedTemplate?.id,
+            analysisDate: new Date().toISOString(),
+          }
+        };
+
+        const errorLogResponse = await fetch('/api/audit-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(errorLogPayload)
+        });
+
+        if (errorLogResponse.ok) {
+          const logData = await errorLogResponse.json();
+          if (logData.log) {
+            addLog(logData.log);
+          }
+        }
+      } catch (logError) {
+        console.error('Failed to save error audit log:', logError);
+      }
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Download contract review results as JSON
+  const handleDownloadResults = () => {
+    if (!extractedDocument) {
+      toastError('No Data', 'No analysis results to download');
+      return;
+    }
+
+    const results = {
+      fileName: extractedDocument.fileName,
+      analysisDate: new Date().toISOString(),
+      overallScore: extractedDocument.overallScore,
+      template: selectedTemplate?.name || 'Custom Template',
+      sections: extractedDocument.sections,
+      gaps: extractedDocument.gaps,
+      summary: {
+        totalIssues: extractedDocument.gaps?.length || 0,
+        criticalIssues: extractedDocument.gaps?.filter(g => g.severity === 'critical').length || 0,
+        highIssues: extractedDocument.gaps?.filter(g => g.severity === 'high').length || 0,
+        mediumIssues: extractedDocument.gaps?.filter(g => g.severity === 'medium').length || 0,
+        lowIssues: extractedDocument.gaps?.filter(g => g.severity === 'low').length || 0,
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contract-review-${extractedDocument.fileName}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toastSuccess('Downloaded', 'Contract review results downloaded successfully');
+  };
+
+  // Download detailed report as text
+  const handleDownloadReport = () => {
+    if (!extractedDocument) {
+      toastError('No Data', 'No analysis results to download');
+      return;
+    }
+
+    let reportText = `CONTRACT REVIEW REPORT\n`;
+    reportText += `${'='.repeat(80)}\n\n`;
+    reportText += `File Name: ${extractedDocument.fileName}\n`;
+    reportText += `Analysis Date: ${new Date().toLocaleDateString()}\n`;
+    reportText += `Template: ${selectedTemplate?.name || 'Custom Template'}\n`;
+    reportText += `Overall Score: ${extractedDocument.overallScore}%\n\n`;
+    
+    reportText += `SUMMARY\n`;
+    reportText += `${'-'.repeat(80)}\n`;
+    reportText += `Total Issues: ${extractedDocument.gaps?.length || 0}\n`;
+    reportText += `  • Critical: ${extractedDocument.gaps?.filter(g => g.severity === 'critical').length || 0}\n`;
+    reportText += `  • High: ${extractedDocument.gaps?.filter(g => g.severity === 'high').length || 0}\n`;
+    reportText += `  • Medium: ${extractedDocument.gaps?.filter(g => g.severity === 'medium').length || 0}\n`;
+    reportText += `  • Low: ${extractedDocument.gaps?.filter(g => g.severity === 'low').length || 0}\n\n`;
+
+    if (extractedDocument.gaps && extractedDocument.gaps.length > 0) {
+      reportText += `DETAILED FINDINGS\n`;
+      reportText += `${'-'.repeat(80)}\n\n`;
+      
+      extractedDocument.gaps.forEach((gap, idx) => {
+        reportText += `${idx + 1}. ${gap.sectionTitle} [${gap.severity.toUpperCase()}]\n`;
+        reportText += `   Type: ${gap.gapType.replace('-', ' ')}\n`;
+        reportText += `   Description: ${gap.description}\n`;
+        if (gap.recommendation) {
+          reportText += `   Recommendation: ${gap.recommendation}\n`;
+        }
+        reportText += `\n`;
+      });
+    }
+
+    const blob = new Blob([reportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contract-review-report-${extractedDocument.fileName}-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toastSuccess('Downloaded', 'Detailed report downloaded successfully');
+  };
+
+  // Start a new review - reset everything
+  const handleStartNewReview = () => {
+    // Reset all state
+    setCurrentStep(1);
+    setSelectedTemplate(null);
+    setUploadedFile(null);
+    setUploadSource(null);
+    setCustomTemplateFile(null);
+    setExtractedDocument(null);
+    setFinalInstructions('');
+    setApplyRuleBase(true);
+    setSearchTerm('');
+    setActiveTab('template');
+    
+    // Reset input keys to clear file inputs
+    setDeviceInputKey(Date.now());
+    setCustomTemplateInputKey(Date.now() + 1);
+    
+    // Clear store state
+    crStore.setExtractedDocument(null);
+    crStore.setSuggestions([]);
+    
+    toastSuccess('Ready for New Review', 'All data cleared. You can start a new contract review.');
   };
 
   // Server-side text extraction for uploaded files
@@ -966,7 +1187,7 @@ export default function ContractReview() {
   };
 
   const canProceedToStep2 = !!selectedTemplate;
-  const canProceedToStep3 = currentStep === 2 && selectedTemplate !== null;
+  const canProceedToStep3 = currentStep === 2 && (selectedTemplate !== null || (activeTab === "custom" && customTemplateFile !== null));
   const canProceedToStep4 = currentStep === 3 && uploadedFile !== null;
 
   return (
@@ -1038,7 +1259,7 @@ export default function ContractReview() {
                   placeholder="Search Template..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
+                  className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#DEE3ED] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
                 />
                 <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3" viewBox="0 0 12 12" fill="none">
                   <path d="M5.5 9.5C7.70914 9.5 9.5 7.70914 9.5 5.5C9.5 3.29086 7.70914 1.5 5.5 1.5C3.29086 1.5 1.5 3.29086 1.5 5.5C1.5 7.70914 3.29086 9.5 5.5 9.5Z" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1191,8 +1412,19 @@ export default function ContractReview() {
                     </div>
                     
                     {logsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <p className="text-xs text-center text-[#6A707C] dark:text-gray-400">Loading logs...</p>
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-16" />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Skeleton className="h-3 w-1/2" />
+                              <Skeleton className="h-5 w-20" />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : templateLogs.length === 0 ? (
                       <div className="flex items-center justify-center py-8">
@@ -1201,24 +1433,36 @@ export default function ContractReview() {
                     ) : (
                       <div className="space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                         {templateLogs.map((log: any, idx: number) => (
-                          <div key={idx} className="pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                          <div key={idx} className="pb-3 border-b border-[#DEE3ED] dark:border-gray-700 last:border-0">
                             <div className="flex items-start justify-between gap-2 mb-1">
                               <p className="text-xs font-medium text-[#2D2F34] dark:text-gray-100 line-clamp-2">
-                                {log.action || 'Contract Review'}
+                                {log.fileName || 'Contract Review'}
                               </p>
                               <span className="text-xs text-[#6A707C] dark:text-gray-400 whitespace-nowrap">
-                                {new Date(log.timestamp || log.createdAt).toLocaleDateString('en-US', { 
+                                {new Date(log.analysisDate || log.timestamp || log.createdAt).toLocaleDateString('en-US', { 
                                   month: 'short', 
                                   day: 'numeric' 
                                 })}
                               </span>
                             </div>
-                            <p className="text-xs text-[#6A707C] dark:text-gray-400 line-clamp-2 mb-1">
-                              {log.details || log.description || 'Contract analysis completed'}
-                            </p>
-                            {log.userName && (
-                              <p className="text-xs text-[#8D8D8D] dark:text-gray-500">
-                                By: {log.userName}
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-xs text-[#6A707C] dark:text-gray-400">
+                                Score: {log.score}% • Issues: {log.gapsCount || 0}
+                              </p>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  log.status === 'success' 
+                                    ? 'border-green-300 text-green-700 dark:text-green-400' 
+                                    : 'border-red-300 text-red-700 dark:text-red-400'
+                                }`}
+                              >
+                                {log.status}
+                              </Badge>
+                            </div>
+                            {log.snapshot?.criticalIssues > 0 && (
+                              <p className="text-xs text-red-600 dark:text-red-400">
+                                ⚠️ {log.snapshot.criticalIssues} critical issue{log.snapshot.criticalIssues > 1 ? 's' : ''}
                               </p>
                             )}
                           </div>
@@ -1261,7 +1505,7 @@ export default function ContractReview() {
         {currentStep === 2 && selectedTemplate && (
           <div className="flex-1 flex flex-col space-y-3 overflow-hidden">
             {/* Button Tabs - matches Figma design exactly */}
-            <div className="flex items-center gap-10 border-b border-[#D9D9D9] dark:border-gray-700">
+            <div className="flex items-center gap-10 border-b border-[#DEE3ED] dark:border-gray-700">
               <button
                 onClick={() => setActiveTab("template")}
                 className={"relative pb-3 text-xs font-semibold transition-colors " + (
@@ -1294,8 +1538,8 @@ export default function ContractReview() {
             {activeTab === "template" ? (
               /* Three Column Layout for Use Contract Template */
               <div className="flex-1 flex gap-5 overflow-hidden">
-              {/* Left Column - Selected Template (280px) */}
-              <div className="w-[280px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-y-auto scrollbar-thin">
+              {/* Left Column - Selected Template (240px) */}
+              <div className="w-[240px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-y-auto scrollbar-thin">
                 <h3 className="text-base font-semibold text-[#2D2F34] dark:text-gray-100 mb-4 leading-tight">
                   Selected Template: {selectedTemplate.name}
                 </h3>
@@ -1348,8 +1592,8 @@ export default function ContractReview() {
                 </div>
               </div>
 
-              {/* Right Column - Sources (280px) */}
-              <div className="w-[280px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-y-auto scrollbar-thin">
+              {/* Right Column - Sources (240px) */}
+              <div className="w-[240px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-y-auto scrollbar-thin">
                 <h3 className="text-base font-semibold text-[#2D2F34] dark:text-gray-100 mb-5 leading-tight">
                   Sources
                 </h3>
@@ -1374,29 +1618,55 @@ export default function ContractReview() {
             ) : (
               /* Custom Template Upload */
               <div className="flex-1 flex flex-col overflow-hidden items-center pt-8">
-                <div className="bg-white dark:bg-gray-800 rounded-[10px] border border-[#A0A8C2] dark:border-gray-600 border-dashed p-5 flex flex-col gap-4 w-full max-w-3xl">
+                <div className="bg-white dark:bg-gray-800 rounded-[10px] border border-[#DEE3ED] dark:border-gray-600 border-dashed p-5 flex flex-col gap-4 w-full max-w-3xl">
                   <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
                     Provide a custom template
                   </h3>
                   
                   {/* Upload Area */}
-                  <div className="border border-[#E6E6E6] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 p-8">
+                  <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 p-8">
                     <div className="flex flex-col items-center justify-center gap-2.5">
                       <svg className="w-16 h-16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm4.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" className="text-gray-400 dark:text-gray-500"/>
                         <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2Zm2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2Z" className="text-gray-400 dark:text-gray-500"/>
                       </svg>
                       
-                      <Button 
-                        className="text-white hover:bg-[#2F36B0] text-xs font-semibold h-9 px-4"
-                        style={{ backgroundColor: '#3B43D6' }}
-                      >
+                      <label className="text-white hover:bg-[#2F36B0] text-xs font-semibold h-9 px-4 rounded-[5px] cursor-pointer flex items-center justify-center" style={{ backgroundColor: '#3B43D6' }}>
                         Drag & drop your template here or click to browse
-                      </Button>
+                        <Input 
+                          key={customTemplateInputKey}
+                          ref={customTemplateInputRef}
+                          type="file" 
+                          accept=".pdf,.doc,.docx,.txt" 
+                          onChange={handleCustomTemplateUpload}
+                          className="hidden"
+                        />
+                      </label>
                       
                       <p className="text-xs font-medium text-[#595959] dark:text-gray-400">
                         Accepted: .pdf, .doc, .docx, .txt
                       </p>
+
+                      {customTemplateFile && (
+                        <div className="mt-2 flex items-center gap-2 text-xs">
+                          <FileText className="h-4 w-4 text-[#3B43D6]" />
+                          <span className="text-[#202020] dark:text-gray-100 truncate max-w-[260px]" title={customTemplateFile.name}>
+                            Selected: {customTemplateFile.name}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setCustomTemplateFile(null);
+                              if (customTemplateInputRef.current) {
+                                customTemplateInputRef.current.value = "";
+                              }
+                              setCustomTemplateInputKey((k) => k + 1);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1435,7 +1705,7 @@ export default function ContractReview() {
             {/* Upload Options */}
             <div className="flex gap-[25px] w-full max-w-[1648px]">
               {/* Upload from Device */}
-              <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] border border-[#A0A8C2] dark:border-gray-600 border-dashed p-5 flex flex-col gap-[15px]">
+              <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] border border-[#DEE3ED] dark:border-gray-600 border-dashed p-5 flex flex-col gap-[15px]">
                 <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
                   Upload from Device
                 </h3>
@@ -1447,7 +1717,7 @@ export default function ContractReview() {
                 </div>
                 
                 {/* Upload Area */}
-                <div className="border border-[#E6E6E6] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 px-5 py-[15px] flex justify-center items-center">
+                <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 px-5 py-[15px] flex justify-center items-center">
                   <div className="flex flex-col items-center justify-center gap-2.5">
                     <svg className="w-16 h-16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm4.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" className="text-gray-400 dark:text-gray-500"/>
@@ -1498,7 +1768,7 @@ export default function ContractReview() {
               </div>
 
               {/* Use Existing Asset */}
-              <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] border border-[#A0A8C2] dark:border-gray-600 border-dashed p-5 flex flex-col gap-[15px]">
+              <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] border border-[#DEE3ED] dark:border-gray-600 border-dashed p-5 flex flex-col gap-[15px]">
                 <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
                   Use Existing Asset
                 </h3>
@@ -1510,7 +1780,7 @@ export default function ContractReview() {
                 </div>
                 
                 {/* Browse Area */}
-                <div className="border border-[#E6E6E6] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 px-5 py-[15px] flex justify-center items-center">
+                <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 px-5 py-[15px] flex justify-center items-center">
                   <div className="flex flex-col items-center justify-center gap-2.5">
                     <svg className="w-16 h-16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                       <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm4.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" className="text-gray-400 dark:text-gray-500"/>
@@ -1594,7 +1864,7 @@ export default function ContractReview() {
               <div className="flex items-center gap-[15px]">
                 <button
                   onClick={prevStep}
-                  className="flex items-center gap-[5px] px-2.5 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-[5px] text-xs font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100"
+                  className="flex items-center gap-[5px] px-2.5 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#DEE3ED] dark:border-gray-600 rounded-[5px] text-xs font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -1614,7 +1884,7 @@ export default function ContractReview() {
 
         {/* Step 4: Canvas Review */}
         {currentStep === 4 && (
-          <div className="flex-1 flex flex-col gap-6 overflow-hidden items-end pr-4">
+          <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-thin items-end pr-4">
             {/* Reviewer notes textarea before analysis */}
             {!extractedDocument && (
               <Textarea
@@ -1627,7 +1897,7 @@ export default function ContractReview() {
 
             {/* Canvas after analysis */}
             {extractedDocument && (
-              <div className="flex-1 overflow-hidden w-full max-w-[1648px]">
+              <div className="flex-1 overflow-y-auto scrollbar-thin w-full max-w-[1648px]">
                 <ContractCanvas />
               </div>
             )}
@@ -1637,7 +1907,7 @@ export default function ContractReview() {
               <div className="flex items-center gap-[15px]">
                 <button
                   onClick={prevStep}
-                  className="flex items-center gap-[5px] px-2.5 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-[5px] text-xs font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100"
+                  className="flex items-center gap-[5px] px-2.5 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#DEE3ED] dark:border-gray-600 rounded-[5px] text-xs font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -1679,7 +1949,7 @@ export default function ContractReview() {
 
         {/* Step 5: Results */}
         {currentStep === 5 && (
-          <div className="flex-1 flex flex-col space-y-6 overflow-y-auto scrollbar-thin">
+          <div className="flex-1 flex flex-col space-y-6 overflow-y-auto scrollbar-thin pr-4">
             {/* Step 5 Subtitle */}
             <div className="text-center -mt-4">
               <p className="text-sm text-muted-foreground">
@@ -1691,12 +1961,39 @@ export default function ContractReview() {
             <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-6 w-6 text-green-600" />
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-green-800 dark:text-green-200">Analysis Complete!</h3>
                   <p className="text-sm text-green-700 dark:text-green-300">
                     Your contract has been successfully analyzed. Review the results below and use the action buttons to proceed.
                   </p>
                 </div>
+                {extractedDocument && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleDownloadReport}
+                      className="flex items-center gap-2 h-9 px-4 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-xs font-semibold rounded-[5px]"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Report
+                    </Button>
+                    <Button
+                      onClick={handleDownloadResults}
+                      variant="outline"
+                      className="flex items-center gap-2 h-9 px-4 border-[#DEE3ED] text-xs font-semibold rounded-[5px]"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download JSON
+                    </Button>
+                    <Button
+                      onClick={handleStartNewReview}
+                      variant="outline"
+                      className="flex items-center gap-2 h-9 px-4 border-[#DEE3ED] text-xs font-semibold rounded-[5px] hover:bg-[#3B43D6] hover:text-white hover:border-[#3B43D6]"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      New Review
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -18,6 +18,7 @@ import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { useRulebaseStore } from "@/stores/rulebase-store";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ComplianceStandard {
   id: string;
@@ -961,40 +962,48 @@ export default function ComplianceCheckPage() {
             </div>
           </div>
 
+          {/* Fixed Search Bar - Only visible on Step 1 */}
+          {currentStep === 1 && (
+            <div className="flex-shrink-0 px-6 pb-3 border-b border-border dark:border-border">
+              <div className="space-y-2">
+                {/* Search Bar */}
+                <div className="relative w-[280px]">
+                  <Input
+                    type="text"
+                    placeholder="Search Template..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
+                  />
+                  <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3" viewBox="0 0 12 12" fill="none">
+                    <path d="M5.5 9.5C7.70914 9.5 9.5 7.70914 9.5 5.5C9.5 3.29086 7.70914 1.5 5.5 1.5C3.29086 1.5 1.5 3.29086 1.5 5.5C1.5 7.70914 3.29086 9.5 5.5 9.5Z" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M10.5 10.5L8.5 8.5" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Results count */}
+                {searchQuery && filteredStandards.length > 0 && (
+                  <p className="text-xs text-[#6A707C] dark:text-gray-400">
+                    Found {filteredStandards.length} standard{filteredStandards.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Scrollable Content Area */}
           <div className="flex-1 overflow-y-auto px-6 pb-4 scrollbar-thin">{/* Step Content */}
           {/* Step 1: Select Compliance Standards */}
           {currentStep === 1 && (
-            <div className="space-y-3">
-              {/* Search Bar */}
-              <div className="relative w-[280px]">
-                <Input
-                  type="text"
-                  placeholder="Search Template..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
-                />
-                <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3" viewBox="0 0 12 12" fill="none">
-                  <path d="M5.5 9.5C7.70914 9.5 9.5 7.70914 9.5 5.5C9.5 3.29086 7.70914 1.5 5.5 1.5C3.29086 1.5 1.5 3.29086 1.5 5.5C1.5 7.70914 3.29086 9.5 5.5 9.5Z" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M10.5 10.5L8.5 8.5" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-
-              {/* Results count */}
-              {searchQuery && filteredStandards.length > 0 && (
-                <p className="text-xs text-[#6A707C] dark:text-gray-400">
-                  Found {filteredStandards.length} standard{filteredStandards.length !== 1 ? 's' : ''}
-                </p>
-              )}
+            <div className="pt-3">
 
               {/* Standards Grid - Responsive based on audit logs state */}
               <div className={`grid gap-4 ${
@@ -1850,11 +1859,32 @@ export default function ComplianceCheckPage() {
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden flex flex-col p-4">
                 {isLoadingLogs ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-primary mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Loading audit logs...</p>
-                    </div>
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <Card key={i} className="p-3">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-5 w-3/4" />
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-6 w-20 rounded-full" />
+                                <Skeleton className="h-4 w-16" />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-3 border-t">
+                            <Skeleton className="h-4 w-32" />
+                            {i === 0 && <Skeleton className="h-6 w-16 rounded-full" />}
+                          </div>
+                          {i === 0 && (
+                            <div className="flex items-center justify-between pt-2">
+                              <Skeleton className="h-4 w-40" />
+                              <Skeleton className="h-6 w-24" />
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 ) : filteredAuditLogs.length === 0 ? (
                   <div className="flex-1 flex items-center justify-center text-center py-16">

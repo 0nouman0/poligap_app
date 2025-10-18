@@ -124,16 +124,16 @@ export default function SignInPage() {
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <div className="flex items-center justify-center">
               <Image
                 src={krooloLogoSrc}
                 alt="PoliGap AI Logo"
-                width={500}
-                height={500}
+                width={1600}
+                height={1600}
                 priority
                 className="object-contain"
-                style={{ width: 'auto', height: 'auto', maxWidth: '450px' }}
+                style={{ width: 'auto', height: 'auto', maxWidth: '1200px' }}
               />
             </div>
           </div>
@@ -240,15 +240,6 @@ export default function SignInPage() {
                 )}
               </Button>
             </form>
-            <div className="mt-4 text-center text-xs text-gray-500">
-              {"Don't have an account? "}
-              <Link
-                href="/auth/signup"
-                className="text-base-purple hover:text-base-purple-hover font-medium"
-              >
-                Sign up
-              </Link>
-            </div>
           </div>
         </div>
       </div>

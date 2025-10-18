@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { useRulebaseStore } from "@/stores/rulebase-store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RuleItem {
   _id?: string;
@@ -444,11 +445,30 @@ export default function RuleBasePage() {
 
             {/* Rules Grid - Same design as Templates */}
             {loading ? (
-              <div className="flex flex-col justify-center items-center gap-[10px] py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-[#595959]" />
-                <p className="text-[12px] font-medium text-[#595959] leading-[14.52px]">
-                  Loading rules...
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[25px]">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-white rounded-[10px] border border-[#DEE3ED] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between">
+                        <Skeleton className="h-6 w-6 rounded" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <Skeleton className="h-8 w-8 rounded" />
+                        <Skeleton className="h-8 w-8 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col justify-center items-center gap-[10px] py-20">
@@ -634,14 +654,14 @@ export default function RuleBasePage() {
                       {/* Top section with icon and badge */}
                       <div className="flex items-start justify-between gap-[13px]">
                         <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B43D6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                           </svg>
                         </div>
                         
                         <div className="flex items-center gap-[13px]">
                           <div className="bg-[#DEE3ED] rounded-[35px] px-[10px] py-[5px]">
-                            <span className="text-[12px] font-medium text-[#2D2F34] leading-[14.52px]">Legal & Compliance</span>
+                            <span className="text-[12px] font-medium text-[#2D2F34] leading-[14.52px]">{template.category}</span>
                           </div>
                           <button
                             onClick={() => handleAddTemplate(template)}

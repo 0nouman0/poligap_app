@@ -1013,7 +1013,44 @@ export default function Page() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen">
-          Loading...
+          <div className="w-full max-w-4xl px-4 space-y-6">
+            {/* Search Bar Skeleton */}
+            <div className="mb-8">
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
+
+            {/* Results Grid Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {/* Main Results */}
+              <div className="md:col-span-3 space-y-4">
+                {[...Array(4)].map((_, idx) => (
+                  <Card key={idx} className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                      <div className="flex-grow space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Sidebar */}
+              <aside className="md:col-span-1">
+                <Card className="p-4">
+                  <Skeleton className="h-6 w-1/2 mb-4" />
+                  <div className="space-y-2">
+                    {[...Array(4)].map((_, idx) => (
+                      <Skeleton key={idx} className="h-8 w-full" />
+                    ))}
+                  </div>
+                </Card>
+              </aside>
+            </div>
+          </div>
         </div>
       }
     >

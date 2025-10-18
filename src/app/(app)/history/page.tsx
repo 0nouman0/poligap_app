@@ -16,6 +16,7 @@ import { ListSkeleton } from "@/components/ui/page-loader";
 import { useDebounce } from "@/hooks/use-performance";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ComplianceStatus = 'compliant' | 'non-compliant' | 'partial';
 
@@ -167,7 +168,7 @@ export default function HistoryPage() {
             </Select>
 
             <Button 
-              className="h-[52px] px-[15px] rounded-[5px] bg-[#3B43D6] text-white hover:bg-[#2D35B8]"
+              className="h-[40px] px-[15px] rounded-[5px] bg-[#3B43D6] text-white hover:bg-[#2D35B8]"
               onClick={async () => {
                 const userId = getUserId();
                 if (userId) {
@@ -181,8 +182,27 @@ export default function HistoryPage() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-8 text-center">
-            <p className="text-[14px] text-[#6A707C]">Loading...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <div className="flex items-center gap-2 pt-2">
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : logs.length === 0 ? (
           <div className="bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-16 text-center">

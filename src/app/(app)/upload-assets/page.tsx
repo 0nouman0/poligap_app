@@ -19,6 +19,7 @@ import {
 import { useAssetsStore, type Asset } from "@/stores/assets-store";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface UploadProgress {
   filename: string;
@@ -204,10 +205,68 @@ export default function UploadAssetsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#605BFF] mx-auto mb-4"></div>
-          <p className="text-[#6A707C]">Loading assets...</p>
+      <div style={{ backgroundColor: '#FAFAFB' }} className="min-h-screen py-8 px-10">
+        {/* Header Skeleton */}
+        <div className="flex items-center gap-5 mb-10">
+          <Skeleton className="h-14 w-14 rounded-full flex-shrink-0" />
+          <div className="flex-1">
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-8 w-8 rounded" />
+              </div>
+              <Skeleton className="h-8 w-16 mb-1" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          ))}
+        </div>
+
+        {/* Upload Area Skeleton */}
+        <div className="bg-white rounded-lg p-8 mb-8 shadow-sm">
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+
+        {/* Search and Filters Skeleton */}
+        <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <Skeleton className="h-6 w-32" />
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-64" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+
+          {/* Assets Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="border rounded-lg p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <Skeleton className="h-10 w-10 rounded flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <Skeleton className="h-5 w-full mb-2" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <Skeleton className="h-4 w-32" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

@@ -148,7 +148,22 @@ export default function ChatHistoryPage() {
               )}
               {activeTab === "trash" && (
                 <div className="space-y-4">
-                  {isTrashLoading && <div>Loading...</div>}
+                  {isTrashLoading && (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="p-4 border rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-5 w-3/4" />
+                              <Skeleton className="h-4 w-1/2" />
+                              <Skeleton className="h-4 w-full" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {isTrashError && <div>Error loading chat history.</div>}
                   {trashData?.data && trashData.data.length === 0 && (
                     <div>No conversations found.</div>
