@@ -13,6 +13,9 @@ import { useUserStore } from "@/stores/user-store";
 import { ChatSkeleton } from "@/components/ui/page-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Force dynamic rendering for real-time chat functionality
+export const dynamic = 'force-dynamic';
+
 const AgentChat = () => {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const searchParams = useSearchParams();
