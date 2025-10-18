@@ -19,13 +19,59 @@ import {
 import { useContractReviewStore, ContractTemplate } from '@/store/contractReview';
 
 const getTemplateIcon = (type: string) => {
+  // Colorful circular icon per type
+  const base = 'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0';
   switch (type) {
-    case 'service': return <FileText className="h-5 w-5" />;
-    case 'legal': return <Gavel className="h-5 w-5" />;
-    case 'technology': return <Server className="h-5 w-5" />;
-    case 'property': return <Home className="h-5 w-5" />;
-    case 'business': return <Building className="h-5 w-5" />;
-    default: return <Shield className="h-5 w-5" />;
+    case 'service':
+      return (
+        <div className={`${base} bg-blue-100`}>
+          <FileText className="h-5 w-5 text-blue-600" />
+        </div>
+      );
+    case 'legal':
+      return (
+        <div className={`${base} bg-purple-100`}>
+          <Gavel className="h-5 w-5 text-purple-600" />
+        </div>
+      );
+    case 'technology':
+      return (
+        <div className={`${base} bg-green-100`}>
+          <Server className="h-5 w-5 text-green-600" />
+        </div>
+      );
+    case 'property':
+    case 'real-estate':
+      return (
+        <div className={`${base} bg-orange-100`}>
+          <Home className="h-5 w-5 text-orange-600" />
+        </div>
+      );
+    case 'business':
+    case 'commercial':
+      return (
+        <div className={`${base} bg-indigo-100`}>
+          <Building className="h-5 w-5 text-indigo-600" />
+        </div>
+      );
+    case 'healthcare':
+      return (
+        <div className={`${base} bg-rose-100`}>
+          <Shield className="h-5 w-5 text-rose-600" />
+        </div>
+      );
+    case 'hr':
+      return (
+        <div className={`${base} bg-teal-100`}>
+          <Shield className="h-5 w-5 text-teal-600" />
+        </div>
+      );
+    default:
+      return (
+        <div className={`${base} bg-gray-100`}>
+          <Shield className="h-5 w-5 text-gray-600" />
+        </div>
+      );
   }
 };
 
@@ -99,11 +145,6 @@ export const TemplateSelector: React.FC = () => {
                       <div className="flex items-center gap-2">
                         {getTemplateIcon(template.type)}
                         <span>{template.name}</span>
-                        {template.isBaseline && (
-                          <Badge variant="outline" className="text-xs">
-                            Baseline
-                          </Badge>
-                        )}
                       </div>
                     </SelectItem>
                   ))}
@@ -166,11 +207,7 @@ export const TemplateSelector: React.FC = () => {
                 <Badge className={`text-xs ${getTypeColor(template.type)}`}>
                   {template.type}
                 </Badge>
-                {template.isBaseline && (
-                  <Badge variant="outline" className="text-xs">
-                    Baseline
-                  </Badge>
-                )}
+                {/* Baseline tag removed */}
               </div>
               
               <div className="space-y-2">
@@ -179,24 +216,50 @@ export const TemplateSelector: React.FC = () => {
                   <span>Updated {template.lastUpdated}</span>
                 </div>
                 
-                {/* Critical clauses preview */}
-                <div className="flex flex-wrap gap-1">
-                  {template.clauses
-                    .filter(clause => clause.priority === 'critical')
-                    .slice(0, 3)
-                    .map((clause) => (
-                      <div key={clause.id} className="flex items-center gap-1">
-                        {getPriorityIcon(clause.priority)}
-                        <span className="text-xs text-gray-600 truncate">
-                          {clause.title}
-                        </span>
-                      </div>
-                    ))}
-                  {template.clauses.filter(c => c.priority === 'critical').length > 3 && (
-                    <span className="text-xs text-gray-500">
-                      +{template.clauses.filter(c => c.priority === 'critical').length - 3} more
-                    </span>
-                  )}
+                {/* Clause labels preview (up to 4, prioritized by severity, then +N more) */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {(() => {
+                    const priorityRank: Record<string, number> = {
+                      critical: 0,
+                      high: 1,
+                      medium: 2,
+                      low: 3,
+                    };
+                    const sorted = [...template.clauses].sort((a, b) => {
+                      const ra = priorityRank[a.priority] ?? 99;
+                      const rb = priorityRank[b.priority] ?? 99;
+                      if (ra !== rb) return ra - rb;
+                      // tie-breaker: keep original order
+                      return 0;
+                    });
+                    const shown = sorted.slice(0, 3);
+                    const overflow = template.clauses.length - shown.length;
+
+                    return (
+                      <>
+                        {shown.map((clause) => (
+                          <Badge
+                            key={clause.id}
+                            variant="outline"
+                            className="text-[11px] leading-tight px-2 py-0.5 rounded-[12px] border-gray-300 text-gray-700 max-w-full"
+                            title={`${clause.title} • ${clause.priority}`}
+                          >
+                            <span className="inline-flex items-center gap-1 max-w-full">
+                              {getPriorityIcon(clause.priority)}
+                              <span className="block max-w-[10rem] whitespace-nowrap text-ellipsis overflow-hidden">
+                                {clause.title}
+                              </span>
+                            </span>
+                          </Badge>
+                        ))}
+                        {overflow > 0 && (
+                          <Badge variant="outline" className="text-[11px] leading-tight px-2 py-0.5 rounded-[12px] border-dashed text-gray-500">
+                            +{overflow} more
+                          </Badge>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               

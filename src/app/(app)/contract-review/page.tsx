@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useCallback, useDeferredValue, useEffect } from "react";
-import { Shield, ChevronRight, ChevronLeft, BookOpen, Award, CheckCircle, RotateCcw, Upload, FolderOpen, FileText, Info, Trash2, AlertTriangle, Clock, Download } from "lucide-react";
+import { Shield, ChevronRight, ChevronLeft, BookOpen, CheckCircle, RotateCcw, Upload, FolderOpen, FileText, Info, Trash2, AlertTriangle, Clock, Download, Gavel, Server, Home, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1305,14 +1305,65 @@ export default function ContractReview() {
                           >
                             <div className="p-3">
                               <div className="flex items-start justify-between mb-2.5">
-                                <div className="w-10 h-10 rounded-full bg-[#EFF1F6] dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                  <BookOpen className="h-5 w-5 text-[#3B43D6]" />
-                                </div>
+                                {(() => {
+                                  const type = template.type;
+                                  const base = "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0";
+                                  if (type === "service") {
+                                    return (
+                                      <div className={`${base} bg-blue-100 dark:bg-blue-900/30`}>
+                                        <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                      </div>
+                                    );
+                                  }
+                                  if (type === "legal") {
+                                    return (
+                                      <div className={`${base} bg-purple-100 dark:bg-purple-900/30`}>
+                                        <Gavel className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                      </div>
+                                    );
+                                  }
+                                  if (type === "technology") {
+                                    return (
+                                      <div className={`${base} bg-green-100 dark:bg-green-900/30`}>
+                                        <Server className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                      </div>
+                                    );
+                                  }
+                                  if (type === "real-estate" || type === "property") {
+                                    return (
+                                      <div className={`${base} bg-orange-100 dark:bg-orange-900/30`}>
+                                        <Home className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                      </div>
+                                    );
+                                  }
+                                  if (type === "business" || type === "commercial") {
+                                    return (
+                                      <div className={`${base} bg-indigo-100 dark:bg-indigo-900/30`}>
+                                        <Building className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                      </div>
+                                    );
+                                  }
+                                  if (type === "healthcare") {
+                                    return (
+                                      <div className={`${base} bg-rose-100 dark:bg-rose-900/30`}>
+                                        <Shield className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                                      </div>
+                                    );
+                                  }
+                                  if (type === "hr") {
+                                    return (
+                                      <div className={`${base} bg-teal-100 dark:bg-teal-900/30`}>
+                                        <Shield className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className={`${base} bg-gray-100 dark:bg-gray-700`}>
+                                      <Shield className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                  );
+                                })()}
                                 <div className="flex items-center gap-2">
-                                  <div className="bg-[#EDFFDE] dark:bg-green-900/30 rounded-full px-2 py-0.5 flex items-center gap-1">
-                                    <Award className="h-2.5 w-2.5 text-[#47AF47]" />
-                                    <span className="text-xs font-medium text-[#47AF47]">Baseline</span>
-                                  </div>
                                   <CheckCircle className={"h-4 w-4 transition-colors " + (isSelected ? 'text-[#3B43D6]' : 'text-[#DADADA] dark:text-gray-600')} />
                                 </div>
                               </div>
@@ -1330,12 +1381,26 @@ export default function ContractReview() {
                                   Sources: {template.sources.join(", ")}
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                  <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                    <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">Parties</span>
-                                  </div>
-                                  <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
-                                    <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">+{template.requiredSections.length - 1} more</span>
-                                  </div>
+                                  {(() => {
+                                    const rank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+                                    const sorted = [...template.requiredSections].sort((a, b) => (rank[a.priority] ?? 99) - (rank[b.priority] ?? 99));
+                                    const shown = sorted.slice(0, 3);
+                                    const overflow = template.requiredSections.length - shown.length;
+                                    return (
+                                      <>
+                                        {shown.map((sec, idx) => (
+                                          <div key={idx} className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
+                                            <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">{sec.title}</span>
+                                          </div>
+                                        ))}
+                                        {overflow > 0 && (
+                                          <div className="bg-[#EFF1F6] dark:bg-gray-700 rounded-full px-2 py-0.5">
+                                            <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300">+{overflow} more</span>
+                                          </div>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             </div>
