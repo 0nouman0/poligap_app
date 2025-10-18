@@ -6,6 +6,9 @@ import { UserInitializer } from "@/components/UserInitializer";
 import { NavigationProgress } from "@/components/ui/navigation-progress";
 import { createClient } from "@/lib/supabase/server";
 
+// Revalidate auth check every 5 minutes
+export const revalidate = 300;
+
 export default async function AppPagesLayout({
   children,
 }: {

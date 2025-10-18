@@ -240,6 +240,15 @@ export default function SignInPage() {
                 )}
               </Button>
             </form>
+            <div className="mt-4 text-center text-xs text-gray-500">
+              {"Don't have an account? "}
+              <Link
+                href="/auth/signup"
+                className="text-base-purple hover:text-base-purple-hover font-medium"
+              >
+                Sign up
+              </Link>
+            </div>
           </div>
         </div>
       </div>
