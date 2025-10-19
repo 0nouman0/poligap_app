@@ -109,7 +109,7 @@ export function PipedreamConnectionStatus({
             {isConnecting ? "Connecting..." : "Ready"}
           </Badge>
           {isConnecting && (
-            <span className="text-sm text-gray-600">
+            <span className="font-body-14 text-gray-600">
               Processing connection with enhanced security checks...
             </span>
           )}
@@ -118,21 +118,21 @@ export function PipedreamConnectionStatus({
         {/* Enhanced Features */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-3 border rounded-lg">
-            <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+            <h4 className="font-title-14 mb-2 flex items-center gap-2">
               <Shield className="w-4 h-4 text-green-500" />
               Email Security Check
             </h4>
-            <p className="text-xs text-gray-600">
+            <p className="font-body-12 text-gray-600">
               Automatically validates that connected accounts match your authorized email address
             </p>
           </div>
           
           <div className="p-3 border rounded-lg">
-            <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+            <h4 className="font-title-14 mb-2 flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-blue-500" />
               Comprehensive Logging
             </h4>
-            <p className="text-xs text-gray-600">
+            <p className="font-body-12 text-gray-600">
               Detailed logs for every step of the connection process with timestamps and context
             </p>
           </div>
@@ -142,7 +142,7 @@ export function PipedreamConnectionStatus({
         {showLogs && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-sm">Connection Logs</h4>
+              <h4 className="font-title-14">Connection Logs</h4>
               <Button
                 variant="ghost"
                 size="sm"
@@ -186,7 +186,7 @@ export function PipedreamConnectionStatus({
         {connectionLogs.length === 0 && showLogs && (
           <div className="space-y-2">
             <h4 className="font-medium text-sm">Sample Log Output</h4>
-            <div className="max-h-40 overflow-y-auto space-y-1 border rounded-lg p-3 bg-gray-50 dark:bg-gray-900 font-mono text-xs">
+            <div className="max-h-40 overflow-y-auto space-y-1 border rounded-lg p-3 bg-gray-50 dark:bg-gray-900 font-mono font-body-12">
               <div className="text-green-600">🔌 PIPEDREAM INFO 2024-01-01T12:00:00Z [appName:Google Drive] - 🚀 Starting connection process</div>
               <div className="text-blue-600">🔌 PIPEDREAM INFO 2024-01-01T12:00:01Z - 🎫 Token generated successfully</div>
               <div className="text-green-600">🔌 PIPEDREAM INFO 2024-01-01T12:00:02Z - 🪝 Pipedream connection response received</div>

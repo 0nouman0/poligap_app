@@ -903,7 +903,7 @@ export default function ComplianceCheckPage() {
 
   return (
     <div className="w-full h-full flex relative">
-      <a href="/how-to-use#compliance-check" className="absolute top-2 right-4 text-xs text-[var(--url-color)] hover:underline z-10">
+  <a href="/how-to-use#compliance-check" className="absolute top-2 right-4 font-body-12 text-[var(--url-color)] hover:underline z-10">
         How to Use
       </a>
 
@@ -919,8 +919,8 @@ export default function ComplianceCheckPage() {
                 <Shield className="h-5 w-5 text-[#3B43D6]" />
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">Compliance Check</h1>
-                <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-0.5 leading-tight">
+                <h1 className="font-title-14 text-[#2D2F34] dark:text-gray-100">Compliance Check</h1>
+                <p className="font-body-12 text-[#6A707C] dark:text-gray-400 mt-0.5 leading-tight">
                   Analyze your documents against compliance standards using AI
                 </p>
               </div>
@@ -931,10 +931,10 @@ export default function ComplianceCheckPage() {
           <div className="flex-shrink-0 px-6 pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100">
+                <h2 className="font-title-14 text-[#2D2F34] dark:text-gray-100">
                   {steps[currentStep - 1]?.title}
                 </h2>
-                <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-0.5">
+                <p className="font-body-12 text-[#6A707C] dark:text-gray-400 mt-0.5">
                   {currentStep === 1 ? `${selectedStandards.length} of ${complianceStandards.length} standards selected` : steps[currentStep - 1]?.description}
                 </p>
               </div>
@@ -949,7 +949,7 @@ export default function ComplianceCheckPage() {
                           ? 'bg-[#3B43D6] text-white'
                           : 'bg-white dark:bg-gray-800 border border-[#D9D9D9] dark:border-gray-600 text-[#717171] dark:text-gray-400'
                       )}>
-                        <span className="text-sm font-semibold">
+                        <span className="font-title-14">
                           {String(step.id).padStart(2, '0')}
                         </span>
                       </div>
@@ -978,7 +978,7 @@ export default function ComplianceCheckPage() {
                     placeholder="Search Template..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 text-xs pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
+                    className="h-8 font-body-12 pl-8 bg-white dark:bg-gray-800 border-[#E4E4E4] dark:border-gray-600 rounded-[5px] select-text text-[#717171] dark:text-gray-100 placeholder:text-[#8D8D8D] dark:placeholder:text-gray-400"
                   />
                   <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3" viewBox="0 0 12 12" fill="none">
                     <path d="M5.5 9.5C7.70914 9.5 9.5 7.70914 9.5 5.5C9.5 3.29086 7.70914 1.5 5.5 1.5C3.29086 1.5 1.5 3.29086 1.5 5.5C1.5 7.70914 3.29086 9.5 5.5 9.5Z" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1013,7 +1013,7 @@ export default function ComplianceCheckPage() {
 
               {/* Results count */}
               {searchQuery && filteredStandards.length > 0 && (
-                <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-2">
+                <p className="font-body-12 text-[#6A707C] dark:text-gray-400 mt-2">
                   Found {filteredStandards.length} standard{filteredStandards.length !== 1 ? 's' : ''}
                 </p>
               )}
@@ -1070,7 +1070,7 @@ export default function ComplianceCheckPage() {
                       </div>
                       <div className="flex-1 min-w-0 pr-6">
                         <h3 className="font-semibold text-foreground dark:text-foreground text-base mb-1 truncate" title={standard.name}>{standard.name}</h3>
-                        <p className="text-xs text-muted-foreground dark:text-muted-foreground line-clamp-2 break-words" title={standard.description}>{standard.description}</p>
+                        <p className="font-body-12 text-muted-foreground dark:text-muted-foreground line-clamp-2 break-words" title={standard.description}>{standard.description}</p>
                       </div>
                     </div>
                   </div>
@@ -1078,8 +1078,8 @@ export default function ComplianceCheckPage() {
                 ) : (
                   <div className="col-span-full flex flex-col items-center justify-center py-12">
                     <Search className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium text-foreground mb-2">No standards found</p>
-                    <p className="text-sm text-muted-foreground">Try adjusting your search query</p>
+                    <p className="font-body-16-medium text-foreground mb-2">No standards found</p>
+                    <p className="font-body-14 text-muted-foreground">Try adjusting your search query</p>
                   </div>
                 )}
               </div>
@@ -1094,7 +1094,7 @@ export default function ComplianceCheckPage() {
                 {/* Upload New Document */}
                 <div className="bg-card dark:bg-card border border-dashed border-border dark:border-border rounded-[10px] p-5 space-y-4">
                   <h3 className="text-foreground dark:text-foreground font-semibold text-base">Upload New Document</h3>
-                  <p className="text-muted-foreground dark:text-muted-foreground text-xs font-medium">Upload a policy document for compliance analysis</p>
+                  <p className="text-muted-foreground dark:text-muted-foreground font-body-12 font-body-12-medium">Upload a policy document for compliance analysis</p>
                   
                   {/* Upload Area */}
                   <div className="bg-[#FAFAFA] dark:bg-gray-800 border border-[#E6E6E6] dark:border-gray-700 rounded-[5px] p-4 flex flex-col items-center justify-center gap-3">
@@ -1111,14 +1111,14 @@ export default function ComplianceCheckPage() {
                       />
                       <Button 
                         asChild 
-                        className="bg-[#3B43D6] hover:bg-[#2F36B0] text-white h-9 px-4 rounded-[5px] text-xs font-semibold"
+                        className="bg-[#3B43D6] hover:bg-[#2F36B0] text-white h-9 px-4 rounded-[5px] font-title-14"
                       >
                         <label htmlFor="file-upload" className="cursor-pointer">
                           Choose File
                         </label>
                       </Button>
                     </div>
-                    <p className="text-[#595959] dark:text-gray-400 text-xs font-medium text-center">
+                    <p className="text-[#595959] dark:text-gray-400 font-body-12 font-body-12-medium text-center">
                       Supported formats: PDF, DOC, DOCX, TXT
                     </p>
                   </div>

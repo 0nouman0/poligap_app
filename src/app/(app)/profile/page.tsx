@@ -655,7 +655,7 @@ export default function UserProfilePage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-1">
             {isEditing ? (
               <>
                 <Button
@@ -663,20 +663,20 @@ export default function UserProfilePage() {
                   variant="outline"
                   onClick={() => cancelEditing('dob')}
                   disabled={isSaving}
-                  className="h-9 border-[#E4E4E4] hover:bg-[#FAFAFB]"
+                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none border-[#E4E4E4] hover:bg-[#FAFAFB]"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => saveField('dob')}
                   disabled={isSaving || hasError}
-                  className="h-9 bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
+                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
                 >
                   {isSaving ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Check className="h-3 w-3" />
+                    <Check className="h-4 w-4" />
                   )}
                 </Button>
               </>
@@ -685,9 +685,9 @@ export default function UserProfilePage() {
                 size="sm"
                 variant="ghost"
                 onClick={() => startEditing('dob', currentDOB)}
-                className="h-9 hover:bg-[#EFF1F6]"
+                className="h-8 w-8 p-0 flex items-center justify-center rounded-md hover:bg-[#EFF1F6]"
               >
-                <Edit3 className="h-3 w-3" />
+                <Edit3 className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -764,7 +764,7 @@ export default function UserProfilePage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-1">
             {isEditing ? (
               <>
                 <Button
@@ -772,20 +772,20 @@ export default function UserProfilePage() {
                   variant="outline"
                   onClick={() => cancelEditing(fieldName)}
                   disabled={isSaving}
-                  className="h-9 border-[#E4E4E4] hover:bg-[#FAFAFB]"
+                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none border-[#E4E4E4] hover:bg-[#FAFAFB]"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => saveField(fieldName)}
                   disabled={isSaving || hasError}
-                  className="h-9 bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
+                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
                 >
                   {isSaving ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Check className="h-3 w-3" />
+                    <Check className="h-4 w-4" />
                   )}
                 </Button>
               </>
@@ -1097,8 +1097,9 @@ export default function UserProfilePage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => startEditing('about', profileData?.about || '')}
+                          className="h-8 w-8 p-0 flex items-center justify-center rounded-md hover:bg-[#EFF1F6]"
                         >
-                          <Edit3 className="h-3 w-3" />
+                          <Edit3 className="h-4 w-4" />
                         </Button>
                       </div>
                     )}

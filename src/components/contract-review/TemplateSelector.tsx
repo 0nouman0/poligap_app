@@ -121,7 +121,7 @@ export const TemplateSelector: React.FC = () => {
       {/* Quick Select Dropdown */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="font-body-16-medium flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-600" />
             Select Contract Template
           </CardTitle>
@@ -137,7 +137,7 @@ export const TemplateSelector: React.FC = () => {
             <SelectContent>
               {Object.entries(templatesByType).map(([type, templates]) => (
                 <div key={type}>
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <div className="px-2 py-1 font-body-12 font-body-12-medium text-gray-500 uppercase tracking-wide">
                     {type}
                   </div>
                   {templates.map((template) => (
@@ -159,15 +159,15 @@ export const TemplateSelector: React.FC = () => {
                 {getTemplateIcon(selectedTemplate.type)}
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-900">{selectedTemplate.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{selectedTemplate.description}</p>
+                  <p className="font-body-14 text-gray-600 mt-1">{selectedTemplate.description}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className={`text-xs ${getTypeColor(selectedTemplate.type)}`}>
+                    <Badge className={`font-body-12 ${getTypeColor(selectedTemplate.type)}`}>
                       {selectedTemplate.type}
                     </Badge>
-                    <span className="text-xs text-gray-500">
+                    <span className="font-body-12 text-gray-500">
                       {selectedTemplate.clauses.length} clauses
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="font-body-12 text-gray-500">
                       Updated {selectedTemplate.lastUpdated}
                     </span>
                   </div>
@@ -197,21 +197,21 @@ export const TemplateSelector: React.FC = () => {
                   <h3 className="font-medium text-gray-900 truncate">
                     {template.name}
                   </h3>
-                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                  <p className="font-body-14 text-gray-600 mt-1 line-clamp-2">
                     {template.description}
                   </p>
                 </div>
               </div>
               
               <div className="flex items-center justify-between mb-3">
-                <Badge className={`text-xs ${getTypeColor(template.type)}`}>
+                <Badge className={`font-body-12 ${getTypeColor(template.type)}`}>
                   {template.type}
                 </Badge>
                 {/* Baseline tag removed */}
               </div>
               
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between font-body-12 text-gray-500">
                   <span>{template.clauses.length} clauses</span>
                   <span>Updated {template.lastUpdated}</span>
                 </div>
@@ -265,7 +265,7 @@ export const TemplateSelector: React.FC = () => {
               
               {selectedTemplate?.id === template.id && (
                 <div className="mt-3 pt-3 border-t border-blue-200">
-                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <div className="flex items-center gap-2 font-body-14 text-blue-700">
                     <CheckCircle className="h-4 w-4" />
                     <span>Selected for analysis</span>
                   </div>
@@ -280,7 +280,7 @@ export const TemplateSelector: React.FC = () => {
       {selectedTemplate && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="font-body-16-medium flex items-center gap-2">
               {getTemplateIcon(selectedTemplate.type)}
               {selectedTemplate.name} - Clause Details
             </CardTitle>
@@ -293,14 +293,14 @@ export const TemplateSelector: React.FC = () => {
                     <h4 className="font-medium text-gray-900">{clause.title}</h4>
                     <div className="flex items-center gap-1">
                       {getPriorityIcon(clause.priority)}
-                      <span className="text-xs text-gray-500 capitalize">
+                      <span className="font-body-12 text-gray-500 capitalize">
                         {clause.priority}
                       </span>
                     </div>
                   </div>
                   
                   {clause.content && (
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                    <p className="font-body-14 text-gray-600 mb-2 line-clamp-2">
                       {clause.content}
                     </p>
                   )}

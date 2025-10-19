@@ -141,7 +141,7 @@ export default function SignInPage() {
 
               {/* Sign In Form */}
               <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-center">Sign In</h2>
+                <h2 className="font-h2 text-center">Sign In</h2>
             
             {/* Email Verification Success Banner */}
             {verificationSuccess && (
@@ -152,8 +152,8 @@ export default function SignInPage() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-green-900">Email Verified Successfully!</h3>
-                  <p className="text-xs text-green-700 mt-1">
+                  <h3 className="font-title-14 text-green-900">Email Verified Successfully!</h3>
+                  <p className="font-body-12 text-green-700 mt-1">
                     Your account is now active. Please sign in to continue.
                   </p>
                 </div>
@@ -162,7 +162,7 @@ export default function SignInPage() {
             
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-medium">
+                <Label htmlFor="email" className="font-title-14">
                   Work Email
                 </Label>
                 <Input
@@ -182,14 +182,14 @@ export default function SignInPage() {
                 />
 
                 {errors.email && (
-                  <p className="text-xs text-error-red">
+                  <p className="font-body-12 text-error-red">
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-medium">
+                <Label htmlFor="password" className="font-title-14">
                   Password
                 </Label>
                 <div className="relative">
@@ -220,7 +220,7 @@ export default function SignInPage() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-xs text-error-red">
+                  <p className="font-body-12 text-error-red">
                     {errors.password.message}
                   </p>
                 )}
@@ -228,24 +228,24 @@ export default function SignInPage() {
 
               <Button
                 type="submit"
-                className="w-full cursor-pointer bg-base-purple hover:bg-base-purple-hover text-white py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full cursor-pointer bg-base-purple hover:bg-base-purple-hover text-white py-2 px-4 rounded-md font-body-16-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing In...
+                    <span className="font-body-16">Signing In...</span>
                   </>
                 ) : (
-                  "Sign In"
+                  <span className="font-body-16">Sign In</span>
                 )}
               </Button>
             </form>
-                <div className="mt-4 text-center text-xs text-gray-500">
+                <div className="mt-4 text-center font-body-14 text-secondary">
                   {"Don't have an account? "}
                   <Link
                     href="/auth/signup"
-                    className="text-base-purple hover:text-base-purple-hover font-medium"
+                    className="text-base-purple hover:text-base-purple-hover font-body-14-medium"
                   >
                     Sign up
                   </Link>

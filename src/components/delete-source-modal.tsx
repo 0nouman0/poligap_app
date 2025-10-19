@@ -41,12 +41,12 @@ export function DeleteSourceModal({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="text-sm px-3 py-1 cursor-pointer">
+          <AlertDialogCancel className="font-body-14 px-3 py-1 cursor-pointer">
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-sm px-3 py-1 cursor-pointer"
+            className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 font-body-14 px-3 py-1 cursor-pointer"
           >
             Disconnect
           </AlertDialogAction>

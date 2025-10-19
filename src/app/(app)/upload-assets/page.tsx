@@ -299,26 +299,8 @@ export default function UploadAssetsPage() {
 
         {/* Title and Description */}
         <div>
-          <h1 
-            className="font-semibold"
-            style={{
-              fontSize: '20px',
-              color: '#2D2F34',
-              lineHeight: '1.3em',
-              marginBottom: '6px'
-            }}
-          >
-            Upload Your Files
-          </h1>
-          <p 
-            style={{
-              fontSize: '14px',
-              color: '#6A707C',
-              lineHeight: '1.4em'
-            }}
-          >
-            Choose a file type below or drag and drop files anywhere
-          </p>
+          <h1 className="font-h2 text-[#2D2F34] mb-1">Upload Your Files</h1>
+          <p className="font-body-14 text-[#6A707C]">Choose a file type below or drag and drop files anywhere</p>
         </div>
       </div>
 
@@ -332,25 +314,14 @@ export default function UploadAssetsPage() {
             boxShadow: '0px 0px 15px 0px rgba(19,43,76,0.1)'
           }}
         >
-          <h3 
-            className="font-semibold mb-4"
-            style={{
-              fontSize: '16px',
-              color: '#202020'
-            }}
-          >
-            Upload Progress
-          </h3>
+          <h3 className="font-title-16 mb-4 text-[#202020]">Upload Progress</h3>
           <div className="space-y-3">
             {uploadProgress.map((item, index) => (
               <div key={index} className="flex items-center gap-3">
                 <div className="flex-1">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span style={{ fontSize: '12px', color: '#000000', opacity: 0.7 }}>
-                      {item.filename}
-                    </span>
-                    <span style={{
-                      fontSize: '12px',
+                  <div className="flex justify-between font-body-14 mb-1">
+                    <span className="font-body-12 text-[#000] opacity-70">{item.filename}</span>
+                    <span className="font-body-12" style={{
                       color: item.status === 'completed' ? '#47AF47' :
                              item.status === 'error' ? '#EF4444' : '#605BFF'
                     }}>
@@ -395,8 +366,8 @@ export default function UploadAssetsPage() {
             <div 
               className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
               style={{
-                width: '330px',
-                height: '110px',
+                width: '280px',
+                height: '100px',
                 backgroundColor: '#F8F9FE',
                 borderRadius: '12px',
                 padding: '20px 24px',
@@ -424,25 +395,8 @@ export default function UploadAssetsPage() {
               </div>
               {/* Text */}
               <div>
-                <h4 
-                  className="font-semibold mb-1"
-                  style={{
-                    fontSize: '18px',
-                    color: '#2D2F34',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Photo
-                </h4>
-                <p 
-                  style={{
-                    fontSize: '13px',
-                    color: '#6A707C',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Click to upload
-                </p>
+                <h4 className="font-title-16 mb-1 text-[#2D2F34]">Photo</h4>
+                <p className="font-body-14 text-[#6A707C]">Click to upload</p>
               </div>
             </div>
           </div>
@@ -462,8 +416,8 @@ export default function UploadAssetsPage() {
             <div 
               className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
               style={{
-                width: '330px',
-                height: '110px',
+                width: '280px',
+                height: '100px',
                 backgroundColor: '#FFFBF5',
                 borderRadius: '12px',
                 padding: '20px 24px',
@@ -491,25 +445,8 @@ export default function UploadAssetsPage() {
               </div>
               {/* Text */}
               <div>
-                <h4 
-                  className="font-semibold mb-1"
-                  style={{
-                    fontSize: '18px',
-                    color: '#2D2F34',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Documents
-                </h4>
-                <p 
-                  style={{
-                    fontSize: '13px',
-                    color: '#6A707C',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Click to upload
-                </p>
+                <h4 className="font-title-16 mb-1 text-[#2D2F34]">Documents</h4>
+                <p className="font-body-14 text-[#6A707C]">Click to upload</p>
               </div>
             </div>
           </div>
@@ -529,8 +466,8 @@ export default function UploadAssetsPage() {
             <div 
               className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
               style={{
-                width: '330px',
-                height: '110px',
+                width: '280px',
+                height: '100px',
                 backgroundColor: '#F3FBF7',
                 borderRadius: '12px',
                 padding: '20px 24px',
@@ -559,25 +496,8 @@ export default function UploadAssetsPage() {
               </div>
               {/* Text */}
               <div>
-                <h4 
-                  className="font-semibold mb-1"
-                  style={{
-                    fontSize: '18px',
-                    color: '#2D2F34',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Sheets
-                </h4>
-                <p 
-                  style={{
-                    fontSize: '13px',
-                    color: '#6A707C',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Click to upload
-                </p>
+                <h4 className="font-title-16 mb-1 text-[#2D2F34]">Sheets</h4>
+                <p className="font-body-14 text-[#6A707C]">Click to upload</p>
               </div>
             </div>
           </div>
@@ -597,8 +517,8 @@ export default function UploadAssetsPage() {
             <div 
               className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
               style={{
-                width: '330px',
-                height: '110px',
+                width: '280px',
+                height: '100px',
                 backgroundColor: '#FFF9F3',
                 borderRadius: '12px',
                 padding: '20px 24px',
@@ -625,25 +545,8 @@ export default function UploadAssetsPage() {
               </div>
               {/* Text */}
               <div>
-                <h4 
-                  className="font-semibold mb-1"
-                  style={{
-                    fontSize: '18px',
-                    color: '#2D2F34',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Presentations
-                </h4>
-                <p 
-                  style={{
-                    fontSize: '13px',
-                    color: '#6A707C',
-                    lineHeight: '1.3em'
-                  }}
-                >
-                  Click to upload
-                </p>
+                <h4 className="font-title-16 mb-1 text-[#2D2F34]">Presentations</h4>
+                <p className="font-body-14 text-[#6A707C]">Click to upload</p>
               </div>
             </div>
           </div>
@@ -651,9 +554,9 @@ export default function UploadAssetsPage() {
 
         {/* Right: Drag and Drop Zone */}
         <div 
-          className={`cursor-pointer transition-all flex-1 ${isDragActive ? 'border-[#605BFF] bg-blue-50' : ''}`}
+            className={`cursor-pointer transition-all flex-1 ${isDragActive ? 'border-[#605BFF] bg-blue-50' : ''}`}
           style={{
-            minWidth: '520px',
+            minWidth: '440px',
             height: '248px',
             backgroundColor: '#FFFFFF',
             borderRadius: '16px',
@@ -705,14 +608,9 @@ export default function UploadAssetsPage() {
             
             {/* Button */}
             <button 
-              className="font-semibold hover:bg-[#3239BC] transition-colors"
+              className="font-body-14 text-white hover:bg-[#3239BC] transition-colors rounded-md px-6 h-11"
               style={{
-                height: '44px',
                 backgroundColor: '#605BFF',
-                color: '#FFFFFF',
-                fontSize: '14px',
-                borderRadius: '8px',
-                padding: '0 24px',
                 border: 'none',
                 cursor: 'pointer'
               }}
@@ -721,17 +619,7 @@ export default function UploadAssetsPage() {
             </button>
 
             {/* Description */}
-            <p 
-              className="font-medium"
-              style={{
-                fontSize: '14px',
-                color: '#6A707C',
-                textAlign: 'center',
-                lineHeight: '1.5em'
-              }}
-            >
-              Drag and drop files here or click to browse
-            </p>
+            <p className="font-body-14 text-[#6A707C] text-center">Drag and drop files here or click to browse</p>
 
             <input
               id="general-upload"
@@ -749,16 +637,7 @@ export default function UploadAssetsPage() {
       {/* Uploaded Files Section Header */}
       <div className="flex items-center justify-between mb-8">
         {/* Title */}
-        <h2 
-          className="font-semibold"
-          style={{
-            fontSize: '20px',
-            color: '#2D2F34',
-            lineHeight: '1.3em'
-          }}
-        >
-          Uploaded Files
-        </h2>
+        <h2 className="font-h2 text-[#2D2F34]">Uploaded Files</h2>
 
         {/* Search and Category Filter */}
         <div className="flex items-center gap-3">
@@ -788,9 +667,8 @@ export default function UploadAssetsPage() {
               placeholder="Search Rules..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-full font-medium outline-none bg-transparent"
+              className="w-full h-full font-body-14 outline-none bg-transparent"
               style={{
-                fontSize: '14px',
                 color: '#2D2F34',
                 paddingLeft: '42px',
                 paddingRight: '14px'
@@ -810,15 +688,7 @@ export default function UploadAssetsPage() {
               padding: '0 14px'
             }}
           >
-            <span 
-              className="font-medium"
-              style={{
-                fontSize: '14px',
-                color: '#6A707C'
-              }}
-            >
-              {selectedCategory}
-            </span>
+            <span className="font-body-14 text-[#6A707C]">{selectedCategory}</span>
             <ChevronDown 
               style={{
                 width: '16px',
@@ -860,24 +730,8 @@ export default function UploadAssetsPage() {
               }}
             />
           </div>
-          <h3 
-            className="font-semibold mb-3"
-            style={{
-              fontSize: '18px',
-              color: '#2D2F34'
-            }}
-          >
-            No files found
-          </h3>
-          <p 
-            style={{
-              fontSize: '14px',
-              color: '#6A707C',
-              textAlign: 'center',
-              maxWidth: '400px',
-              lineHeight: '1.5em'
-            }}
-          >
+          <h3 className="font-title-16 mb-3 text-[#2D2F34]">No files found</h3>
+          <p className="font-body-14 text-[#6A707C] text-center max-w-[400px]">
             {assets.length === 0 
               ? "Upload your first file to get started with managing your documents" 
               : "Try adjusting your search or upload new files"}
@@ -895,8 +749,8 @@ export default function UploadAssetsPage() {
               key={asset._id} 
               className="hover:shadow-xl transition-all cursor-pointer"
               style={{
-                minWidth: '280px',
-                maxWidth: '320px',
+                minWidth: '240px',
+                maxWidth: '300px',
                 backgroundColor: '#FFFFFF',
                 borderRadius: '12px',
                 padding: '24px',
@@ -929,17 +783,7 @@ export default function UploadAssetsPage() {
                 {/* Actions: Active Badge + Check Icon */}
                 <div className="flex items-center gap-2">
                   {/* Active Badge */}
-                  <div 
-                    className="font-medium"
-                    style={{
-                      backgroundColor: '#ECFDF5',
-                      color: '#059669',
-                      fontSize: '11px',
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontWeight: '600'
-                    }}
-                  >
+                  <div className="font-body-12 font-body-12-medium bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full">
                     Active
                   </div>
 
@@ -964,79 +808,39 @@ export default function UploadAssetsPage() {
               </div>
 
               {/* Filename */}
-              <h4 
-                className="font-semibold truncate mb-4"
-                style={{
-                  fontSize: '15px',
-                  color: '#2D2F34',
-                  lineHeight: '1.4em'
-                }}
-                title={asset.originalName}
-              >
-                {asset.originalName}
-              </h4>
+              <h4 className="font-body-16-medium truncate mb-4 text-[#2D2F34]" title={asset.originalName}>{asset.originalName}</h4>
 
               {/* File Size and Date */}
               <div className="flex items-center justify-between mb-5">
-                <span 
-                  style={{
-                    fontSize: '13px',
-                    color: '#6A707C',
-                    fontWeight: '500'
-                  }}
-                >
-                  {formatFileSize(asset.size)}
-                </span>
-                <span 
-                  style={{
-                    fontSize: '13px',
-                    color: '#6A707C',
-                    fontWeight: '500'
-                  }}
-                >
-                  {new Date(asset.uploadDate).toLocaleDateString('en-US', {
+                <span className="font-body-14 text-[#6A707C] font-body-14-medium">{formatFileSize(asset.size)}</span>
+                <span className="font-body-14 text-[#6A707C] font-body-14-medium">{new Date(asset.uploadDate).toLocaleDateString('en-US', {
                     month: '2-digit',
                     day: '2-digit',
                     year: 'numeric'
-                  })}
-                </span>
+                  })}</span>
               </div>
 
               {/* Buttons Row */}
               <div className="flex items-center gap-3">
                 {/* View Button */}
-                <button 
-                  className="font-semibold hover:bg-[#1F2937] transition-colors flex-1"
-                  style={{
+                <button className="font-body-14 font-body-14-medium hover:bg-[#1F2937] transition-colors flex-1" style={{
                     backgroundColor: '#374151',
                     color: '#FFFFFF',
-                    fontSize: '13px',
                     borderRadius: '8px',
                     padding: '10px 0',
                     border: 'none',
                     cursor: 'pointer'
-                  }}
-                  onClick={() => handleViewAsset(asset)}
-                >
-                  View
-                </button>
+                  }} onClick={() => handleViewAsset(asset)}>View</button>
 
                 {/* Download Button */}
-                <button 
-                  className="font-semibold hover:bg-[#4F46E5] transition-colors flex-1"
-                  style={{
+                <button className="font-body-14 font-body-14-medium hover:bg-[#4F46E5] transition-colors flex-1" style={{
                     backgroundColor: '#605BFF',
                     color: '#FFFFFF',
-                    fontSize: '13px',
                     borderRadius: '8px',
                     padding: '10px 0',
                     border: 'none',
                     cursor: 'pointer'
-                  }}
-                  onClick={() => handleDownloadAsset(asset)}
-                >
-                  Download
-                </button>
+                  }} onClick={() => handleDownloadAsset(asset)}>Download</button>
               </div>
             </div>
           ))}

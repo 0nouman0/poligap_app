@@ -39,7 +39,7 @@ export const VersionHistory: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Badge 
                     variant={version.version === currentVersion ? "default" : "outline"}
-                    className="text-xs"
+                    className="font-body-12"
                   >
                     v{version.version}
                   </Badge>

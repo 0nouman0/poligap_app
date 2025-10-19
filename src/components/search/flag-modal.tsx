@@ -86,7 +86,7 @@ export default function FlagModal({
           </DialogTitle>
         </DialogHeader>
         <div className="mb-4">
-          <label className="block mb-1 text-sm font-medium">Reason</label>
+          <label className="block mb-1 font-title-14">Reason</label>
           <Select value={reason} onValueChange={setReason}>
             <SelectTrigger className="w-full focus-visible:ring-0">
               <SelectValue
@@ -104,7 +104,7 @@ export default function FlagModal({
           </Select>
         </div>
         <div className="mb-4">
-          <label className="block mb-1 text-sm font-medium">Note</label>
+          <label className="block mb-1 font-title-14">Note</label>
           <Textarea
             className="w-full min-h-[80px] focus-visible:ring-0"
             value={note}
@@ -113,7 +113,7 @@ export default function FlagModal({
             required
           />
         </div>
-        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
+  {error && <div className="text-red-500 font-body-12 mb-2">{error}</div>}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel

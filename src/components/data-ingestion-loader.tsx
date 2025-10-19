@@ -245,8 +245,8 @@ export function DataIngestionLoader({
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium">{message}</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="font-title-14">{message}</h3>
+              <p className="font-body-14 text-muted-foreground">
                 {hasSteps
                   ? `Step ${currentStepIndex + 1} of ${steps.length}`
                   : "Please wait while we process your request"}
@@ -264,7 +264,7 @@ export function DataIngestionLoader({
               </span>
             </div>
             <Progress value={progress} className="h-2 transition-all" />
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between font-body-12 text-muted-foreground">
               <span>Started {formatTime(elapsedTime)} ago</span>
               {remainingTime !== null && (
                 <span className="flex items-center gap-1">
@@ -286,7 +286,7 @@ export function DataIngestionLoader({
                     : "opacity-0 transform -translate-y-2"
                 )}
               >
-                <p className="text-sm italic">
+                <p className="font-body-14 italic">
                   {engagingMessages[currentEngagingMessageIndex]}
                 </p>
               </div>
@@ -330,7 +330,7 @@ export function DataIngestionLoader({
                         {step.title}
                       </p>
                       {step.description && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-body-12 text-muted-foreground">
                           {step.description}
                         </p>
                       )}
@@ -345,7 +345,7 @@ export function DataIngestionLoader({
           {allowCancel && onCancel && (
             <button
               onClick={onCancel}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+              className="font-body-14 text-muted-foreground hover:text-foreground transition-colors mx-auto"
             >
               Cancel
             </button>
