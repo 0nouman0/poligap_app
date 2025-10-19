@@ -205,7 +205,7 @@ export default function UploadAssetsPage() {
 
   if (loading) {
     return (
-      <div style={{ backgroundColor: '#FAFAFB' }} className="min-h-screen py-8 px-10">
+      <div style={{ backgroundColor: '#FAFAFB' }} className="min-h-screen py-4 sm:py-8 px-4 sm:px-6 lg:px-10">
         {/* Header Skeleton */}
         <div className="flex items-center gap-5 mb-10">
           <Skeleton className="h-14 w-14 rounded-full flex-shrink-0" />
@@ -273,9 +273,9 @@ export default function UploadAssetsPage() {
   }
 
   return (
-    <div style={{ backgroundColor: '#FAFAFB' }} className="min-h-screen py-8 px-10">
+    <div style={{ backgroundColor: '#FAFAFB' }} className="min-h-screen py-4 sm:py-8 px-4 sm:px-6 lg:px-10">
       {/* Header Section */}
-      <div className="flex items-center gap-5 mb-10">
+      <div className="flex items-center gap-3 sm:gap-5 mb-6 sm:mb-10">
         {/* Upload Cloud Icon */}
         <div 
           className="flex items-center justify-center flex-shrink-0"
@@ -347,9 +347,9 @@ export default function UploadAssetsPage() {
       )}
 
       {/* Upload Type Cards and Drag-Drop Zone */}
-      <div className="flex gap-8 mb-12">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-8 sm:mb-12">
         {/* Left: 4 Upload Type Cards in 2x2 Grid */}
-        <div className="grid grid-cols-2 gap-6" style={{ width: 'auto' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full lg:w-auto">
           {/* Row 1, Col 1 */}
           {/* Photo Card */}
           <div className="relative">
@@ -364,13 +364,12 @@ export default function UploadAssetsPage() {
               }}
             />
             <div 
-              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              className="flex items-center gap-3 sm:gap-5 cursor-pointer hover:shadow-lg transition-all w-full"
               style={{
-                width: '280px',
-                height: '100px',
+                minHeight: '100px',
                 backgroundColor: '#F8F9FE',
                 borderRadius: '12px',
-                padding: '20px 24px',
+                padding: '16px sm:20px 20px sm:24px',
                 border: '1px solid #E8EAED'
               }}
             >
@@ -414,13 +413,12 @@ export default function UploadAssetsPage() {
               }}
             />
             <div 
-              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              className="flex items-center gap-3 sm:gap-5 cursor-pointer hover:shadow-lg transition-all w-full"
               style={{
-                width: '280px',
-                height: '100px',
+                minHeight: '100px',
                 backgroundColor: '#FFFBF5',
                 borderRadius: '12px',
-                padding: '20px 24px',
+                padding: '16px 20px',
                 border: '1px solid #FEF3E8'
               }}
             >
@@ -464,13 +462,12 @@ export default function UploadAssetsPage() {
               }}
             />
             <div 
-              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              className="flex items-center gap-3 sm:gap-5 cursor-pointer hover:shadow-lg transition-all w-full"
               style={{
-                width: '280px',
-                height: '100px',
+                minHeight: '100px',
                 backgroundColor: '#F3FBF7',
                 borderRadius: '12px',
-                padding: '20px 24px',
+                padding: '16px 20px',
                 border: '1px solid #E8F5EE'
               }}
             >
@@ -515,13 +512,12 @@ export default function UploadAssetsPage() {
               }}
             />
             <div 
-              className="flex items-center gap-5 cursor-pointer hover:shadow-lg transition-all"
+              className="flex items-center gap-3 sm:gap-5 cursor-pointer hover:shadow-lg transition-all w-full"
               style={{
-                width: '280px',
-                height: '100px',
+                minHeight: '100px',
                 backgroundColor: '#FFF9F3',
                 borderRadius: '12px',
-                padding: '20px 24px',
+                padding: '16px 20px',
                 border: '1px solid #FEF3E8'
               }}
             >
@@ -554,14 +550,14 @@ export default function UploadAssetsPage() {
 
         {/* Right: Drag and Drop Zone */}
         <div 
-            className={`cursor-pointer transition-all flex-1 ${isDragActive ? 'border-[#605BFF] bg-blue-50' : ''}`}
+            className={`cursor-pointer transition-all w-full lg:flex-1 ${isDragActive ? 'border-[#605BFF] bg-blue-50' : ''}`}
           style={{
-            minWidth: '440px',
-            height: '248px',
+            minHeight: '200px',
+            height: 'auto',
             backgroundColor: '#FFFFFF',
             borderRadius: '16px',
             border: isDragActive ? '2px dashed #605BFF' : '2px dashed #D1D5DB',
-            padding: '32px'
+            padding: '24px'
           }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -635,17 +631,16 @@ export default function UploadAssetsPage() {
       </div>
 
       {/* Uploaded Files Section Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         {/* Title */}
         <h2 className="font-h2 text-[#2D2F34]">Uploaded Files</h2>
 
         {/* Search and Category Filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search Box */}
           <div 
-            className="relative flex items-center"
+            className="relative flex items-center w-full sm:w-80"
             style={{
-              width: '320px',
               height: '40px',
               backgroundColor: '#FFFFFF',
               border: '1px solid #E4E7EC',
@@ -678,9 +673,8 @@ export default function UploadAssetsPage() {
 
           {/* Category Dropdown */}
           <div 
-            className="relative flex items-center justify-between cursor-pointer hover:border-gray-300 transition-colors"
+            className="relative flex items-center justify-between cursor-pointer hover:border-gray-300 transition-colors w-full sm:w-44"
             style={{
-              width: '180px',
               height: '40px',
               backgroundColor: '#FFFFFF',
               border: '1px solid #E4E7EC',
@@ -739,21 +733,16 @@ export default function UploadAssetsPage() {
         </div>
       ) : (
         <div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          style={{
-            width: '100%'
-          }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
         >
           {filteredAssets.map((asset) => (
             <div 
               key={asset._id} 
-              className="hover:shadow-xl transition-all cursor-pointer"
+              className="hover:shadow-xl transition-all cursor-pointer w-full"
               style={{
-                minWidth: '240px',
-                maxWidth: '300px',
                 backgroundColor: '#FFFFFF',
                 borderRadius: '12px',
-                padding: '24px',
+                padding: '20px',
                 boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.08)',
                 border: '1px solid #F0F1F3'
               }}

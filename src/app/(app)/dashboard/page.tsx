@@ -166,7 +166,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-none p-6 space-y-8">
+      <div className="w-full max-w-none p-4 sm:p-6 space-y-6 sm:space-y-8">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -240,7 +240,7 @@ export default function DashboardPage() {
   // Show empty state if no analytics data
   if (!analytics || (analytics.overview.totalSearches === 0 && analytics.overview.totalDocumentAnalyses === 0)) {
     return (
-      <div className="w-full max-w-none p-6 space-y-8">
+      <div className="w-full max-w-none p-4 sm:p-6 space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -311,9 +311,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="w-full max-w-none p-6 space-y-8">
+    <div className="w-full max-w-none p-4 sm:p-6 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">
             Good afternoon, {userData?.name || 'User'}
@@ -327,7 +327,7 @@ export default function DashboardPage() {
             })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={timeRange === '7' ? 'default' : 'outline'}
             size="sm"

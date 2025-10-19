@@ -7,7 +7,7 @@ export interface Rule {
   name: string;
   description: string;
   tags: string[];
-  sourceType: 'manual' | 'file' | 'api';
+  sourceType: 'text' | 'file';
   fileName?: string;
   fileContent?: string;
   active: boolean;

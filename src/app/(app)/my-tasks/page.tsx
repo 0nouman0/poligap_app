@@ -244,9 +244,9 @@ export default function MyTasksPage() {
 
   return (
     <div className="min-h-screen bg-background dark:bg-background select-none">
-      <div className="w-full px-6 mx-auto" style={{ maxWidth: '1640px' }}>
+      <div className="w-full px-4 sm:px-6 mx-auto max-w-7xl">
         {/* Header Section */}
-        <div className="py-6 flex items-center justify-between">
+        <div className="py-4 sm:py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Title */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">

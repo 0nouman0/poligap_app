@@ -20,7 +20,8 @@ import {
   Check,
   Loader2,
   ChevronDown,
-  AlertTriangle
+  AlertTriangle,
+  FileText
 } from "lucide-react";
 import { useUserStore, UserData } from "@/stores/user-store";
 import { useCompanyStore } from "@/stores/company-store";
@@ -60,6 +61,10 @@ export default function UserProfilePage() {
   const [profileData, setProfileData] = useState(profile || userData);
   const [isSaving, setIsSaving] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  
+  // Global edit mode state
+  const [isGlobalEditMode, setIsGlobalEditMode] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   
   // Editable fields state
   const [editableFields, setEditableFields] = useState<Record<string, EditableField>>({});
@@ -367,6 +372,84 @@ export default function UserProfilePage() {
     });
   };
 
+  // Global edit mode functions
+  const startGlobalEdit = () => {
+    setIsGlobalEditMode(true);
+    // Initialize all fields for editing with current values
+    const fieldsToEdit = ['name', 'mobile', 'dob', 'country', 'designation', 'about'];
+    const initialFields: Record<string, EditableField> = {};
+    
+    fieldsToEdit.forEach(fieldName => {
+      const currentValue = profileData?.[fieldName as keyof UserData] as string || '';
+      initialFields[fieldName] = {
+        field: fieldName as keyof UserData,
+        value: currentValue,
+        isEditing: true
+      };
+    });
+    
+    setEditableFields(initialFields);
+  };
+
+  const cancelGlobalEdit = () => {
+    setIsGlobalEditMode(false);
+    setEditableFields({});
+  };
+
+  const handleSaveClick = () => {
+    setShowSaveConfirmation(true);
+  };
+
+  const confirmSave = async () => {
+    setShowSaveConfirmation(false);
+    setIsSaving(true);
+    
+    try {
+      // Validate all fields first
+      const fieldsToValidate = Object.keys(editableFields);
+      for (const fieldName of fieldsToValidate) {
+        const fieldData = editableFields[fieldName];
+        if (fieldData) {
+          const validation = validateField(fieldName, fieldData.value);
+          if (!validation.isValid) {
+            toastError('Validation Error', `${fieldName}: ${validation.error}`);
+            setIsSaving(false);
+            return;
+          }
+        }
+      }
+
+      // Prepare update data
+      const updateData: Partial<UserData> = {};
+      fieldsToValidate.forEach(fieldName => {
+        const fieldData = editableFields[fieldName];
+        if (fieldData) {
+          updateData[fieldName as keyof UserData] = fieldData.value.trim() as any;
+        }
+      });
+
+      const updatedProfile = await updateProfile(updateData as any);
+
+      if (updatedProfile) {
+        setProfileData(updatedProfile);
+        setIsGlobalEditMode(false);
+        setEditableFields({});
+        toastSuccess('Profile updated successfully!');
+      } else {
+        toastError('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toastError('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const cancelSave = () => {
+    setShowSaveConfirmation(false);
+  };
+
   const handleBannerEdit = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
@@ -502,7 +585,7 @@ export default function UserProfilePage() {
 
   // Custom DOB component with better UI
   const DOBFieldComponent = () => {
-    const isEditing = editableFields['dob']?.isEditing;
+    const isEditing = isGlobalEditMode && editableFields['dob']?.isEditing;
     const currentDOB = profileData?.dob || '';
     
     // Parse current date or set defaults
@@ -593,102 +676,66 @@ export default function UserProfilePage() {
 
     return (
       <div className="flex flex-col">
-        <div className={`flex items-center justify-between p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
-          <div className="flex items-center gap-3 flex-1">
+        <div className={`p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
+          <div className="flex items-center gap-3 mb-1">
             <Calendar className={`h-4 w-4 ${hasError ? 'text-red-500' : 'text-[#6A707C]'}`} />
-            <div className="flex-1">
-              <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>Date of Birth</Label>
-              {isEditing ? (
-                <div className="flex gap-2 mt-1">
-                  <Select 
-                    value={month || ''} 
-                    onValueChange={(value) => updateDOBField(day, value, year)}
-                  >
-                    <SelectTrigger className={`w-[120px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
-                      <SelectValue placeholder="Select Month" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {months.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select 
-                    value={day || ''} 
-                    onValueChange={(value) => updateDOBField(value, month, year)}
-                  >
-                    <SelectTrigger className={`w-[80px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
-                      <SelectValue placeholder="Day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {days.map((d) => (
-                        <SelectItem key={d} value={d}>
-                          {d}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select 
-                    value={year || ''} 
-                    onValueChange={(value) => updateDOBField(day, month, value)}
-                  >
-                    <SelectTrigger className={`w-[100px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
-                      <SelectValue placeholder="Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map((y) => (
-                        <SelectItem key={y} value={y}>
-                          {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <p className="text-sm text-[#6A707C] mt-1">
-                  {formatDisplayDate(currentDOB)}
-                </p>
-              )}
-            </div>
+            <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>Date of Birth</Label>
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="ml-4 sm:ml-7">
             {isEditing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => cancelEditing('dob')}
-                  disabled={isSaving}
-                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none border-[#E4E4E4] hover:bg-[#FAFAFB]"
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select 
+                  value={month || ''} 
+                  onValueChange={(value) => updateDOBField(day, value, year)}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => saveField('dob')}
-                  disabled={isSaving || hasError}
-                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
+                  <SelectTrigger className={`w-full sm:w-[120px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
+                    <SelectValue placeholder="Select Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={day || ''} 
+                  onValueChange={(value) => updateDOBField(value, month, year)}
                 >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
-                </Button>
-              </>
+                  <SelectTrigger className={`w-full sm:w-[80px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
+                    <SelectValue placeholder="Day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {days.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={year || ''} 
+                  onValueChange={(value) => updateDOBField(day, month, value)}
+                >
+                  <SelectTrigger className={`w-full sm:w-[100px] h-8 ${hasError ? 'border-red-400' : 'border-[#E4E4E4]'}`}>
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => startEditing('dob', currentDOB)}
-                className="h-8 w-8 p-0 flex items-center justify-center rounded-md hover:bg-[#EFF1F6]"
-              >
-                <Edit3 className="h-4 w-4" />
-              </Button>
+              <p className="text-sm text-[#6A707C] py-1">
+                {formatDisplayDate(currentDOB)}
+              </p>
             )}
           </div>
         </div>
@@ -717,7 +764,7 @@ export default function UserProfilePage() {
     icon: any; 
     type?: string; 
   }) => {
-    const isEditing = editableFields[fieldName]?.isEditing;
+    const isEditing = isGlobalEditMode && editableFields[fieldName]?.isEditing;
     // Use ?? instead of || to allow empty strings
     const editValue = editableFields[fieldName]?.value ?? value ?? '';
     
@@ -743,61 +790,24 @@ export default function UserProfilePage() {
 
     return (
       <div className="flex flex-col">
-        <div className={`flex items-center justify-between p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
-          <div className="flex items-center gap-3 flex-1">
+        <div className={`p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
+          <div className="flex items-center gap-3 mb-1">
             <Icon className={`h-4 w-4 ${hasError ? 'text-red-500' : 'text-[#6A707C]'}`} />
-            <div className="flex-1">
-              <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>{label}</Label>
-              {isEditing ? (
-                <Input
-                  type={type}
-                  value={editValue}
-                  onChange={handleInputChange}
-                  className={`mt-1 h-8 w-full border-[#E4E4E4] focus:border-[#3B43D6] ${hasError ? 'border-red-400 focus:border-red-500' : ''}`}
-                  autoFocus
-                  placeholder={`Enter ${label.toLowerCase()}`}
-                />
-              ) : (
-                <p className="text-sm text-[#6A707C] mt-1">
-                  {value || 'Not provided'}
-                </p>
-              )}
-            </div>
+            <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>{label}</Label>
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="ml-4 sm:ml-7">
             {isEditing ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => cancelEditing(fieldName)}
-                  disabled={isSaving}
-                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none border-[#E4E4E4] hover:bg-[#FAFAFB]"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => saveField(fieldName)}
-                  disabled={isSaving || hasError}
-                  className="h-8 w-8 p-0 flex items-center justify-center rounded-md leading-none bg-[#605BFF] hover:bg-[#4D47CC] text-white disabled:opacity-50"
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4" />
-                  )}
-                </Button>
-              </>
+              <Input
+                type={type}
+                value={editValue}
+                onChange={handleInputChange}
+                className={`h-8 w-full border-[#E4E4E4] focus:border-[#3B43D6] ${hasError ? 'border-red-400 focus:border-red-500' : ''}`}
+                placeholder={`Enter ${label.toLowerCase()}`}
+              />
             ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => startEditing(fieldName, value)}
-                className="h-9 hover:bg-[#EFF1F6]"
-              >
-                <Edit3 className="h-3 w-3" />
-              </Button>
+              <p className="text-sm text-[#6A707C] py-1">
+                {value || 'Not provided'}
+              </p>
             )}
           </div>
         </div>
@@ -889,7 +899,7 @@ export default function UserProfilePage() {
 
         <div className="px-4 sm:px-6 lg:px-8">
           {/* Profile Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:gap-6 mb-4 sm:mb-0">
             <div className="z-10 -mt-16 sm:-mt-24 relative group">
               {isInitializing ? (
                 <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white bg-gray-200 animate-pulse flex items-center justify-center">
@@ -963,15 +973,26 @@ export default function UserProfilePage() {
           <Separator className="my-8 bg-[#E6E6E6]" />
 
           {/* Profile Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 pb-8">
             {/* Main Profile Information */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
                 <CardHeader className="border-b border-[#E6E6E6]">
-                  <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold">
-                    <User className="h-5 w-5 text-[#3B43D6]" />
-                    Personal Information
-                  </CardTitle>
+                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                    <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold text-sm sm:text-base">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-[#3B43D6]" />
+                      Personal Information
+                    </CardTitle>
+                    {!isGlobalEditMode && (
+                      <Button
+                        onClick={startGlobalEdit}
+                        className="bg-[#605BFF] hover:bg-[#4D47CC] text-white shadow-sm border-0 font-medium h-8 w-8 p-0"
+                        size="sm"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-6">
                   <EditableFieldComponent
@@ -1014,8 +1035,8 @@ export default function UserProfilePage() {
 
               <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
                 <CardHeader className="border-b border-[#E6E6E6]">
-                  <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold">
-                    <Briefcase className="h-5 w-5 text-[#3B43D6]" />
+                  <CardTitle className="flex items-center gap-2 text-[#2D2F34] font-semibold text-sm sm:text-base">
+                    <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-[#3B43D6]" />
                     Professional Information
                   </CardTitle>
                 </CardHeader>
@@ -1029,8 +1050,12 @@ export default function UserProfilePage() {
                   
                   {/* About Section */}
                   <div className="p-3 rounded-lg border">
-                    <Label className="text-sm font-medium mb-2 block">About</Label>
-                    {editableFields['about']?.isEditing ? (
+                    <div className="flex items-center gap-3 mb-1">
+                      <FileText className="h-4 w-4 text-[#6A707C]" />
+                      <Label className="text-sm font-medium text-[#2D2F34]">About</Label>
+                    </div>
+                    <div className="ml-4 sm:ml-7">
+                    {isGlobalEditMode && editableFields['about']?.isEditing ? (
                       <div className="space-y-3">
                         <div className="relative">
                           <Textarea
@@ -1065,54 +1090,48 @@ export default function UserProfilePage() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => cancelEditing('about')}
-                            disabled={isSaving}
-                          >
-                            <X className="h-3 w-3 mr-1" /> Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => saveField('about')}
-                            disabled={isSaving || !validateAbout(editableFields['about']?.value ?? '').isValid}
-                          >
-                            {isSaving ? (
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            ) : (
-                              <Save className="h-3 w-3 mr-1" />
-                            )}
-                            Save
-                          </Button>
-                        </div>
                       </div>
                     ) : (
-                      <div className="flex items-start justify-between">
-                        <p className="text-sm text-muted-foreground flex-1">
-                          {profileData?.about || 'No bio added yet'}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => startEditing('about', profileData?.about || '')}
-                          className="h-8 w-8 p-0 flex items-center justify-center rounded-md hover:bg-[#EFF1F6]"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {profileData?.about || 'No bio added yet'}
+                      </p>
                     )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Global Save/Cancel Buttons */}
+              {isGlobalEditMode && (
+                <div className="flex justify-center sm:justify-end gap-3 pt-4 sm:pt-6 border-t border-[#E6E6E6] mt-4 sm:mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={cancelGlobalEdit}
+                    disabled={isSaving}
+                    className="h-10 w-10 sm:h-10 sm:w-10 p-0 border-[#E6E6E6] hover:bg-[#F8F9FA] text-[#6A707C] font-medium shadow-sm touch-manipulation"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleSaveClick}
+                    disabled={isSaving}
+                    className="bg-[#605BFF] hover:bg-[#4D47CC] text-white h-10 w-10 sm:h-10 sm:w-10 p-0 font-medium shadow-sm border-0 disabled:opacity-50 touch-manipulation"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <Card className="bg-white rounded-xl shadow-sm border-[#E6E6E6]">
                 <CardHeader className="border-b border-[#E6E6E6]">
-                  <CardTitle className="text-[#2D2F34] font-semibold">Account Status</CardTitle>
+                  <CardTitle className="text-[#2D2F34] font-semibold text-sm sm:text-base">Account Status</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="space-y-3">
@@ -1149,6 +1168,39 @@ export default function UserProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Save Confirmation Dialog */}
+      {showSaveConfirmation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 sm:p-8 max-w-sm sm:max-w-lg w-full mx-4 border border-[#E6E6E6]">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-[#2D2F34]">Confirm Changes</h3>
+            <p className="text-[#6A707C] mb-6 sm:mb-8 text-sm sm:text-base leading-relaxed">
+              Do you want to save the changes you made to your profile?
+            </p>
+            <div className="flex justify-center sm:justify-end gap-3 sm:gap-4">
+              <Button
+                variant="outline"
+                onClick={cancelSave}
+                disabled={isSaving}
+                className="h-12 w-12 p-0 border-[#E6E6E6] hover:bg-[#F8F9FA] text-[#6A707C] font-medium"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              <Button
+                onClick={confirmSave}
+                disabled={isSaving}
+                className="bg-[#605BFF] hover:bg-[#4D47CC] text-white h-12 w-12 p-0 font-medium shadow-sm border-0 disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Save className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
