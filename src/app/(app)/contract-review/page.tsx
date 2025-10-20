@@ -19,6 +19,16 @@ import { deleteCacheKey, CACHE_KEYS } from '@/lib/cache';
 import { useContractReviewStore } from "@/store/contractReview";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Helper to escape HTML when rendering plain text into a printable document
+function escapeHtml(unsafe: string) {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface RequiredSection {
   title: string;
   priority: "critical" | "high" | "medium" | "low";
@@ -2121,21 +2131,79 @@ export default function ContractReview() {
                 </div>
                     {extractedDocument && (
                       <div className="flex items-center gap-3">
-                        <Button
-                          onClick={handleDownloadReport}
-                          className="min-w-[180px] h-10 px-5 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download Report
-                        </Button>
-                        <Button
-                          onClick={handleDownloadResults}
-                          variant="outline"
-                          className="min-w-[180px] h-10 px-5 border-[#DEE3ED] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download JSON
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              // Download as Markdown (.md)
+                              const revised = crStore.exportRevisedDocument ? crStore.exportRevisedDocument() : extractedDocument.fullText;
+                              const baseName = (extractedDocument.fileName || 'revised-document').replace(/\.[^/.]+$/, '');
+                              const blob = new Blob([revised || ''], { type: 'text/markdown;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${baseName}.md`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              toastSuccess('Downloaded', 'Revised document (.md) downloaded');
+                            }}
+                            className="min-w-[140px] h-10 px-4 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                          >
+                            <Download className="h-4 w-4" />
+                            .MD
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              // Download as TXT
+                              const revised = crStore.exportRevisedDocument ? crStore.exportRevisedDocument() : extractedDocument.fullText;
+                              const baseName = (extractedDocument.fileName || 'revised-document').replace(/\.[^/.]+$/, '');
+                              const blob = new Blob([revised || ''], { type: 'text/plain;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${baseName}.txt`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              toastSuccess('Downloaded', 'Revised document (.txt) downloaded');
+                            }}
+                            variant="outline"
+                            className="min-w-[140px] h-10 px-4 border-[#DEE3ED] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                          >
+                            <Download className="h-4 w-4" />
+                            .TXT
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              // Open printable window for PDF (user can save as PDF via print dialog)
+                              const revised = crStore.exportRevisedDocument ? crStore.exportRevisedDocument() : extractedDocument.fullText;
+                              const baseName = (extractedDocument.fileName || 'revised-document').replace(/\.[^/.]+$/, '');
+                              const printWindow = window.open('', '_blank');
+                              if (!printWindow) {
+                                toastError('Popup blocked', 'Unable to open print window. Please allow popups and try again.');
+                                return;
+                              }
+                              const html = `<!doctype html><html><head><meta charset="utf-8"><title>${baseName}</title><style>body{font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:40px;} pre{white-space:pre-wrap;word-wrap:break-word;font-size:13px;line-height:1.45;}</style></head><body><pre>${escapeHtml(revised || '')}</pre></body></html>`;
+                              printWindow.document.open();
+                              printWindow.document.write(html);
+                              printWindow.document.close();
+                              // Try to auto-trigger print; browsers may block without user gesture
+                              setTimeout(() => {
+                                try { printWindow.print(); } catch (e) { /* ignore */ }
+                              }, 500);
+                            }}
+                            className="min-w-[140px] h-10 px-4 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                          >
+                            <Download className="h-4 w-4" />
+                            PDF (Print)
+                          </Button>
+                        </div>
+
+                        
                         <Button
                           onClick={handleStartNewReview}
                           variant="outline"
