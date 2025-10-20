@@ -180,12 +180,19 @@ export default function PolicyGeneratorPage() {
     kbNotes: "",
   });
 
-  // Filter policy logs based on selected policy type
+  // Filter policy logs to show only entries produced by the Policy Generator
   const policyLogs = useMemo(() => {
     if (!inputs.policyType) return [];
-    return allAuditLogs.filter(log => 
-      log.standards?.includes(inputs.policyType)
-    ).slice(0, 20);
+    return allAuditLogs
+      .filter((log) =>
+        // Ensure this log was created by the policy generator
+        (log.analysisMethod === 'policy-generator' || log.analysisMethod === 'policy_generator' || log.analysisMethod === 'generator' )
+        // And matches the selected policy type (if standards is present)
+        && (!log.standards || log.standards.includes(inputs.policyType))
+      )
+      // Most recent first
+      .sort((a, b) => (new Date(b.analysisDate).getTime() || 0) - (new Date(a.analysisDate).getTime() || 0))
+      .slice(0, 20);
   }, [allAuditLogs, inputs.policyType]);
 
   const steps = [

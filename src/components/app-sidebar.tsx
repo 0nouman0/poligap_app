@@ -140,8 +140,8 @@ export function AppSidebar() {
   // Show all navigation items for Poligap interface
   const visibleNavigationItems = navigationItems;
 
-  // Show all bottom navigation items for Poligap interface
-  const visibleBottomNavigationItems = bottomNavigationItems;
+  // Show bottom navigation items, but hide Settings for now
+  const visibleBottomNavigationItems = bottomNavigationItems.filter(item => item.title !== 'Settings');
 
   // console.log("visibleBottomNavigationItems =>", visibleBottomNavigationItems);
 

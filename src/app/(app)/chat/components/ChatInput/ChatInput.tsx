@@ -26,7 +26,7 @@ import { AddMediaButton } from "./AddMediaButton";
 import { LlmButton } from "./LlmButton";
 import { MediaCard, MediaCardSkeleton } from "./MediaCard";
 import { SelectLanguageButton } from "./SelectLanguageButton";
-import { SelectMetaProperties } from "./SelectMetaProperties";
+// SelectMetaProperties removed per request
 import { toastError } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/company-store";
@@ -377,11 +377,7 @@ const ChatInput = ({
             />
           )}
           
-          <SelectMetaProperties
-            options={selectedOptions}
-            onChange={handleChange}
-            disabled={isStreamingResponse}
-          />
+          {/* Search & tools button removed */}
         </div>
 
         <TooltipProvider>
