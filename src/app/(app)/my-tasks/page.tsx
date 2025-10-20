@@ -101,7 +101,7 @@ export default function MyTasksPage() {
   }, [activeTab]);
 
   const resolvedUserId = getUserId();
-  const { data: queryTasks = [], isLoading: loading } = useTasksList(resolvedUserId);
+  const { data: queryTasks = [], isLoading: loading, isFetched: tasksFetched } = useTasksList(resolvedUserId);
   const createTaskMutation = useCreateTask(resolvedUserId);
   const updateTaskMutation = useUpdateTask(resolvedUserId);
   const deleteTaskMutation = useDeleteTask(resolvedUserId);
@@ -476,7 +476,7 @@ export default function MyTasksPage() {
               ))}
             </div>
           )}
-          {!loading && filteredTasks.length === 0 ? (
+          {!loading && filteredTasks.length === 0 && tasksFetched ? (
             <div className="bg-card dark:bg-card rounded-[10px] shadow-sm p-12 border border-border dark:border-border">
               <div className="text-center">
                 <div className="bg-primary/10 dark:bg-primary/20 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">

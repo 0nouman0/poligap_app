@@ -98,21 +98,19 @@ export const ContractCanvas: React.FC = () => {
             </h4>
             <div className="flex gap-2">
               <Button
-                size="sm"
                 variant="outline"
                 onClick={undoLastFix}
                 disabled={appliedFixes.length === 0}
-                className="text-xs"
+                className="min-w-[160px] h-9 text-sm rounded-xl flex items-center justify-center"
               >
                 <Undo2 className="h-3 w-3 mr-1" />
                 Undo Last
               </Button>
               <Button
-                size="sm"
                 variant="outline"
                 onClick={revertAllChanges}
                 disabled={currentVersion === 0 && versions.length <= 1}
-                className="text-xs"
+                className="min-w-[160px] h-9 text-sm rounded-xl flex items-center justify-center"
               >
                 <RotateCcw className="h-3 w-3 mr-1" />
                 Reset All
@@ -322,9 +320,8 @@ export const ContractCanvas: React.FC = () => {
           <div className="flex items-center gap-2">
             {hasUnsavedChanges && (
               <Button
-                size="sm"
                 onClick={saveChanges}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="min-w-[180px] h-10 text-sm rounded-xl flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
@@ -333,9 +330,8 @@ export const ContractCanvas: React.FC = () => {
             
             <Button
               variant="outline"
-              size="sm"
               onClick={() => setShowHighlights(!showHighlights)}
-              className="flex items-center gap-2"
+              className="min-w-[180px] h-10 text-sm rounded-xl flex items-center gap-2 justify-center"
             >
               {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showHighlights ? 'Hide' : 'Show'} Highlights

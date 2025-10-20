@@ -509,7 +509,7 @@ export default function PolicyGeneratorPage() {
                 <button
                   onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
                   disabled={currentStep === 1}
-                  className="h-9 px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-[12px] font-semibold text-[#717171] flex items-center gap-[5px] disabled:opacity-50"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-5 py-3 bg-[#FAFAFA] border border-[#717171] rounded-xl text-sm font-semibold text-[#717171] disabled:opacity-50 justify-center"
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
                   Previous
@@ -517,7 +517,7 @@ export default function PolicyGeneratorPage() {
                 <button
                   onClick={()=> setCurrentStep(currentStep+1)}
                   disabled={!canProceed1 || isGenerating}
-                  className="h-9 px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-6 py-3 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold disabled:opacity-50 justify-center"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
@@ -563,7 +563,7 @@ export default function PolicyGeneratorPage() {
               <div className="flex justify-end gap-3 md:gap-[15px]">
                 <button
                   onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
-                  className="h-10 md:h-9 px-4 md:px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-xs md:text-[12px] font-semibold text-[#717171] flex items-center gap-[5px]"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-5 py-3 bg-[#FAFAFA] border border-[#717171] rounded-xl text-sm font-semibold text-[#717171] justify-center"
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
                   Previous
@@ -571,7 +571,7 @@ export default function PolicyGeneratorPage() {
                 <button
                   onClick={()=> setCurrentStep(currentStep+1)}
                   disabled={!canProceed1 || isGenerating}
-                  className="h-10 md:h-9 px-4 md:px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-xs md:text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-6 py-3 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold disabled:opacity-50 justify-center"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
@@ -665,7 +665,7 @@ export default function PolicyGeneratorPage() {
               <div className="flex justify-end gap-3 md:gap-[15px]">
                 <button
                   onClick={()=> setCurrentStep(Math.max(1, currentStep-1))}
-                  className="h-10 md:h-9 px-4 md:px-[10px] rounded-[5px] bg-[#FAFAFA] border border-[#717171] text-xs md:text-[12px] font-semibold text-[#717171] flex items-center gap-[5px]"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-5 py-3 bg-[#FAFAFA] border border-[#717171] rounded-xl text-sm font-semibold text-[#717171] justify-center"
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
                   Previous
@@ -673,7 +673,7 @@ export default function PolicyGeneratorPage() {
                 <button
                   onClick={generatePolicy}
                   disabled={!canGenerate}
-                  className="h-10 md:h-9 px-4 md:px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-xs md:text-[12px] font-semibold flex items-center gap-[5px] disabled:opacity-50 transition-opacity"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-6 py-3 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold disabled:opacity-50 justify-center transition-opacity"
                 >
                   {isGenerating ? (
                     <>
@@ -727,7 +727,7 @@ export default function PolicyGeneratorPage() {
               <div className="flex justify-end gap-3 md:gap-[15px] mt-4 md:mt-[25px]">
                 <button
                   onClick={()=> { setCurrentStep(1); setResult(""); }}
-                  className="h-10 md:h-9 px-4 md:px-[15px] rounded-[5px] bg-[#3B43D6] text-white text-xs md:text-[12px] font-semibold flex items-center gap-[5px] hover:bg-[#2D35B8] transition-colors"
+                  className="min-w-[150px] whitespace-nowrap flex items-center justify-center px-6 py-3 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold hover:bg-[#2D35B8] transition-colors"
                 >
                   New Policy
                 </button>

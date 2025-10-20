@@ -28,6 +28,7 @@ import { useCompanyStore } from "@/stores/company-store";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState, useRef } from "react";
+import Image from 'next/image';
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { uploadAndUpdateImage } from "@/lib/supabase/image-upload";
 import { Textarea } from "@/components/ui/textarea";
@@ -822,19 +823,9 @@ export default function UserProfilePage() {
     );
   };
 
-  // Only show full page loading during initial load, not during updates
-  if (isInitializing) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profileData) {
+  // Render the page even during initial load, but show skeletons while initializing
+  // If there's absolutely no profileData after initialization, show a helpful empty state
+  if (!profileData && !isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -860,11 +851,15 @@ export default function UserProfilePage() {
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
             </div>
           ) : (
-            <img
-              src={bannerImage}
-              alt="Profile Banner"
-              className="w-full h-48 md:h-64 object-cover"
-            />
+            <div className="w-full h-48 md:h-64 relative">
+              <Image
+                src={bannerImage || ''}
+                alt="Profile Banner"
+                fill
+                className="object-cover"
+                priority={false}
+              />
+            </div>
           )}
           {/* Loading overlay */}
           {isSaving && isBannerUploading && (
@@ -906,11 +901,15 @@ export default function UserProfilePage() {
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : profile?.profileImage || userData?.profileImage ? (
-                <img
-                  src={profile?.profileImage || userData?.profileImage}
-                  alt={profile?.name || userData?.name || "User"}
-                  className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white object-cover shadow-md"
-                />
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white relative shadow-md overflow-hidden">
+                  <Image
+                    src={(profile?.profileImage || userData?.profileImage) || ''}
+                    alt={profile?.name || userData?.name || "User"}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 128px, 160px"
+                  />
+                </div>
               ) : (
                 <div
                   className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white flex items-center justify-center text-white text-4xl font-bold shadow-md ${
@@ -952,16 +951,29 @@ export default function UserProfilePage() {
             
             <div className="mt-4 sm:mb-4 flex-grow">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2F34]">
-                  {profileData?.name || "User"}
-                </h1>
-                <Badge variant="outline" className="text-xs border-[#E4E4E4] text-[#6A707C]">
-                  {profileData?.status || 'Active'}
-                </Badge>
+                {isInitializing ? (
+                  <div className="space-y-2">
+                    <div className="w-48 h-6 bg-gray-200 rounded-md animate-pulse" />
+                    <div className="w-24 h-4 bg-gray-200 rounded-md animate-pulse mt-2" />
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2F34]">
+                      {profileData?.name || "User"}
+                    </h1>
+                    <Badge variant="outline" className="text-xs border-[#E4E6E6] text-[#6A707C]">
+                      {profileData?.status || 'Active'}
+                    </Badge>
+                  </>
+                )}
               </div>
-              <p className="text-[#6A707C]">
-                {profileData?.email || "No email provided"}
-              </p>
+              {isInitializing ? (
+                <div className="w-64 h-4 bg-gray-200 rounded-md animate-pulse" />
+              ) : (
+                <p className="text-[#6A707C]">
+                  {profileData?.email || "No email provided"}
+                </p>
+              )}
               {error && (
                 <p className="text-sm text-red-600 mt-1">
                   Error: {error}

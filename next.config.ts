@@ -35,6 +35,15 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },
+      // Supabase storage (public URLs)
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "taziwfxkhwzhlddpvuzn.supabase.co",
+      },
     ],
   },
   webpack(config) {

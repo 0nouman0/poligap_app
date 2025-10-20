@@ -96,6 +96,7 @@ export const persistentCache = new PersistentCache();
 export const CACHE_KEYS = {
   USER_PROFILE: (userId: string) => `user_profile_${userId}`,
   TASKS: (userId: string) => `tasks_${userId}`,
+  RECENT_ACTIVITY: (userId?: string) => (userId ? `recent_activity_${userId}` : `recent_activity_global`),
   RULES: 'rules_list',
   CHAT_HISTORY: (userId: string) => `chat_history_${userId}`,
   AUDIT_LOGS: (userId: string) => `audit_logs_${userId}`,
@@ -117,4 +118,9 @@ export function withCache<T>(
     persistentCache.set(key, data, ttlSeconds);
     return data;
   });
+}
+
+// Convenience helper to remove a key from persistent cache
+export function deleteCacheKey(key: string) {
+  persistentCache.delete(key);
 }

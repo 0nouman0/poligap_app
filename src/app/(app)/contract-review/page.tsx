@@ -15,6 +15,7 @@ import { ContractCanvas } from "@/components/contract-review/ContractCanvas";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
+import { deleteCacheKey, CACHE_KEYS } from '@/lib/cache';
 import { useContractReviewStore } from "@/store/contractReview";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -728,25 +729,41 @@ export default function ContractReview() {
     }
   }, [userData?.userId, fetchLogs]);
 
+  // Ensure we refresh logs when a template is selected so history reflects saved reviews
+  useEffect(() => {
+    const userId = userData?.userId;
+    if (!userId || !selectedTemplate) return;
+    // Force refresh to pick up the authoritative history entries
+    fetchLogs(userId, true);
+  }, [selectedTemplate, userData?.userId, fetchLogs]);
+
   // Filter template logs based on selected template
   const templateLogs = useMemo(() => {
     if (!selectedTemplate?.name) return [];
     
     // Filter by template name in standards array OR templateId in snapshot
-    return allAuditLogs.filter(log => {
-      const standards = (log as any).standards || [];
-      const templateId = (log as any).snapshot?.templateId;
-      const templateName = (log as any).snapshot?.templateName;
-      const analysisMethod = (log as any).analysisMethod;
-      
-      // Only show contract review logs
-      if (analysisMethod !== 'contract_review') return false;
-      
-      // Match by template name in standards or snapshot
-      return standards.includes(selectedTemplate.name) || 
-             templateName === selectedTemplate.name ||
-             templateId === selectedTemplate.id;
+    // Strictly show only saved contract-review logs matching the selected template
+    const matches = allAuditLogs.filter((log: any) => {
+      const standards = log?.standards || [];
+      const templateId = log?.snapshot?.templateId;
+      const templateName = log?.snapshot?.templateName;
+      const analysisMethod = (log?.analysisMethod || '').toString().toLowerCase();
+
+      // Normalize to allow 'contract_review' or 'contract-review' but exclude other types
+      const normalized = analysisMethod.replace(/[^a-z0-9]/g, '');
+      if (normalized !== 'contractreview') return false;
+
+      // Match by template name in standards or snapshot or fileName contains template name
+      const fileName = (log?.fileName || '').toString();
+      const matchesTemplateName = standards.includes(selectedTemplate.name) ||
+        templateName === selectedTemplate.name ||
+        templateId === selectedTemplate.id ||
+        fileName.toLowerCase().includes(selectedTemplate.name.toLowerCase());
+
+      return matchesTemplateName;
     }).slice(0, 20);
+
+    return matches;
   }, [allAuditLogs, selectedTemplate]);
 
   const steps = [
@@ -787,21 +804,20 @@ export default function ContractReview() {
     if (!assets || assets.length === 0) {
       return;
     }
-
-    const asset = assets[0];
-    
+    const asset = assets[0]; // single selection
     try {
       const response = await fetch(asset.url);
       if (!response.ok) {
-        throw new Error('Failed to fetch asset: ' + response.statusText);
+        throw new Error(`Failed to fetch asset: ${response.statusText}`);
       }
-      
+
       const blob = await response.blob();
+
       const file = new File([blob], asset.originalName || asset.filename, {
         type: asset.mimetype || blob.type || 'application/pdf',
-        lastModified: new Date(asset.uploadDate).getTime()
+        lastModified: new Date(asset.uploadDate).getTime(),
       });
-      
+
       setUploadedFile(file);
       setUploadSource("asset");
       setIsAssetPickerOpen(false);
@@ -824,6 +840,13 @@ export default function ContractReview() {
     crStore.setExtractedDocument(null);
     crStore.setSuggestions([]);
     
+    // Helper to map numeric score to status union expected by AuditLog
+    const mapScoreToStatus = (score: number) => {
+      if (score >= 90) return 'compliant' as const;
+      if (score >= 70) return 'partial' as const;
+      return 'non-compliant' as const;
+    };
+
     setIsAnalyzing(true);
     try {
       // Extract text from uploaded file
@@ -920,7 +943,7 @@ export default function ContractReview() {
       
       crStore.setSuggestions(suggestions as any);
 
-      // Save to audit logs
+      // Save to audit logs (POST) and update local store. Use optimistic add if API doesn't return
       try {
         const auditLogPayload = {
           fileName: uploadedFile.name,
@@ -932,6 +955,7 @@ export default function ContractReview() {
           analysisMethod: 'contract_review',
           userId: userData?.userId,
           sessionId: document.id,
+          analysisDate: new Date().toISOString(),
           snapshot: {
             templateName: selectedTemplate?.name || 'Custom Template',
             templateId: selectedTemplate?.id,
@@ -945,6 +969,31 @@ export default function ContractReview() {
           }
         };
 
+        // Helper to map numeric score to status union expected by AuditLog
+        const mapScoreToStatus = (score: number) => {
+          if (score >= 90) return 'compliant' as const;
+          if (score >= 70) return 'partial' as const;
+          return 'non-compliant' as const;
+        };
+
+        // Optimistic local log object (client-generated id) in case API doesn't return a persisted log
+        const optimisticLog = {
+          _id: `local-${Date.now()}`,
+          id: `local-${Date.now()}`,
+          fileName: auditLogPayload.fileName,
+          standards: auditLogPayload.standards,
+          score: auditLogPayload.score,
+          status: mapScoreToStatus(auditLogPayload.score),
+          gapsCount: auditLogPayload.gapsCount,
+          analysisDate: auditLogPayload.analysisDate,
+          fileSize: auditLogPayload.fileSize,
+          analysisMethod: auditLogPayload.analysisMethod,
+          userId: auditLogPayload.userId,
+          sessionId: auditLogPayload.sessionId,
+          snapshot: auditLogPayload.snapshot
+        };
+
+        // Try POSTing to API
         const logResponse = await fetch('/api/audit-logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -952,14 +1001,52 @@ export default function ContractReview() {
         });
 
         if (logResponse.ok) {
-          const logData = await logResponse.json();
-          if (logData.log) {
+          const logData = await logResponse.json().catch(() => null);
+          if (logData && logData.log) {
             addLog(logData.log);
+          } else if (logData && logData.insertedId) {
+            // Some APIs return an id only - ensure userId is a string
+            addLog({ ...optimisticLog, _id: logData.insertedId, id: logData.insertedId, userId: userData?.userId || 'unknown' } as any);
+          } else {
+            // Fallback: optimistic add
+            addLog(optimisticLog as any);
           }
+        } else {
+          // Non-ok response -> optimistic add & schedule refresh
+          addLog(optimisticLog as any);
+        }
+
+        // Force fetch latest logs so server-side ordering / ids are picked up
+        if (userData?.userId) {
+          fetchLogs(userData.userId, true).catch(() => {});
+          // Invalidate recent-activity cache so home page will refresh
+          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
         }
       } catch (logError) {
         console.error('Failed to save audit log:', logError);
-        // Don't block the main flow if audit log fails
+        // Fallback: add optimistic log so user sees immediate feedback
+        try {
+          addLog({
+            _id: `local-${Date.now()}`,
+            id: `local-${Date.now()}`,
+            fileName: uploadedFile.name,
+            standards: [selectedTemplate?.name || 'Custom Template'],
+            score: document.overallScore,
+            status: mapScoreToStatus(document.overallScore),
+            gapsCount: document.gaps?.length || 0,
+            analysisDate: new Date().toISOString(),
+            fileSize: uploadedFile.size || 0,
+            analysisMethod: 'contract_review',
+            userId: userData?.userId || 'unknown',
+            sessionId: document.id,
+            snapshot: {
+              templateName: selectedTemplate?.name || 'Custom Template',
+              templateId: selectedTemplate?.id,
+            }
+          } as any);
+        } catch (e) {
+          // ignore
+        }
       }
 
       toastSuccess('Analysis Complete', 'Your contract has been analyzed successfully');
@@ -1546,16 +1633,16 @@ export default function ContractReview() {
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 1}
-                  className="px-3 hover:bg-[#E8E9FF]"
+                  className="min-w-[150px] whitespace-nowrap flex items-center justify-center px-5 py-3 text-sm font-semibold rounded-xl hover:bg-[#E8E9FF]"
                   style={{ borderColor: '#3B43D6', color: '#3B43D6' }}
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
                 <Button
                   onClick={nextStep}
                   disabled={!canProceedToStep2}
-                  className="px-4 text-white hover:bg-[#2F36B0]"
+                  className="min-w-[150px] whitespace-nowrap flex items-center justify-center px-6 py-3 text-sm font-semibold text-white rounded-xl hover:bg-[#2F36B0]"
                   style={{ backgroundColor: '#3B43D6' }}
                 >
                   Next
@@ -1744,16 +1831,16 @@ export default function ContractReview() {
                 <Button
                   variant="outline"
                   onClick={prevStep}
-                  className="px-3 hover:bg-[#E8E9FF]"
+                  className="min-w-[150px] whitespace-nowrap flex items-center justify-center px-5 py-3 text-sm font-semibold rounded-xl hover:bg-[#E8E9FF]"
                   style={{ borderColor: '#3B43D6', color: '#3B43D6' }}
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
                 <Button
                   onClick={nextStep}
                   disabled={!canProceedToStep3}
-                  className="px-4 text-white hover:bg-[#2F36B0]"
+                  className="min-w-[150px] whitespace-nowrap flex items-center justify-center px-6 py-3 text-sm font-semibold text-white rounded-xl hover:bg-[#2F36B0]"
                   style={{ backgroundColor: '#3B43D6' }}
                 >
                   Next
@@ -1929,7 +2016,7 @@ export default function ContractReview() {
               <div className="flex items-center gap-[15px]">
                 <button
                   onClick={prevStep}
-                  className="flex items-center gap-[5px] px-2.5 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#DEE3ED] dark:border-gray-600 rounded-[5px] text-xs font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-5 py-3 bg-[#FAFAFA] dark:bg-gray-800 border border-[#DEE3ED] dark:border-gray-600 rounded-xl text-sm font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100 justify-center"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -1937,7 +2024,7 @@ export default function ContractReview() {
                 <button
                   onClick={nextStep}
                   disabled={!canProceedToStep4}
-                  className="flex items-center gap-[5px] px-4 h-9 bg-[#3B43D6] text-white rounded-[5px] text-xs font-semibold hover:bg-[#2F36B0] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-6 py-3 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold hover:bg-[#2F36B0] disabled:opacity-50 disabled:cursor-not-allowed justify-center"
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />
@@ -1972,7 +2059,7 @@ export default function ContractReview() {
               <div className="flex items-center gap-[15px]">
                 <button
                   onClick={prevStep}
-                  className="flex items-center gap-[5px] px-2.5 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#DEE3ED] dark:border-gray-600 rounded-[5px] text-xs font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100"
+                  className="min-w-[220px] h-11 whitespace-nowrap flex items-center gap-2 px-5 bg-[#FAFAFA] dark:bg-gray-800 border border-[#DEE3ED] dark:border-gray-600 rounded-xl text-sm font-semibold text-[#717171] dark:text-gray-400 hover:bg-gray-100 justify-center"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -1982,7 +2069,7 @@ export default function ContractReview() {
                   <button
                     onClick={handleDocumentExtraction}
                     disabled={!uploadedFile || isAnalyzing || !selectedTemplate}
-                    className="flex items-center gap-[5px] px-4 h-9 bg-[#3B43D6] text-white rounded-[5px] text-xs font-semibold hover:bg-[#2F36B0] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="min-w-[220px] h-11 flex items-center gap-2 px-4 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold hover:bg-[#2F36B0] disabled:opacity-50 disabled:cursor-not-allowed justify-center"
                   >
                     {isAnalyzing ? (
                       <>
@@ -1992,7 +2079,7 @@ export default function ContractReview() {
                     ) : (
                       <>
                         <FileText className="h-4 w-4" />
-                        Extract & Analyze with AI
+                        <span className="whitespace-nowrap text-sm">Extract & Analyze with AI</span>
                       </>
                     )}
                   </button>
@@ -2001,7 +2088,7 @@ export default function ContractReview() {
                 {extractedDocument && (
                   <button
                     onClick={nextStep}
-                    className="flex items-center gap-[5px] px-4 h-9 bg-[#3B43D6] text-white rounded-[5px] text-xs font-semibold hover:bg-[#2F36B0]"
+                    className="min-w-[220px] h-11 flex items-center gap-2 px-4 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold hover:bg-[#2F36B0] justify-center"
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
@@ -2032,33 +2119,33 @@ export default function ContractReview() {
                     Your contract has been successfully analyzed. Review the results below and use the action buttons to proceed.
                   </p>
                 </div>
-                {extractedDocument && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={handleDownloadReport}
-                      className="flex items-center gap-2 h-9 px-4 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-xs font-semibold rounded-[5px]"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download Report
-                    </Button>
-                    <Button
-                      onClick={handleDownloadResults}
-                      variant="outline"
-                      className="flex items-center gap-2 h-9 px-4 border-[#DEE3ED] text-xs font-semibold rounded-[5px]"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download JSON
-                    </Button>
-                    <Button
-                      onClick={handleStartNewReview}
-                      variant="outline"
-                      className="flex items-center gap-2 h-9 px-4 border-[#DEE3ED] text-xs font-semibold rounded-[5px] hover:bg-[#3B43D6] hover:text-white hover:border-[#3B43D6]"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      New Review
-                    </Button>
-                  </div>
-                )}
+                    {extractedDocument && (
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={handleDownloadReport}
+                          className="min-w-[180px] h-10 px-5 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download Report
+                        </Button>
+                        <Button
+                          onClick={handleDownloadResults}
+                          variant="outline"
+                          className="min-w-[180px] h-10 px-5 border-[#DEE3ED] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download JSON
+                        </Button>
+                        <Button
+                          onClick={handleStartNewReview}
+                          variant="outline"
+                          className="min-w-[180px] h-10 px-5 border-[#DEE3ED] text-sm font-semibold rounded-[8px] flex items-center gap-2 hover:bg-[#3B43D6] hover:text-white hover:border-[#3B43D6] justify-center"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          New Review
+                        </Button>
+                      </div>
+                    )}
               </div>
             </div>
 
@@ -2074,16 +2161,16 @@ export default function ContractReview() {
               <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <h3 className="text-xl font-semibold flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        {extractedDocument.fileName}
-                      </h3>
+                    <div className="space-y-1 min-w-0">
+                        <h3 className="text-xl font-semibold flex items-center gap-2">
+                          <FileText className="h-5 w-5 flex-shrink-0" />
+                          <span className="truncate block max-w-[60vw]">{extractedDocument.fileName}</span>
+                        </h3>
                       <p className="text-muted-foreground">
                         {selectedTemplate?.name || 'Contract Analysis'} • Analyzed on {formatDateShort(new Date())}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase">Assessed</span>
                       <Badge className={extractedDocument.overallScore >= 90 ? 'bg-green-100 text-green-800' : extractedDocument.overallScore >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
                         {extractedDocument.overallScore >= 90 ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertTriangle className="h-3 w-3 mr-1" />}

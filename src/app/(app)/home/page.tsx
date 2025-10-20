@@ -41,6 +41,19 @@ export default function HomePage() {
   const { userData } = useUserStore();
   const { data: recentActivity = [], isLoading: isLoadingActivity } = useRecentActivity();
   const { data: overviewStats = { complianceChecks: 0, contractsReviewed: 0, policiesGenerated: 0, trainingModules: 0 }, isLoading: isLoadingStats } = useOverviewStats();
+
+  // Deduplicate recent activity items by id to prevent duplicate-key React warnings
+  const dedupedRecentActivity = React.useMemo(() => {
+    const seen = new Set<string>();
+    const out: ActivityItem[] = [];
+    for (const act of recentActivity) {
+      if (!seen.has(act.id)) {
+        out.push(act);
+        seen.add(act.id);
+      }
+    }
+    return out;
+  }, [recentActivity]);
   
   // Get current time-based greeting
   const getGreeting = () => {
@@ -255,7 +268,6 @@ export default function HomePage() {
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-3 animate-pulse">
-                    <div className="w-6 h-6 bg-accent dark:bg-accent rounded-full"></div>
                     <div className="flex-1">
                       <div className="h-3 bg-accent dark:bg-accent rounded w-2/3 mb-1"></div>
                       <div className="h-2 bg-accent dark:bg-accent rounded w-1/3"></div>
@@ -266,35 +278,34 @@ export default function HomePage() {
               </div>
             ) : recentActivity.length > 0 ? (
               <div className="space-y-3">
-                {recentActivity.map((activity) => {
-                  const IconComponent = getActivityIcon(activity.type);
+                {dedupedRecentActivity.map((activity) => {
                   const statusBadge = getStatusBadge(activity.status);
-                  
+
                   return (
                     <div key={activity.id} className="flex items-center gap-3 py-1">
-                      <div className={`w-6 h-6 ${getActivityIconBg(activity.type)} rounded-full flex items-center justify-center flex-shrink-0`}>
-                        <IconComponent className={`h-3 w-3 ${getActivityIconColor(activity.type)}`} />
-                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground dark:text-foreground truncate">{activity.title}</p>
                         <p className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
                           {activity.fileName || activity.description.split(' ').slice(0, 4).join(' ')}... • {formatTimestamp(activity.timestamp)}
                         </p>
                       </div>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${statusBadge.className}`}>
-                        {statusBadge.text === 'Completed' ? '✓' : statusBadge.text === 'In Progress' ? '⏳' : '✗'}
-                      </span>
+                      {/* status badge removed as requested */}
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="text-center py-6">
-                <Clock className="h-8 w-8 text-muted-foreground dark:text-muted-foreground opacity-50 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground dark:text-muted-foreground mb-1">No recent activity</p>
-                <p className="text-xs text-muted-foreground dark:text-muted-foreground opacity-70">
-                  Start using Poligap to see your activity here
-                </p>
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 animate-pulse">
+                    <div className="w-6 h-6 bg-accent dark:bg-accent rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-accent dark:bg-accent rounded w-2/3 mb-1"></div>
+                      <div className="h-2 bg-accent dark:bg-accent rounded w-1/3"></div>
+                    </div>
+                    <div className="w-12 h-4 bg-accent dark:bg-accent rounded-full"></div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

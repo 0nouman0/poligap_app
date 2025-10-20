@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
+import { deleteCacheKey, CACHE_KEYS } from '@/lib/cache';
 import { useRulebaseStore } from "@/stores/rulebase-store";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -641,6 +642,8 @@ export default function ComplianceCheckPage() {
       
       // Refresh audit logs from store (will use cache or fetch if needed)
       fetchAuditLogsFromStore(userId, true);
+      // Invalidate recent activity cache so home dashboard refreshes
+      try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
     } catch (error) {
       console.error('Error saving audit log:', error);
     }
@@ -886,6 +889,8 @@ export default function ComplianceCheckPage() {
           setAddedTaskKeys(prev => new Set(prev).add(key));
         }
         console.debug('Task created');
+        // Invalidate recent activity cache so new task shows up on home
+        try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
       }
     } catch (err) {
       console.error('Error creating task', err);
@@ -1611,8 +1616,7 @@ export default function ComplianceCheckPage() {
                                                   </Badge>
                                                   <Button
                                                     variant="outline"
-                                                    size="sm"
-                                                    className="flex items-center gap-1"
+                                                    className="min-w-[140px] h-9 text-sm rounded-xl flex items-center gap-2 justify-center"
                                                     title="Add to My Tasks"
                                                     disabled={addingTaskKeys.has(`gap:${result.id}:${gap.id}`) || addedTaskKeys.has(`gap:${result.id}:${gap.id}`)}
                                                     onClick={() => addTask({
@@ -1630,7 +1634,7 @@ export default function ComplianceCheckPage() {
                                                       ) : (
                                                         <Plus className="h-4 w-4" />
                                                       )}
-                                                      <span className="hidden md:inline">
+                                                      <span className="inline">
                                                         {addingTaskKeys.has(`gap:${result.id}:${gap.id}`) ? 'Adding…' : addedTaskKeys.has(`gap:${result.id}:${gap.id}`) ? 'Added' : 'Add Task'}
                                                       </span>
                                                     </Button>
@@ -1681,8 +1685,7 @@ export default function ComplianceCheckPage() {
                                     <p className="text-sm leading-relaxed">{suggestion}</p>
                                     <Button
                                       variant="outline"
-                                      size="sm"
-                                      className="flex items-center gap-1"
+                                      className="min-w-[140px] h-9 text-sm rounded-xl flex items-center gap-2 justify-center"
                                       title="Add suggestion as task"
                                       disabled={addingTaskKeys.has(`suggestion:${result.id}:${index}`) || addedTaskKeys.has(`suggestion:${result.id}:${index}`)}
                                       onClick={() => addTask({
@@ -1700,7 +1703,7 @@ export default function ComplianceCheckPage() {
                                       ) : (
                                         <Plus className="h-4 w-4" />
                                       )}
-                                      <span className="hidden md:inline">{addingTaskKeys.has(`suggestion:${result.id}:${index}`) ? 'Adding…' : addedTaskKeys.has(`suggestion:${result.id}:${index}`) ? 'Added' : 'Add Task'}</span>
+                                      <span className="inline">{addingTaskKeys.has(`suggestion:${result.id}:${index}`) ? 'Adding…' : addedTaskKeys.has(`suggestion:${result.id}:${index}`) ? 'Added' : 'Add Task'}</span>
                                     </Button>
                                   </li>
                                 ))}
@@ -1723,19 +1726,19 @@ export default function ComplianceCheckPage() {
               <div className="flex justify-end gap-[15px]">
                 <button
                   onClick={prevStep}
-                  className="flex items-center gap-[5px] px-2.5 py-0 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-[5px] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-5 py-3 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4 text-[#717171] dark:text-gray-400" strokeWidth={1.33} />
-                  <span className="text-[12px] font-semibold leading-[14.52px] text-center text-[#717171] dark:text-gray-400">
+                  <span className="text-sm font-semibold text-[#717171] dark:text-gray-400">
                     Previous
                   </span>
                 </button>
                 <button
                   onClick={handleSaveAndExit}
                   disabled={isAnalyzing || results.length === 0}
-                  className="flex items-center gap-[5px] px-[15px] py-0 h-9 bg-[#3B43D6] rounded-[5px] hover:bg-[#2F36B0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-6 py-3 bg-[#3B43D6] text-white rounded-xl hover:bg-[#2F36B0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-center"
                 >
-                  <span className="text-[12px] font-semibold leading-[14.52px] text-center text-white">
+                  <span className="text-sm font-semibold text-white">
                     Save & Exit
                   </span>
                   <ChevronRight className="w-4 h-4 text-white" strokeWidth={1.33} />
@@ -1748,10 +1751,10 @@ export default function ComplianceCheckPage() {
                 <button
                   onClick={prevStep}
                   disabled={currentStep === 1 || isAnalyzing}
-                  className="flex items-center gap-[5px] px-[10px] py-0 h-9 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-[5px] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-5 py-3 bg-[#FAFAFA] dark:bg-gray-800 border border-[#717171] dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-center"
                 >
                   <ChevronLeft className="w-4 h-4 text-[#717171] dark:text-gray-400" strokeWidth={1.33} />
-                  <span className="text-xs font-semibold text-[#717171] dark:text-gray-400">
+                  <span className="text-sm font-semibold text-[#717171] dark:text-gray-400">
                     Previous
                   </span>
                 </button>
@@ -1772,9 +1775,9 @@ export default function ComplianceCheckPage() {
                     currentStep === 5 ||
                     isAnalyzing
                   }
-                  className="flex items-center gap-[5px] px-[15px] py-0 h-9 rounded-[5px] transition-colors text-white shadow-sm bg-[#585CFF] hover:bg-[#4B50E6] disabled:bg-[#C8CAF9] disabled:text-white disabled:shadow-none disabled:cursor-not-allowed"
+                  className="min-w-[150px] whitespace-nowrap flex items-center gap-2 px-6 py-3 rounded-xl transition-colors text-white shadow-sm bg-[#585CFF] hover:bg-[#4B50E6] disabled:bg-[#C8CAF9] disabled:text-white disabled:shadow-none disabled:cursor-not-allowed justify-center"
                 >
-                  <span className="text-xs font-semibold">
+                  <span className="text-sm font-semibold">
                     {currentStep === 3 ? 'Analyze' : 'Next'}
                   </span>
                   <ChevronRight className="w-4 h-4" strokeWidth={1.33} />
@@ -1791,7 +1794,7 @@ export default function ComplianceCheckPage() {
             <Button
               variant="secondary"
               size="icon"
-              className="absolute -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full shadow"
+              className="absolute -left-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full shadow z-50"
               title={isLogsCollapsed ? 'Show Audit Logs' : 'Hide Audit Logs'}
               aria-label={isLogsCollapsed ? 'Show Audit Logs' : 'Hide Audit Logs'}
               onClick={() => setIsLogsCollapsed((v) => !v)}
@@ -1953,15 +1956,14 @@ export default function ComplianceCheckPage() {
                 )}
                 
                 {filteredAuditLogs.length > 0 && (
-                  <div className="pt-3 border-t border-border dark:border-border">
-                    <Link href="/history">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full text-sm font-medium px-4 py-2 border border-primary dark:border-primary text-primary dark:text-primary hover:bg-primary dark:hover:bg-primary hover:text-primary-foreground dark:hover:text-primary-foreground transition-all duration-200 rounded-lg"
+                  <div className="pt-3 border-t border-border dark:border-border flex justify-center items-center p-4">
+                    <Link href="/history" className="w-full flex justify-center">
+                      <Button
+                        variant="outline"
+                        className="text-base font-semibold min-w-[180px] px-6 py-3 border border-primary dark:border-primary text-primary dark:text-primary hover:bg-primary dark:hover:bg-primary hover:text-primary-foreground dark:hover:text-primary-foreground transition-all duration-200 rounded-xl flex items-center justify-center gap-3"
                       >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View All History
+                        <Eye className="h-5 w-5" />
+                        <span className="leading-none">View All History</span>
                       </Button>
                     </Link>
                   </div>

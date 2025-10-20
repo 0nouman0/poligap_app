@@ -162,17 +162,17 @@ export function AppSidebar() {
   }) => {
     const [isHovering, setIsHovering] = React.useState(false);
     
-    const buttonContent = (
+      const buttonContent = (
       <div
         className={`group flex items-center gap-1 w-full transition-all duration-300 cursor-pointer relative ${
           isActive ? "font-medium" : ""
-        }`}
+        } ${sidebarCollapsed ? "" : "pl-1"}`}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
         <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 transition-transform duration-300 ${
           isHovering && !isActive ? "scale-110" : ""
-        }`}>
+        } ${sidebarCollapsed ? 'mx-auto' : ''}`}>
           <Icon 
             className={`w-5 h-5 transition-all duration-300 ${
               isActive 
@@ -328,7 +328,7 @@ export function AppSidebar() {
                 {visibleBottomNavigationItems.map((item, index) => (
                   <div 
                     key={item.title} 
-                    className="transition-all duration-300 ease-in-out"
+                    className={`transition-all duration-300 ease-in-out ${sidebarCollapsed ? '' : 'pl-1'}`}
                     style={{
                       transitionDelay: `${index * 50}ms`
                     }}

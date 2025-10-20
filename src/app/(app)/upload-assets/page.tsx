@@ -369,7 +369,7 @@ export default function UploadAssetsPage() {
                 minHeight: '100px',
                 backgroundColor: '#F8F9FE',
                 borderRadius: '12px',
-                padding: '16px sm:20px 20px sm:24px',
+                padding: '16px 20px',
                 border: '1px solid #E8EAED'
               }}
             >

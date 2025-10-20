@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { withCache, CACHE_KEYS } from '@/lib/cache';
 
 export type ActivityItem = {
   id: string;
@@ -16,6 +17,7 @@ export type OverviewStats = {
   policiesGenerated: number;
   trainingModules: number;
 };
+
 
 async function fetchRecentActivity(): Promise<ActivityItem[]> {
   const endpoints = [
@@ -43,16 +45,22 @@ async function fetchRecentActivity(): Promise<ActivityItem[]> {
   }
 
   return results
-    .sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    )
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 3);
+}
+
+// Use withCache to persist recent activity to the shared persistent cache
+async function fetchRecentActivityWithCache(): Promise<ActivityItem[]> {
+  const key = CACHE_KEYS.RECENT_ACTIVITY();
+  return withCache<ActivityItem[]>(key, async () => {
+    return await fetchRecentActivity();
+  }, 300);
 }
 
 export function useRecentActivity() {
   return useQuery({
     queryKey: ["home", "recent-activity"],
-    queryFn: fetchRecentActivity,
+    queryFn: fetchRecentActivityWithCache,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUserStore } from '@/stores/user-store';
 import { useCompanyStore } from '@/stores/company-store';
 import { toastSuccess, toastError } from '@/components/toast-varients';
-import { apiCache, CACHE_KEYS } from '@/lib/cache';
+import { persistentCache, withCache, CACHE_KEYS } from '@/lib/cache';
 
 export interface UserProfile {
   _id: string;
@@ -94,42 +94,36 @@ export function useUserProfile(): UseUserProfileReturn {
         throw new Error('Invalid user ID format. Please clear your cache and sign in again.');
       }
 
-      // Check cache first
+      // Check cache first (persistent/localStorage-backed)
       const cacheKey = CACHE_KEYS.USER_PROFILE(targetUserId);
-      const cachedProfile = apiCache.get(cacheKey);
+      const cachedProfile = persistentCache.get(cacheKey);
       if (cachedProfile) {
         console.log('⚡ Using cached profile data');
         setProfile(cachedProfile);
-        return cachedProfile;
+        return cachedProfile as UserProfile;
       }
 
-      const params = new URLSearchParams({
-        userId: targetUserId,
-      });
-      
-      if (targetCompanyId) {
-        params.append('companyId', targetCompanyId);
-      }
+      // Use withCache to fetch and persist result if not cached
+      const profileData = await withCache<UserProfile>(cacheKey, async () => {
+        const params = new URLSearchParams({ userId: targetUserId });
+        if (targetCompanyId) params.append('companyId', targetCompanyId);
 
+        const response = await fetch(`/api/users/profile?${params}`);
+        const result = await response.json();
 
-      const response = await fetch(`/api/users/profile?${params}`);
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch profile');
-      }
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch profile');
+        }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Profile fetch was not successful');
-      }
+        if (!result.success) {
+          throw new Error(result.error || 'Profile fetch was not successful');
+        }
 
-      const profileData = result.data as UserProfile;
-      
+        return result.data as UserProfile;
+      }, 300);
+
       setProfile(profileData);
-      
-      // Cache the profile data
-      apiCache.set(cacheKey, profileData, 300); // Cache for 5 minutes
-      
+
       // Update the user store with fresh data
       if (setUserData && profileData) {
         setUserData({
@@ -213,15 +207,15 @@ export function useUserProfile(): UseUserProfileReturn {
 
       const updatedProfile = result.data as UserProfile;
       
-      // IMMEDIATELY clear the cache before setting new data
-      const cacheKey = CACHE_KEYS.USER_PROFILE(userId);
-      apiCache.delete(cacheKey);
+  // IMMEDIATELY clear the persistent cache before setting new data
+  const cacheKey = CACHE_KEYS.USER_PROFILE(userId);
+  persistentCache.delete(cacheKey);
       
-      // Set the updated profile state
-      setProfile(updatedProfile);
+  // Set the updated profile state
+  setProfile(updatedProfile);
       
-      // Set fresh cache with updated data
-      apiCache.set(cacheKey, updatedProfile, 300);
+  // Set fresh persistent cache with updated data
+  persistentCache.set(cacheKey, updatedProfile, 300);
       
       // Update the user store with fresh data IMMEDIATELY
       if (setUserData && updatedProfile) {

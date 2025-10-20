@@ -25,10 +25,42 @@ async function fetchTasks(userId: string): Promise<Task[]> {
   return [];
 }
 
+// Wrapper that reads/writes a simple localStorage cache with TTL
+async function fetchTasksWithCache(userId: string): Promise<Task[]> {
+  const cacheKey = `tasks-cache-${userId}`;
+  const ttl = 5 * 60 * 1000; // 5 minutes
+
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.ts && Date.now() - parsed.ts < ttl && Array.isArray(parsed.data)) {
+          return parsed.data as Task[];
+        }
+      }
+    } catch (e) {
+      // ignore cache read errors
+    }
+  }
+
+  const tasks = await fetchTasks(userId);
+
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: tasks }));
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
+
+  return tasks;
+}
+
 export function useTasksList(userId: string | null | undefined) {
   return useQuery({
     queryKey: ["tasks", userId],
-    queryFn: () => fetchTasks(userId as string),
+    queryFn: () => fetchTasksWithCache(userId as string),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
