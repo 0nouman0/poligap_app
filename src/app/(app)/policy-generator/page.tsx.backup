@@ -1,0 +1,538 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Shield, FileText, CheckCircle, AlertTriangle, Download, Copy, BookOpen, Settings, Database, Info } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toastSuccess, toastError } from "@/components/toast-varients";
+
+// Lightweight UI primitives (searchable multi-select and searchable select)
+function MultiSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select...",
+}: { options: string[]; value: string[]; onChange: (next: string[]) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+
+  const toggle = (opt: string) => {
+    if (value.includes(opt)) onChange(value.filter(v => v !== opt));
+    else onChange([...value, opt]);
+  };
+
+  const clearAll = () => onChange([]);
+  const selectAll = () => onChange([...options]);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full border rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200"
+      >
+        <span className="truncate">
+          {value.length === 0 ? (
+            <span className="text-gray-400">{placeholder}</span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <span className="flex flex-wrap gap-1">
+                {value.slice(0, 3).map(v => (
+                  <span key={v} className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs border border-purple-200">{v}</span>
+                ))}
+              </span>
+              {value.length > 3 && (
+                <span className="text-xs text-gray-500">+{value.length - 3} more</span>
+              )}
+            </span>
+          )}
+        </span>
+        <span className="text-xs text-gray-500 mr-2">{value.length} selected</span>
+        <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 w-full bg-white border rounded-md shadow-lg">
+          <div className="p-2 border-b flex gap-2 items-center">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search frameworks..." className="flex-1 border rounded px-2 py-1 text-sm"/>
+            <button type="button" onClick={selectAll} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">All</button>
+            <button type="button" onClick={clearAll} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">Clear</button>
+          </div>
+          <div className="px-2 pt-2 text-[11px] text-gray-500">Quick select:</div>
+          <div className="px-2 pb-1 flex gap-1 flex-wrap">
+            {['GDPR','ISO 27001','SOC 2','NIST CSF','PCI DSS'].map(q => (
+              <button key={q} type="button" onClick={()=>toggle(q)} className="px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 border text-[11px]">{q}</button>
+            ))}
+          </div>
+          <div className="max-h-56 overflow-y-auto p-2 space-y-1">
+            {filtered.map(opt => (
+              <label key={opt} className="flex items-center gap-2 text-sm px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" className="accent-purple-600" checked={value.includes(opt)} onChange={()=>toggle(opt)} />
+                <span>{opt}</span>
+              </label>
+            ))}
+            {filtered.length === 0 && <div className="text-xs text-gray-500 px-2 py-1">No results</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Select...",
+}: { options: string[]; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+  const current = value || "";
+  return (
+    <div className="relative">
+      <button type="button" onClick={()=>setOpen(!open)} className="w-full border rounded-md px-3 py-2 text-sm flex justify-between items-center hover:bg-gray-50">
+        <span className={`truncate ${current ? '' : 'text-gray-400'}`}>{current || placeholder}</span>
+        <svg className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 w-full bg-white border rounded-md shadow-lg">
+          <div className="p-2 border-b">
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search..." className="w-full border rounded px-2 py-1 text-sm"/>
+          </div>
+          <div className="max-h-56 overflow-y-auto p-2">
+            {filtered.map(opt => (
+              <button key={opt} type="button" className="w-full text-left px-2 py-1 text-sm rounded hover:bg-gray-50" onClick={()=>{ onChange(opt); setOpen(false); }}>
+                {opt}
+              </button>
+            ))}
+            {filtered.length === 0 && <div className="text-xs text-gray-500 px-2 py-1">No results</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type GenInputs = {
+  policyType: string;
+  industry: string;
+  region: string;
+  orgType: string;
+  frameworks: string[];
+  applyRuleBase: boolean;
+  customRules: string;
+  kbNotes: string;
+};
+
+export default function PolicyGeneratorPage() {
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [result, setResult] = useState<string>("");
+
+  // Audit logs state for selected policy type
+  const [policyLogs, setPolicyLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+
+  const [inputs, setInputs] = useState<GenInputs>({
+    policyType: "Privacy Policy",
+    industry: "",
+    region: "",
+    orgType: "",
+    frameworks: [],
+    applyRuleBase: false,
+    customRules: "",
+    kbNotes: "",
+  });
+
+  const steps = [
+    { id: 1, title: "Select Inputs", description: "Choose policy type and context" },
+    { id: 2, title: "Knowledge & Rules", description: "Provide knowledge base and custom rules" },
+    { id: 3, title: "Review & Generate", description: "Confirm and generate policy" },
+    { id: 4, title: "Results", description: "Preview and export" },
+  ];
+
+  const canProceed1 = inputs.policyType.length > 0;
+  const canProceed2 = true;
+  const canGenerate = canProceed1 && canProceed2 && !isGenerating;
+
+  // Predefined lists
+  const AVAILABLE_FRAMEWORKS: string[] = [
+    'GDPR',
+    'ISO 27001',
+    'SOC 2',
+    'CCPA',
+    'DPDP Act',
+    'HIPAA',
+    'PCI DSS',
+    'NIST CSF',
+    'NIST 800-53',
+    'NIS2',
+    'DORA',
+    'ISO 22301',
+    'ISO 27701',
+    'ISO 9001',
+    'COBIT 2019',
+    'SOX',
+    'GLBA',
+    'FERPA',
+    'ITAR',
+    'FedRAMP',
+    'CSA CCM',
+    'CIS Controls',
+    'MAS TRMG',
+    'PDPA (Singapore)',
+    'UAE DPL',
+    'DIFC DPL',
+  ];
+
+  const AVAILABLE_REGIONS: string[] = [
+    'Global',
+    'India',
+    'United States',
+    'European Union',
+    'United Kingdom',
+    'Canada',
+    'Australia',
+    'Singapore',
+    'United Arab Emirates',
+    'Saudi Arabia',
+    'Qatar',
+    'Japan',
+    'South Korea',
+    'Brazil',
+  ];
+
+  const toggleFramework = (fw: string) => {
+    setInputs((prev) => ({
+      ...prev,
+      frameworks: prev.frameworks.includes(fw)
+        ? prev.frameworks.filter((x) => x !== fw)
+        : [...prev.frameworks, fw],
+    }));
+  };
+
+  const generatePolicy = async () => {
+    if (!canGenerate) return;
+    setIsGenerating(true);
+    setResult("");
+    try {
+      const res = await fetch("/api/policy-generator/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs }),
+      });
+      const data = await res.json();
+      setResult(data?.content || "");
+      setCurrentStep(4);
+
+      // Save audit log for policy generation
+      await savePolicyAuditLog(data?.content || "");
+      // Refresh logs panel
+      await reloadPolicyLogs();
+      toastSuccess("Audit Log Saved", "Policy generation saved to history.");
+    } catch (e) {
+      setResult("Generation failed. Please try again.");
+      setCurrentStep(4);
+      toastError("Generation Failed", e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Save to shared audit logs collection
+  const savePolicyAuditLog = async (content: string) => {
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      const payload = {
+        fileName: `${inputs.policyType.replace(/\s+/g,'-').toLowerCase()}.md`,
+        standards: [inputs.policyType, ...(inputs.frameworks || [])],
+        score: 75, // neutral score placeholder for generator
+        status: 'partial',
+        gapsCount: 0,
+        fileSize: content ? content.length : 0,
+        analysisMethod: 'policy-generator',
+        userId: userId || undefined,
+        snapshot: {
+          inputs,
+          content,
+        },
+      };
+      const resp = await fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        console.error('Failed to save policy audit log', err);
+        toastError('Audit Log Save Failed', err?.error || 'Could not save policy audit log');
+      }
+    } catch (e) {
+      console.error('Error saving policy audit log', e);
+    }
+  };
+
+  // Load logs for current policy type (uses audit-logs endpoint, requires userId)
+  const reloadPolicyLogs = async () => {
+    setLogsLoading(true);
+    setLogsError(null);
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      if (!userId) {
+        setPolicyLogs([]);
+        setLogsError('Sign in required to view audit logs (missing user_id).');
+        return;
+      }
+      const params = new URLSearchParams();
+      params.set('userId', userId);
+      params.set('standards', encodeURIComponent(inputs.policyType));
+      params.set('limit', '20');
+      const res = await fetch(`/api/audit-logs?${params.toString()}`);
+      const data = await res.json();
+      if (data?.success) {
+        // Filter results that include our policyType in standards
+        const logs = (data.logs || []).filter((l: any) => Array.isArray(l.standards) && l.standards.includes(inputs.policyType));
+        setPolicyLogs(logs);
+      } else {
+        setLogsError(data?.error || 'Failed to load logs');
+      }
+    } catch (e) {
+      setLogsError('Failed to load logs');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  // Refresh logs when policy type changes
+  useEffect(() => {
+    void reloadPolicyLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputs.policyType]);
+
+  return (
+    <div className="w-full mx-auto p-6 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-foreground flex items-center justify-center gap-2">
+          <FileText className="h-8 w-8" />
+          Policy Generator
+        </h1>
+        <p className="text-muted-foreground">Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.</p>
+      </div>
+
+      {/* Stepper */}
+      <div className="flex items-center justify-center space-x-4">
+        {steps.map((step, idx) => (
+          <div key={step.id} className="flex items-center">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${currentStep >= step.id ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground text-muted-foreground'}`}>
+              {currentStep > step.id ? <CheckCircle className="h-5 w-5" /> : <span className="text-sm font-medium">{step.id}</span>}
+            </div>
+            {idx < steps.length - 1 && (
+              <div className={`w-16 h-0.5 mx-2 transition-all ${currentStep > step.id ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">{steps[currentStep - 1]?.title}</h2>
+        <p className="text-muted-foreground text-sm">{steps[currentStep - 1]?.description}</p>
+      </div>
+
+      {/* Card */}
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="p-6">
+          {currentStep === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Policy Type</label>
+                <select value={inputs.policyType} onChange={(e)=>setInputs({...inputs, policyType:e.target.value})} className="w-full border rounded-md px-3 py-2 text-sm">
+                  {[
+                    "Privacy Policy",
+                    "Cookie Policy",
+                    "Information Security Policy",
+                    "Data Retention Policy",
+                    "Acceptable Use Policy",
+                    "Vendor Management Policy",
+                  ].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Industry / Domain</label>
+                <input className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.industry} onChange={(e)=>setInputs({...inputs, industry:e.target.value})} placeholder="e.g., SaaS, FinTech" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Region / Country</label>
+                <SearchSelect
+                  options={AVAILABLE_REGIONS}
+                  value={inputs.region}
+                  onChange={(v)=>setInputs({...inputs, region: v})}
+                  placeholder="Search region/country..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Organization Type</label>
+                <select value={inputs.orgType} onChange={(e)=>setInputs({...inputs, orgType:e.target.value})} className="w-full border rounded-md px-3 py-2 text-sm">
+                  <option value="">Select…</option>
+                  <option value="startup">Startup</option>
+                  <option value="smb">SMB</option>
+                  <option value="enterprise">Enterprise</option>
+                  <option value="public">Public Sector</option>
+                  <option value="nonprofit">Non-profit</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs text-gray-500 mb-1">Frameworks</label>
+                <MultiSelect
+                  options={AVAILABLE_FRAMEWORKS}
+                  value={inputs.frameworks}
+                  onChange={(v)=>setInputs({...inputs, frameworks: v})}
+                  placeholder="Search and select frameworks..."
+                />
+                {inputs.frameworks.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {inputs.frameworks.map(fw => (
+                      <span key={fw} className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs border border-purple-200">{fw}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={inputs.applyRuleBase} onChange={(e)=>setInputs({...inputs, applyRuleBase:e.target.checked})} />
+                  Apply RuleBase during generation
+                </label>
+                <div className="text-xs text-gray-500 mt-1">RuleBase guides clause selection and phrasing to your compliance profile.</div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><Database className="h-3 w-3"/> Knowledge Base Notes</label>
+                <textarea rows={5} className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.kbNotes} onChange={(e)=>setInputs({...inputs, kbNotes:e.target.value})} placeholder="Describe your data types, processing activities, retention needs, etc." />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><Settings className="h-3 w-3"/> Custom Rules</label>
+                <textarea rows={5} className="w-full border rounded-md px-3 py-2 text-sm" value={inputs.customRules} onChange={(e)=>setInputs({...inputs, customRules:e.target.value})} placeholder="Enter any specific clauses, exclusions, or constraints you want enforced" />
+              </div>
+              <div className="text-xs text-gray-500">Tip: You can later move your notes to a proper Knowledge Base page and select assets for reuse.</div>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              {/* Statutory warning */}
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 text-yellow-700"/>
+                <div>
+                  <div className="font-semibold text-yellow-800">Statutory Warning</div>
+                  <div className="text-yellow-700">
+                    This Policy Generator produces draft content for reference only. It is not legal advice and should not be used as-is in real-world scenarios. Use responsibly and have your organization’s legal/compliance team review before any adoption.
+                  </div>
+                </div>
+              </div>
+              {/* Metadata summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="font-medium">Context</div>
+                  <div className="text-gray-600">Type: {inputs.policyType}</div>
+                  <div className="text-gray-600">Industry: {inputs.industry || '-'} | Region: {inputs.region || '-'} | Org: {inputs.orgType || '-'}</div>
+                  <div className="text-gray-600">Generated On: {new Date().toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="font-medium">Configuration</div>
+                  <div className="text-gray-600">Frameworks ({inputs.frameworks.length}): {inputs.frameworks.join(', ') || '-'}</div>
+                  <div className="text-gray-600">RuleBase: {inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
+                  <div className="text-gray-600">Knowledge Notes: {inputs.kbNotes.trim().length > 0 ? `${inputs.kbNotes.trim().length} chars` : 'None'}</div>
+                  <div className="text-gray-600">Custom Rules: {inputs.customRules.trim().length > 0 ? `${inputs.customRules.trim().length} chars` : 'None'}</div>
+                </div>
+              </div>
+              {/* Note: Generate action moved to bottom navigation. */}
+            </div>
+          )}
+
+          {currentStep === 4 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600"><Info className="h-4 w-4"/> Generated for: {inputs.policyType} ({inputs.region || 'Global'})</div>
+              <div className="border rounded-lg p-4 bg-white max-h-[60vh] overflow-y-auto prose prose-sm dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{result || 'No content.'}</ReactMarkdown>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => navigator.clipboard.writeText(result)} className="px-3 py-2 rounded-md border text-sm flex items-center gap-2"><Copy className="h-4 w-4"/> Copy</button>
+                <a
+                  href={`data:text/markdown;charset=utf-8,${encodeURIComponent(result)}`}
+                  download={`${inputs.policyType.replace(/\s+/g,'-').toLowerCase()}-draft.md`}
+                  className="px-3 py-2 rounded-md border text-sm flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4"/> Export .md
+                </a>
+              </div>
+            </div>
+          </div>
+            {!logsLoading && logsError && (
+              <div className="text-sm text-red-600 dark:text-red-400">{logsError}</div>
+            )}
+            {!logsLoading && !logsError && policyLogs.length === 0 && (
+              <div className="text-sm text-muted-foreground">No logs yet for this policy.</div>
+            )}
+            {!logsLoading && !logsError && policyLogs.length > 0 && (
+                {policyLogs.map((log) => (
+                  <div key={log._id} className="border rounded-md p-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium truncate">{log.fileName || inputs.policyType}</div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                        log.status === 'compliant' ? 'border-green-300 text-green-700' :
+                        log.status === 'non-compliant' ? 'border-red-300 text-red-700' : 'border-yellow-300 text-yellow-700'
+                      }`}>{log.status}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+                      <span>{new Date(log.analysisDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      {typeof log.gapsCount === 'number' && <span>• {log.gapsCount} issues</span>}
+                      {typeof log.score === 'number' && <span>• {log.score}%</span>}
+                    </div>
+                    {Array.isArray(log.standards) && log.standards.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {log.standards.slice(0,3).map((s: string) => (
+                          <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 border">{s}</span>
+                        ))}
+                        {log.standards.length > 3 && <span className="text-[10px] text-muted-foreground">+{log.standards.length - 3}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Nav Buttons */}
+      {currentStep < 4 && (
+        <div className="flex justify-between">
+          <button onClick={()=> setCurrentStep(Math.max(1, currentStep-1))} className="px-3 py-2 rounded-md border text-sm">Previous</button>
+          {currentStep === 3 ? (
+            <button
+              onClick={generatePolicy}
+              disabled={!canGenerate}
+              className="px-4 py-2 rounded-md text-sm text-white bg-black disabled:opacity-50"
+            >
+              {isGenerating ? 'Generating…' : 'Generate Policy'}
+            </button>
+          ) : (
+            <button
+              onClick={()=> setCurrentStep(currentStep+1)}
+              disabled={(currentStep===1 && !canProceed1) || isGenerating}
+              className="px-3 py-2 rounded-md border text-sm"
+            >
+              Next
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

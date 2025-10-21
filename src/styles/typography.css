@@ -1,0 +1,151 @@
+/* Typography Hierarchy for Poligap Application */
+
+/* Fonts are provided via next/font; no external imports */
+
+/* CSS Custom Properties for Font Hierarchy */
+:root {
+  /* Primary Font - Inter only */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Font Class Utilities */
+.font-inter {
+  font-family: var(--font-primary);
+}
+
+/* Deprecated font aliases removed (Roberto/System) */
+
+/* Typography Scale for Accessibility */
+.text-primary {
+  color: #1e293b; /* slate-800 */
+}
+
+.dark .text-primary {
+  color: #f1f5f9; /* slate-100 */
+}
+
+.text-secondary {
+  color: #475569; /* slate-600 */
+}
+
+.dark .text-secondary {
+  color: #cbd5e1; /* slate-300 */
+}
+
+.text-tertiary {
+  color: #64748b; /* slate-500 */
+}
+
+.dark .text-tertiary {
+  color: #94a3b8; /* slate-400 */
+}
+
+/* Heading Hierarchy */
+h1, .heading-1 {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 1.125rem; /* 18px (lg) */
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+h2, .heading-2 {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 1rem; /* 16px (base) */
+  line-height: 1.5;
+}
+
+h3, .heading-3 {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 0.875rem; /* 14px (sm) */
+  line-height: 1.5;
+}
+
+h4, .heading-4 {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 0.875rem; /* 14px (sm) */
+  line-height: 1.5;
+}
+
+/* Base Typography */
+body {
+  font-size: 1rem; /* 16px (base) */
+  line-height: 1.5;
+}
+
+/* Body Text */
+.body-large {
+  font-family: var(--font-primary);
+  font-size: 1.125rem; /* 18px (lg) */
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.body-medium {
+  font-family: var(--font-primary);
+  font-size: 1rem; /* 16px (base) */
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.body-small {
+  font-family: var(--font-primary);
+  font-size: 0.875rem; /* 14px (sm) */
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* Caption and Label Text */
+.caption {
+  font-family: var(--font-primary);
+  font-size: 0.75rem; /* 12px (xs) */
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.label {
+  font-family: var(--font-primary);
+  font-size: 0.875rem; /* 14px (sm) */
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* Interactive Elements */
+.button-text {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 0.875rem; /* 14px (sm) */
+  line-height: 1.4;
+}
+
+.nav-text {
+  font-family: var(--font-primary);
+  font-weight: 500;
+  font-size: 0.875rem; /* 14px (sm) */
+  line-height: 1.4;
+}
+
+/* Responsive Typography */
+/* Mobile uses same 4-step scale */
+
+/* High Contrast Mode for Accessibility */
+@media (prefers-contrast: high) {
+  .text-primary {
+    color: #000000;
+  }
+  
+  .dark .text-primary {
+    color: #ffffff;
+  }
+  
+  .text-secondary {
+    color: #333333;
+  }
+  
+  .dark .text-secondary {
+    color: #cccccc;
+  }
+}
