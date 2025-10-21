@@ -11,6 +11,7 @@ import {
   Settings,
   Home,
   Upload,
+  User,
   History,
   NotebookPen,
   BookOpen,
@@ -100,6 +101,11 @@ const navigationItems = [
     title: "RuleBase",
     icon: NotebookPen,
     page: "/rulebase" as PageType,
+  },
+  {
+    title: "Users & Teams",
+    icon: User,
+    page: "/users" as PageType,
   },
   {
     title: "Upload Assets",

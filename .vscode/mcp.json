@@ -11,10 +11,6 @@
         "SUPABASE_ACCESS_TOKEN": "sbp_5279c67aada30b2e99fcf3742efcf0bd2b2a3ef1"
       }
     },
-    "chrome-devtools": {
-      "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"]
-    },
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
