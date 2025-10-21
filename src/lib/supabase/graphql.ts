@@ -608,17 +608,120 @@ export const queries = {
   // Org/Companies
   getUserCompanies: `
     query GetUserCompanies($userId: UUID!) {
-      user_companiesCollection(filter: { user_id: { eq: $userId } }) {
+      user_companiesCollection(
+        filter: { 
+          user_id: { eq: $userId },
+          status: { eq: "active" }
+        }
+        orderBy: [
+          { is_primary: DescNullsLast },
+          { joined_at: DescNullsLast }
+        ]
+      ) {
         edges {
           node {
             role
             company_id
+            is_primary
+            status
+            joined_at
             company: companies {
               id
               name
+              slug
+              logo_url
               enable_knowledge_base
+              is_active
+              max_users
               created_at
             }
+          }
+        }
+      }
+    }
+  `,
+
+  getCompanyMembers: `
+    query GetCompanyMembers($companyId: UUID!, $status: String = "active") {
+      user_companiesCollection(
+        filter: { 
+          company_id: { eq: $companyId },
+          status: { eq: $status }
+        }
+        orderBy: [
+          { is_primary: DescNullsLast },
+          { joined_at: DescNullsLast }
+        ]
+      ) {
+        edges {
+          node {
+            user_id
+            role
+            is_primary
+            status
+            joined_at
+            user: profiles {
+              id
+              name
+              email
+              profile_image
+              designation
+              status
+              last_active_at
+            }
+          }
+        }
+      }
+    }
+  `,
+
+  getCompanyInvitations: `
+    query GetCompanyInvitations($companyId: UUID!, $status: String) {
+      invitationsCollection(
+        filter: { 
+          company_id: { eq: $companyId },
+          status: { eq: $status }
+        }
+        orderBy: { created_at: DescNullsLast }
+      ) {
+        edges {
+          node {
+            id
+            email
+            role
+            status
+            token
+            expires_at
+            sent_at
+            accepted_at
+            created_at
+            inviter: invited_by {
+              id
+              name
+              email
+              profile_image
+            }
+          }
+        }
+      }
+    }
+  `,
+
+  getCompanyDetails: `
+    query GetCompanyDetails($companyId: UUID!) {
+      companiesCollection(filter: { id: { eq: $companyId } }) {
+        edges {
+          node {
+            id
+            name
+            slug
+            logo_url
+            enable_knowledge_base
+            is_active
+            max_users
+            settings
+            created_at
+            updated_at
           }
         }
       }
@@ -628,7 +731,39 @@ export const queries = {
   getUserDetails: `
     query GetUserDetails($userId: UUID!) {
       profilesCollection(filter: { id: { eq: $userId } }) {
-        edges { node { id email name } }
+        edges { 
+          node { 
+            id 
+            email 
+            name 
+            profile_image
+            designation
+            company_id
+            system_role
+            is_active
+            last_active_at
+          } 
+        }
+      }
+    }
+  `,
+
+  // User management queries
+  checkUserAccess: `
+    query CheckUserAccess($userId: UUID!, $companyId: UUID!) {
+      user_companiesCollection(
+        filter: { 
+          user_id: { eq: $userId },
+          company_id: { eq: $companyId },
+          status: { eq: "active" }
+        }
+      ) {
+        edges {
+          node {
+            role
+            is_primary
+          }
+        }
       }
     }
   `,

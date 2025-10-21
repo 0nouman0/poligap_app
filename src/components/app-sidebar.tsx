@@ -16,6 +16,7 @@ import {
   BookOpen,
   Lightbulb,
   HelpCircle,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +52,7 @@ type PageType =
   | "rulebase"
   | "upload-assets"
   | "history"
+  | "users"
   | "how-to-use"
   | "settings";
 
@@ -110,6 +112,11 @@ const navigationItems = [
     title: "History",
     icon: History,
     page: "/history" as PageType,
+  },
+  {
+    title: "Users",
+    icon: Users,
+    page: "/users" as PageType,
   },
 ];
 

@@ -15,7 +15,7 @@ export default function ConfirmEmailPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    const verifyEmail = async () => {
+    const handleAuth = async () => {
       try {
         // Get the hash from URL (contains the verification token)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -23,49 +23,102 @@ export default function ConfirmEmailPage() {
         const refresh_token = hashParams.get('refresh_token');
         const type = hashParams.get('type');
 
-        if (type === 'signup' && access_token) {
-          // Set the session with the tokens
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token,
-            refresh_token: refresh_token || '',
-          });
+        console.log('🔍 Auth confirm - type:', type, 'has token:', !!access_token)
 
-          if (sessionError) {
-            console.error('Session error:', sessionError);
-            setStatus('error');
-            setMessage('Failed to verify email. The link may have expired.');
-            return;
-          }
-
-          // Get the user to confirm they're logged in
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-          if (userError || !user) {
-            console.error('User error:', userError);
-            setStatus('error');
-            setMessage('Failed to verify email. Please try again.');
-            return;
-          }
-
-          // Check if email is verified
-          if (user.email_confirmed_at) {
-            setStatus('success');
-            setMessage('Email verified successfully! Redirecting to login...');
-            
-            // Sign out the user so they can log in properly
-            await supabase.auth.signOut();
-            
-            // Redirect to login after 3 seconds
-            setTimeout(() => {
-              router.push('/auth/signin?verified=true');
-            }, 3000);
-          } else {
-            setStatus('error');
-            setMessage('Email verification is pending. Please check your inbox.');
-          }
-        } else {
+        if (!access_token) {
           setStatus('error');
           setMessage('Invalid verification link. Please request a new one.');
+          return;
+        }
+
+        // Set the session with the tokens
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token,
+          refresh_token: refresh_token || '',
+        });
+
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setStatus('error');
+          setMessage('Failed to verify email. The link may have expired.');
+          return;
+        }
+
+        // Get the user to confirm they're logged in
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.error('User error:', userError);
+          setStatus('error');
+          setMessage('Failed to verify email. Please try again.');
+          return;
+        }
+
+        const metadata = user.user_metadata;
+        console.log('✅ User authenticated:', user.email, 'metadata:', metadata)
+
+        // If this is an invitation (type=invite or has company metadata)
+        if (type === 'invite' || metadata.company_id) {
+          console.log('🔄 Invitation flow detected')
+          
+          // Create or update profile
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              email: user.email!,
+              company_id: metadata.company_id,
+            }, {
+              onConflict: 'id'
+            })
+
+          if (profileError) {
+            console.error('Error creating profile:', profileError)
+          }
+
+          // Create user-company relationship if company_id exists
+          if (metadata.company_id) {
+            const { error: memberError } = await supabase
+              .from('user_companies')
+              .upsert({
+                user_id: user.id,
+                company_id: metadata.company_id,
+                role: metadata.role || 'member',
+                status: 'active',
+              }, {
+                onConflict: 'user_id,company_id'
+              })
+
+            if (memberError) {
+              console.error('Error creating membership:', memberError)
+            }
+          }
+
+          setStatus('success');
+          setMessage(`Welcome to the team, ${user.email}!`);
+          
+          // Redirect to set password page for invited users
+          setTimeout(() => {
+            router.push('/auth/set-password');
+          }, 2000);
+          return;
+        }
+
+        // Regular signup flow
+        if (type === 'signup' && user.email_confirmed_at) {
+          setStatus('success');
+          setMessage('Email verified successfully! Redirecting to login...');
+          
+          // Sign out the user so they can log in properly
+          await supabase.auth.signOut();
+          
+          // Redirect to login after 3 seconds
+          setTimeout(() => {
+            router.push('/auth/signin?verified=true');
+          }, 3000);
+        } else {
+          setStatus('error');
+          setMessage('Email verification is pending. Please check your inbox.');
         }
       } catch (error) {
         console.error('Verification error:', error);
@@ -74,7 +127,7 @@ export default function ConfirmEmailPage() {
       }
     };
 
-    verifyEmail();
+    handleAuth();
   }, [router, supabase]);
 
   const logoSrc = "/assets/poligap-logo.png";

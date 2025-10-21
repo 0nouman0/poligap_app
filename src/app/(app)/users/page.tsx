@@ -1,11 +1,30 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, UserPlus, MoreVertical, Edit, Trash2, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/common/common-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 import {
   Select,
@@ -17,7 +36,7 @@ import {
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useUserStore } from "@/stores/user-store";
-import { useMember } from "@/hooks/useMember";
+import { useListMembers } from "@/hooks/use-user-management";
 import {
   Table,
   TableHeader,
@@ -28,36 +47,35 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterList } from "@mui/icons-material";
+import { InviteUserModal } from "@/components/modals/InviteUserModal";
 
 export type MemberIntegration = {
   imageUrl: string;
   name: string;
-  userStatus: string | null; // e.g., "ACTIVE", "INACTIVE", "DELETED", or null
+  userStatus: string | null;
 };
 
 export type Member = {
-  _id: string;
-  designation: string;
+  user_id: string;
   role: string;
-  integrations: MemberIntegration[];
-  userId: string;
-  email: string;
-  name: string;
-  status: string;
-  dob: string;
-  mobile: string;
-  profileImage: string;
-  profileCreatedOn: string;
-  banner: string | null;
-  createdAt: string;
-  reportingManager: { name: string; email: string } | null;
-  createdBy: { name: string; email: string } | null;
-  // ...add any other fields as needed
+  is_primary?: boolean;
+  status?: string;
+  joined_at?: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    profile_image?: string;
+    designation?: string;
+    status?: string;
+    last_active_at?: string;
+  };
 };
 
 export default function Component() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy] = useState("relevance");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   // New state for filter category and filter value
   const [selectedFilterCategory, setSelectedFilterCategory] = useState<
@@ -69,6 +87,11 @@ export default function Component() {
 
   // New state for showing/hiding filter dropdown
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // State for user management modals
+  const [memberToDelete, setMemberToDelete] = useState<typeof teamMembers[0] | null>(null);
+  const [memberToChangeRole, setMemberToChangeRole] = useState<typeof teamMembers[0] | null>(null);
+  const [newRole, setNewRole] = useState<string>("");
 
   // Ref for filter dropdown
   const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -109,10 +132,12 @@ export default function Component() {
   const { userData } = useUserStore();
 
   const {
-    data: teamMembers = [],
+    data: membersResponse,
     error,
     isLoading,
-  } = useMember(companyId || ""); // or skip fetching if companyId is falsy
+  } = useListMembers(companyId || "");
+
+  const teamMembers = membersResponse?.members || [];
 
   console.log("teamMembers   ======> ", teamMembers);
   console.log("currentUserRole   ======> ", currentUserRole);
@@ -123,22 +148,14 @@ export default function Component() {
     teamMembers.forEach((member) => {
       switch (category) {
         case "Status":
-          // Status property not available in TeamMember type - using role as fallback
-          if (member.role) values.add(member.role);
+          if (member.status) values.add(member.status);
           break;
         case "Role":
           if (member.role) values.add(member.role);
           break;
-        case "Reporting Manager":
-          if (member.reportingManager?.name)
-            values.add(member.reportingManager.name);
-          break;
-        case "Created By":
-          if (member.createdBy?.name) values.add(member.createdBy.name);
-          break;
         case "Created On":
-          if (member.createdAt) {
-            const dateStr = new Date(member.createdAt).toLocaleDateString(
+          if (member.joined_at) {
+            const dateStr = new Date(member.joined_at).toLocaleDateString(
               undefined,
               {
                 year: "numeric",
@@ -157,8 +174,8 @@ export default function Component() {
   }
 
   // Filtered people based on search and filter dropdown
-  const filteredPeople = teamMembers.filter((person) => {
-    const matchesSearch = person.name
+  const filteredPeople = teamMembers.filter((member) => {
+    const matchesSearch = member.user?.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
 
@@ -167,20 +184,14 @@ export default function Component() {
     if (selectedFilterCategory && selectedFilterValue) {
       switch (selectedFilterCategory) {
         case "Status":
-          matchesFilter = person.status === selectedFilterValue;
+          matchesFilter = member.status === selectedFilterValue;
           break;
         case "Role":
-          matchesFilter = person.role === selectedFilterValue;
-          break;
-        case "Reporting Manager":
-          matchesFilter = person.reportingManager?.name === selectedFilterValue;
-          break;
-        case "Created By":
-          matchesFilter = person.createdBy?.name === selectedFilterValue;
+          matchesFilter = member.role === selectedFilterValue;
           break;
         case "Created On":
-          const createdOnStr = person.createdAt
-            ? new Date(person.createdAt).toLocaleDateString(undefined, {
+          const createdOnStr = member.joined_at
+            ? new Date(member.joined_at).toLocaleDateString(undefined, {
                 year: "numeric",
                 month: "short",
                 day: "numeric",
@@ -198,32 +209,32 @@ export default function Component() {
 
   // Dynamic user counts
   const totalUsers = teamMembers.length;
-  const activeUsers = teamMembers.filter((m) => m.status === "ACTIVE").length;
+  const activeUsers = teamMembers.filter((m) => m.status === "active").length;
 
   // Sorting logic
   const sortedPeople = useMemo(() => {
     if (sortBy === "relevance") return filteredPeople;
     const sorted = [...filteredPeople];
     if (sortBy === "name") {
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
+      sorted.sort((a, b) => (a.user?.name || "").localeCompare(b.user?.name || ""));
     } else if (sortBy === "designation") {
       sorted.sort((a, b) =>
-        (a.designation || "").localeCompare(b.designation || "")
+        (a.user?.designation || "").localeCompare(b.user?.designation || "")
       );
     } else if (sortBy === "createdAt") {
       sorted.sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.joined_at || 0).getTime() - new Date(a.joined_at || 0).getTime()
       );
     }
     return sorted;
   }, [filteredPeople, sortBy]);
 
-  // Sort Owners to the top only after filtering and sorting
+  // Sort Admins to the top only after filtering and sorting
   const sortedAndFilteredPeople = useMemo(() => {
     return [...sortedPeople].sort((a, b) => {
-      if (a.role === "Owner" && b.role !== "Owner") return -1;
-      if (a.role !== "Owner" && b.role === "Owner") return 1;
+      if (a.role === "company_admin" && b.role !== "company_admin") return -1;
+      if (a.role !== "company_admin" && b.role === "company_admin") return 1;
       return 0;
     });
   }, [sortedPeople]);
@@ -238,6 +249,64 @@ export default function Component() {
 
     return words[0].charAt(0).toUpperCase() + words[1].charAt(0).toUpperCase();
   }
+
+  // Handle remove member
+  const handleRemoveMember = async () => {
+    if (!companyId || !memberToDelete) return;
+
+    try {
+      const response = await fetch(`/api/members/remove`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: companyId,
+          user_id: memberToDelete.user_id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove member");
+      }
+
+      toast.success("Member removed successfully");
+      setMemberToDelete(null);
+      // Refetch members
+      window.location.reload();
+    } catch (error) {
+      console.error("Error removing member:", error);
+      toast.error("Failed to remove member");
+    }
+  };
+
+  // Handle change role
+  const handleChangeRole = async () => {
+    if (!companyId || !memberToChangeRole || !newRole) return;
+
+    try {
+      const response = await fetch(`/api/members/update-role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company_id: companyId,
+          user_id: memberToChangeRole.user_id,
+          new_role: newRole,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update role");
+      }
+
+      toast.success("Role updated successfully");
+      setMemberToChangeRole(null);
+      setNewRole("");
+      // Refetch members
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
@@ -256,8 +325,19 @@ export default function Component() {
               </Badge>
             </div>
 
-            {/* Search and Filter */}
             <div className="flex items-center gap-3">
+              {/* Invite User Button (only for admins) */}
+              {["company_admin", "super_admin"].includes(currentUserRole || "") && (
+                <Button
+                  onClick={() => setIsInviteModalOpen(true)}
+                  variant="primary"
+                  size="sm"
+                  prefixIcon={<UserPlus className="h-4 w-4" />}
+                  className="bg-base-purple hover:bg-base-purple-hover text-white border-transparent"
+                >
+                  Invite User
+                </Button>
+              )}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <Input
@@ -332,10 +412,6 @@ export default function Component() {
                         <SelectContent className="bg-white dark:bg-background border border-gray-200 dark:border-gray-600 shadow-lg popover-shadow">
                           <SelectItem value="Status">Status</SelectItem>
                           <SelectItem value="Role">Role</SelectItem>
-                          <SelectItem value="Reporting Manager">
-                            Reporting Manager
-                          </SelectItem>
-                          <SelectItem value="Created By">Created By</SelectItem>
                           <SelectItem value="Created On">Created On</SelectItem>
                         </SelectContent>
                       </Select>
@@ -376,8 +452,8 @@ export default function Component() {
                 <span className="inline-block text-sm font-normal text-ellipsis max-w-[70%] overflow-hidden whitespace-nowrap">
                   {selectedCompany?.name || "-"}
                 </span>
-                {(currentUserRole === "Owner" ||
-                  currentUserRole === "Admin") && (
+                {(currentUserRole === "company_admin" ||
+                  currentUserRole === "super_admin") && (
                   <span className="text-sm text-gray-500 dark:text-gray-300 font-normal">
                     &nbsp;(ID:{" "}
                     {selectedCompany?.companyId?.slice(-8) || "--------"})
@@ -502,15 +578,16 @@ export default function Component() {
                   Role
                 </TableHead>
                 <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7">
-                  Reporting Manager
+                  Designation
                 </TableHead>
                 <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7">
-                  Created By
+                  Joined On
                 </TableHead>
-                <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7">
-                  Created On
-                </TableHead>
-                {/* <TableHead className="px-4 py-3"></TableHead> */}
+                {["company_admin", "super_admin"].includes(currentUserRole || "") && (
+                  <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7 text-right">
+                    Actions
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -551,35 +628,35 @@ export default function Component() {
                   ))
                 : sortedAndFilteredPeople.map((member) => (
                     <TableRow
-                      key={member._id.toString()}
+                      key={member.user_id}
                       className="text-13 border-b border-gray-100 dark:border-gray-700 hover:bg-transparent"
                     >
                       <TableCell className="px-3 py-1">
                         <div className="flex items-center gap-3 min-w-0">
                           <Avatar className="h-8 w-8">
                             <AvatarImage
-                              src={member.profileImage || "/placeholder.svg"}
-                              alt={member.name}
+                              src={member.user?.profile_image || "/placeholder.svg"}
+                              alt={member.user?.name || "User"}
                             />
                             <AvatarFallback
                               className={`text-white font-medium bg-green-400`}
                             >
-                              {getInitials(member.name)}
+                              {getInitials(member.user?.name || "")}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1">
                               <span className="text-gray-900 dark:text-gray-100">
-                                {member.name}
+                                {member.user?.name || "-"}
                               </span>
-                              {member.email === userData?.email && (
+                              {member.user?.email === userData?.email && (
                                 <Badge className="bg-white dark:bg-background text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-[4px] px-1 py-0.5 text-xs font-medium card-border">
                                   You
                                 </Badge>
                               )}
                             </div>
                             <p className="text-muted-foreground truncate">
-                              {member.email || "-"}
+                              {member.user?.email || "-"}
                             </p>
                           </div>
                         </div>
@@ -589,35 +666,31 @@ export default function Component() {
                           variant="secondary"
                           className="bg-[#acdc79] text-[#25301b] dark:bg-[#25301b] dark:text-[#acdc79]"
                         >
-                          {member.status
-                            ? member.status.charAt(0).toUpperCase() +
-                              member.status.slice(1).toLowerCase()
-                            : "Active"}
+                          {member.status === "active" ? "Active" : member.status || "Active"}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-3 py-1">
                         <span className="text-gray-900 dark:text-gray-100">
-                          {member?.role === "Owner"
-                            ? "Org Owner"
-                            : member?.role === "Admin"
-                            ? "Org Admin"
-                            : member?.role}
+                          {member.role === "company_admin"
+                            ? "Admin"
+                            : member.role === "super_admin"
+                            ? "Super Admin"
+                            : member.role === "member"
+                            ? "Member"
+                            : member.role === "viewer"
+                            ? "Viewer"
+                            : member.role}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-1">
                         <span className="text-gray-900 dark:text-gray-100">
-                          {member.reportingManager?.name || "-"}
+                          {member.user?.designation || "-"}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-1 hidden lg:table-cell">
                         <span className="text-gray-900 dark:text-gray-100">
-                          {member.createdBy?.name || "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-1 hidden lg:table-cell">
-                        <span className="text-gray-900 dark:text-gray-100">
-                          {member.createdAt
-                            ? new Date(member.createdAt)
+                          {member.joined_at
+                            ? new Date(member.joined_at)
                                 .toLocaleDateString(undefined, {
                                   year: "numeric",
                                   month: "short",
@@ -627,6 +700,39 @@ export default function Component() {
                             : "-"}
                         </span>
                       </TableCell>
+                      {["company_admin", "super_admin"].includes(currentUserRole || "") && (
+                        <TableCell className="px-3 py-1 text-right">
+                          {member.user?.email !== userData?.email && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setMemberToChangeRole(member);
+                                    setNewRole(member.role);
+                                  }}
+                                >
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Change Role
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setMemberToDelete(member)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove Member
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
             </TableBody>
@@ -642,6 +748,70 @@ export default function Component() {
           </div>
         )}
       </div>
+
+      {/* Invite User Modal */}
+      <InviteUserModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        companyId={companyId || ""}
+        companyName={selectedCompany?.name}
+      />
+
+      {/* Delete Member Confirmation Dialog */}
+      <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <strong>{memberToDelete?.user?.name}</strong> from this organization? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveMember}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remove Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Change Role Dialog */}
+      <AlertDialog open={!!memberToChangeRole} onOpenChange={() => setMemberToChangeRole(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Member Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Change the role for <strong>{memberToChangeRole?.user?.name}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Select value={newRole} onValueChange={setNewRole}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="company_admin">Admin</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setMemberToChangeRole(null);
+              setNewRole("");
+            }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleChangeRole}>
+              Update Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

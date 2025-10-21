@@ -105,7 +105,7 @@ export default function SignInPage() {
       }
 
       if (authData?.user) {
-        router.push("/home");
+        router.push("/org-list");
         router.refresh();
       }
     } catch (error) {

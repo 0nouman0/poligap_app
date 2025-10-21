@@ -29,10 +29,59 @@ const CompanyDropdown = memo(() => {
   const companies = useCompanyStore((s) => s.companies);
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const setSelectedCompany = useCompanyStore((s) => s.setSelectedCompany);
+  const setCompanies = useCompanyStore((s) => s.setCompanies);
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
+
+  // Load companies from Supabase if not in store
+  useEffect(() => {
+    const loadCompanies = async () => {
+      // Only load if companies list is empty
+      if (companies.length > 0) return;
+
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const { createGraphQLClient, queries } = await import('@/lib/supabase/graphql');
+        
+        const supabase = createClient();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
+
+        if (!userId) return;
+
+        const gql = createGraphQLClient(sessionData.session?.access_token);
+        const res: any = await gql.request(queries.getUserCompanies, { userId });
+        const edges = res?.user_companiesCollection?.edges || [];
+        
+        const COLORS = ["#7164FF", "#FFD600", "#FF4A4A", "#34A853"];
+        const mapped = edges.map((e: any) => ({
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          companyId: e.node.company?.id,
+          name: e.node.company?.name, // Use 'name' consistently
+          role: e.node.role || "Member",
+        })).filter((c: any) => c.companyId && c.name);
+
+        if (mapped.length > 0) {
+          setCompanies(mapped);
+          // If no company is selected, select the first one
+          if (!selectedCompany) {
+            setSelectedCompany(mapped[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading companies:", error);
+      }
+    };
+
+    loadCompanies();
+  }, [companies.length, setCompanies, selectedCompany, setSelectedCompany]);
 
   const handleCompanySelect = useCallback((company: any) => {
     setSelectedCompany(company);
+    setIsOpen(false);
+    // Reload the page to refresh data with new company
+    window.location.reload();
   }, [setSelectedCompany]);
 
   const companiesList = useMemo(() => companies, [companies]);
@@ -40,11 +89,11 @@ const CompanyDropdown = memo(() => {
   if (!companiesList.length) return null;
 
   return (
-    <DropdownMenu onOpenChange={setIsOpen} modal={false}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className="px-2 sm:px-3 py-1 h-[26px] rounded border bg-filter-menu dark:hover:bg-accent flex items-center gap-1.5 sm:gap-2 border-gray-200 dark:border-gray-600 cursor-pointer whitespace-nowrap">
+        <button className="px-2 sm:px-3 py-1.5 h-[30px] rounded-md border bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-accent flex items-center gap-1.5 sm:gap-2 border-gray-200 dark:border-gray-600 cursor-pointer whitespace-nowrap transition-colors">
           <div className="flex flex-col items-start min-w-0">
-            <span className="text-xs sm:text-13 font-medium text-gray-900 dark:text-gray-100 truncate max-w-[120px] sm:max-w-none">
+            <span className="text-xs sm:text-13 font-medium text-gray-900 dark:text-gray-100 truncate max-w-[120px] sm:max-w-[200px]">
               {selectedCompany ? selectedCompany.name : "Select Company"}
             </span>
           </div>
@@ -58,28 +107,28 @@ const CompanyDropdown = memo(() => {
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="min-w-[200px] p-0 popover-shadow bg-white dark:bg-background border border-gray-200 dark:border-gray-600"
+        className="min-w-[220px] p-0 popover-shadow bg-white dark:bg-background border border-gray-200 dark:border-gray-600 rounded-md"
       >
         {/* Header */}
-        <div className="pl-2 pr-4 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-          Switch account
+        <div className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          Switch Organization
         </div>
 
         {/* Company List */}
-        <div className="py-1">
+        <div className="py-1 max-h-[300px] overflow-y-auto">
           {companiesList.map((company) => (
             <DropdownMenuItem
               key={company.companyId}
               onClick={() => handleCompanySelect(company)}
-              className="px-0 py-2 text-13 hover:bg-[var(--url-color)] focus:bg-gray-50 dark:focus:bg-accent focus:text-gray-900 dark:focus:text-gray-100 cursor-pointer flex items-center rounded-none justify-between w-full"
+              className="px-3 py-2.5 text-13 hover:bg-gray-50 dark:hover:bg-accent focus:bg-gray-50 dark:focus:bg-accent focus:text-gray-900 dark:focus:text-gray-100 cursor-pointer flex items-center rounded-none justify-between w-full"
             >
-              <div className="px-4 w-full flex items-center justify-between">
+              <div className="w-full flex items-center justify-between gap-2">
                 <span
-                  className={`text-gray-900 dark:text-gray-100 ${
+                  className={`text-gray-900 dark:text-gray-100 truncate ${
                     selectedCompany &&
                     selectedCompany.companyId === company.companyId
-                      ? "font-medium"
-                      : ""
+                      ? "font-semibold"
+                      : "font-normal"
                   }`}
                 >
                   {company.name}
@@ -87,10 +136,10 @@ const CompanyDropdown = memo(() => {
                 {selectedCompany &&
                   selectedCompany.companyId === company.companyId && (
                     <svg
-                      className="w-4 h-4 text-purple-600 dark:text-purple-400"
+                      className="w-4 h-4 text-base-purple flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                       viewBox="0 0 24 24"
                       aria-hidden="true"
                     >

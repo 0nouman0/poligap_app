@@ -79,6 +79,17 @@ export const useCompanyStore = create<CompanyStore>()(
     }),
     {
       name: "company-store", // unique name for localStorage
+      version: 2, // Increment this to force clear old cached data
+      migrate: (persistedState: any, version: number) => {
+        // If old version, clear the cache
+        if (version < 2) {
+          return {
+            companies: [],
+            selectedCompany: null,
+          };
+        }
+        return persistedState;
+      },
     }
   )
 );
