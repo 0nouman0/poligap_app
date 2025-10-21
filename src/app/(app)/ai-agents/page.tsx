@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 export default function AIAgentsPage() {
   const [open, setOpen] = useState(false);
   const [activeAgent, setActiveAgent] = useState<
-    "Email Notifier" | "Law Scanner" | null
+    "Email Notifier" | "Law Scanner" | "Compliance Monitor" | "Copyright Detector" | null
   >(null);
   const [activeTab, setActiveTab] = useState<"Actions">("Actions");
 
@@ -41,10 +41,84 @@ export default function AIAgentsPage() {
     []
   );
 
-  const openAgent = (agent: "Email Notifier" | "Law Scanner") => {
+  const openAgent = (
+    agent: "Email Notifier" | "Law Scanner" | "Compliance Monitor" | "Copyright Detector"
+  ) => {
     setActiveAgent(agent);
     setActiveTab("Actions");
     setOpen(true);
+  };
+
+  // Copyright Detector: state and helpers
+  const [cdAction, setCdAction] = useState<string>("monitor");
+  const [cdSearchTerms, setCdSearchTerms] = useState<string>("brand name, product name");
+  const [cdFrom, setCdFrom] = useState<string>("");
+  const [cdTo, setCdTo] = useState<string>("");
+  const [cdOriginalId, setCdOriginalId] = useState<string>("");
+  const [cdSuspect, setCdSuspect] = useState<string>("");
+  const [cdLoading, setCdLoading] = useState<boolean>(false);
+  const [cdResult, setCdResult] = useState<any>(null);
+  const [cdItems, setCdItems] = useState<any[]>([]);
+
+  const runCopyright = async () => {
+    setCdLoading(true);
+    setCdResult(null);
+    setCdItems([]);
+    try {
+      const data: any = {};
+      if (cdAction === "monitor") {
+        const terms = cdSearchTerms
+          .split(/,|\n|;/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        data.search_terms = terms;
+        if (cdFrom || cdTo) data.date_range = { from: cdFrom || undefined, to: cdTo || undefined };
+      } else if (cdAction === "analyze") {
+        data.original_content_id = cdOriginalId;
+        data.suspect_content = cdSuspect;
+      }
+
+      const resp = await fetch("/api/copyright-detector", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: cdAction, data }),
+      });
+      const output = await resp.json();
+      setCdResult(output);
+
+      const plan = output?.plan;
+      if (plan?.decision === "tool") {
+        if (plan.tool_name === "scrapegraph_search") {
+          const proxy = await fetch("/api/tools/scrapegraph_search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(plan.params || data),
+          });
+          const pData = await proxy.json();
+          const items = Array.isArray(pData?.data?.items)
+            ? pData.data.items
+            : Array.isArray(pData?.items)
+            ? pData.items
+            : Array.isArray(pData?.data)
+            ? pData.data
+            : [];
+          setCdItems(items);
+        }
+        if (plan.tool_name === "content_similarity_analysis") {
+          const proxy = await fetch("/api/tools/content_similarity_analysis", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(plan.params || data),
+          });
+          const pData = await proxy.json();
+          setCdItems(Array.isArray(pData?.data) ? pData.data : pData?.data ? [pData.data] : []);
+        }
+      }
+    } catch (e) {
+      setCdResult({ error: "Request failed" });
+    } finally {
+      setCdLoading(false);
+    }
   };
 
   // Law Scanner: state and helpers
@@ -91,6 +165,63 @@ export default function AIAgentsPage() {
   };
 
   const closeModal = () => setOpen(false);
+  // Compliance Monitor: state and helpers
+  const [cmAction, setCmAction] = useState<string>(
+    "Fetch new regulatory changes in EU and US for data protection"
+  );
+  const [cmJurisdictionsText, setCmJurisdictionsText] = useState<string>("EU, US");
+  const [cmTopicsText, setCmTopicsText] = useState<string>("data_protection");
+  const [cmSince, setCmSince] = useState<string>("2025-01-01");
+  const [cmLoading, setCmLoading] = useState(false);
+  const [cmResult, setCmResult] = useState<any>(null);
+  const [cmItems, setCmItems] = useState<any[]>([]);
+
+  const checkCompliance = async () => {
+    setCmLoading(true);
+    setCmResult(null);
+    setCmItems([]);
+    try {
+      const jurisdictions = cmJurisdictionsText
+        .split(/,|\n|;/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const topics = cmTopicsText
+        .split(/,|\n|;/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const sinceISO = cmSince && cmSince.length === 10 ? `${cmSince}T00:00:00Z` : cmSince;
+
+      const res = await fetch("/api/compliance-agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: cmAction,
+          data: {
+            jurisdictions,
+            topics,
+            since_timestamp: sinceISO,
+          },
+        }),
+      });
+      const output = await res.json();
+      setCmResult(output);
+      // If the agent proposes to fetch regulation changes, call our proxy
+      const plan = output?.plan;
+      if (plan?.decision === "tool" && plan?.tool_name === "fetch_regulation_changes") {
+        const proxy = await fetch("/api/regulations/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(plan?.params || { jurisdictions, topics, since_timestamp: sinceISO }),
+        });
+        const data = await proxy.json();
+        if (Array.isArray(data?.items)) setCmItems(data.items);
+      }
+    } catch (e) {
+      setCmResult({ error: "Request failed" });
+    } finally {
+      setCmLoading(false);
+    }
+  };
   // Email Notifier: state and helpers
   const emailActions = useMemo(
     () => [
@@ -177,74 +308,112 @@ export default function AIAgentsPage() {
         </div>
 
         {/* Agents Grid */}
-        <div className="flex flex-wrap gap-[30px] px-[15px] py-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-4 py-5">
           {/* Email Notifier - Active */}
-          <div className="w-[380px] bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 flex flex-col gap-[15px]">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-4 h-full">
             <div className="flex justify-between items-start">
               <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
                 <Mail className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
               </div>
-              <div className="px-[10px] py-[5px] bg-[#EDFFDE] rounded-[35px]">
-                <span className="text-[12px] font-medium text-[#47AF47] leading-[14.52px] text-center">Active</span>
-              </div>
+              <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-[#EDFFDE] text-[#47AF47]">Active</span>
             </div>
-            <div className="flex-1 flex flex-col gap-[5px]">
-              <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">Email Notifier</h3>
-              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px] line-clamp-2">
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="text-[16px] font-semibold text-gray-900">Email Notifier</h3>
+              <p className="text-[12px] text-gray-600 line-clamp-2">
                 Automate email alerts and notifications for key events and policy changes.
               </p>
             </div>
             <button
               onClick={() => openAgent("Email Notifier")}
-              className="mt-auto w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
+              className="mt-auto w-full h-9 bg-[#3B43D6] hover:bg-[#2f36b4] rounded-md text-[12px] font-semibold text-white"
             >
               Use Agent
             </button>
           </div>
 
           {/* Law Scanner - Active */}
-          <div className="w-[380px] bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 flex flex-col gap-[15px]">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-4 h-full">
             <div className="flex justify-between items-start">
               <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
                 <Scale className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
               </div>
-              <div className="px-[10px] py-[5px] bg-[#EDFFDE] rounded-[35px]">
-                <span className="text-[12px] font-medium text-[#47AF47] leading-[14.52px] text-center">Active</span>
-              </div>
+              <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-[#EDFFDE] text-[#47AF47]">Active</span>
             </div>
-            <div className="flex-1 flex flex-col gap-[5px]">
-              <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">Law Scanner</h3>
-              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px] line-clamp-2">
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="text-[16px] font-semibold text-gray-900">Law Scanner</h3>
+              <p className="text-[12px] text-gray-600 line-clamp-2">
                 Scan documents for legal clauses, risks, and compliance issues.
               </p>
             </div>
             <button
               onClick={() => openAgent("Law Scanner")}
-              className="mt-auto w-full py-[7px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px]"
+              className="mt-auto w-full h-9 bg-[#3B43D6] hover:bg-[#2f36b4] rounded-md text-[12px] font-semibold text-white"
+            >
+              Use Agent
+            </button>
+          </div>
+
+          {/* Compliance Monitor - Active */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-4 h-full">
+            <div className="flex justify-between items-start">
+              <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
+                <Bot className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
+              </div>
+              <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-[#EDFFDE] text-[#47AF47]">Active</span>
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="text-[16px] font-semibold text-gray-900">Compliance Monitor</h3>
+              <p className="text-[12px] text-gray-600 line-clamp-2">
+                Track regulatory changes, analyze contracts, and send alerts for risks.
+              </p>
+            </div>
+            <button
+              onClick={() => openAgent("Compliance Monitor")}
+              className="mt-auto w-full h-9 bg-[#3B43D6] hover:bg-[#2f36b4] rounded-md text-[12px] font-semibold text-white"
+            >
+              Use Agent
+            </button>
+          </div>
+
+          {/* Copyright Detector - Active */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-4 h-full">
+            <div className="flex justify-between items-start">
+              <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-[#3B43D6]" strokeWidth={2} />
+              </div>
+              <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-[#EDFFDE] text-[#47AF47]">Active</span>
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="text-[16px] font-semibold text-gray-900">Copyright Detector</h3>
+              <p className="text-[12px] text-gray-600 line-clamp-2">
+                Monitor, analyze, and act on potential copyright infringements.
+              </p>
+            </div>
+            <button
+              onClick={() => openAgent("Copyright Detector")}
+              className="mt-auto w-full h-9 bg-[#3B43D6] hover:bg-[#2f36b4] rounded-md text-[12px] font-semibold text-white"
             >
               Use Agent
             </button>
           </div>
 
           {/* Coming Soon */}
-          <div className="w-[380px] bg-white rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 flex flex-col gap-[15px]">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4 h-full opacity-95">
             <div className="flex justify-between items-start">
               <div className="w-12 h-12 rounded-full bg-[#EFF1F6] flex items-center justify-center">
                 <Construction className="w-6 h-6 text-[#717171]" strokeWidth={2} />
               </div>
-              <div className="px-[10px] py-[5px] bg-[#F5F5F5] rounded-[35px]">
-                <span className="text-[12px] font-medium text-[#717171] leading-[14.52px] text-center">Coming Soon</span>
-              </div>
+              <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-[#F5F5F5] text-[#717171]">Coming Soon</span>
             </div>
-            <div className="flex-1 flex flex-col gap-[5px]">
-              <h3 className="text-[16px] font-semibold text-[#000000] opacity-70 leading-[19.36px]">More Agents</h3>
-              <p className="text-[12px] text-[#030229] opacity-70 leading-[14.52px] line-clamp-2">
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="text-[16px] font-semibold text-gray-900">More Agents</h3>
+              <p className="text-[12px] text-gray-600 line-clamp-2">
                 New specialized agents are in development. Stay tuned for updates!
               </p>
             </div>
             <button
               disabled
-              className="mt-auto w-full py-[7px] bg-[#DADADA] rounded-[5px] text-[12px] font-semibold text-white text-center leading-[14.52px] cursor-not-allowed"
+              className="mt-auto w-full h-9 bg-[#DADADA] rounded-md text-[12px] font-semibold text-white cursor-not-allowed"
             >
               In Development
             </button>
@@ -270,6 +439,12 @@ export default function AIAgentsPage() {
               )}
               {activeAgent === "Law Scanner" && (
                 <Scale className="w-6 h-6 text-[#000000]" strokeWidth={2} />
+              )}
+              {activeAgent === "Compliance Monitor" && (
+                <Bot className="w-6 h-6 text-[#000000]" strokeWidth={2} />
+              )}
+              {activeAgent === "Copyright Detector" && (
+                <Sparkles className="w-6 h-6 text-[#000000]" strokeWidth={2} />
               )}
               <h2 className="ml-[31px] text-[16px] font-semibold text-[#2D2F34] leading-[19.36px]">
                 {activeAgent} Agent
@@ -448,6 +623,268 @@ export default function AIAgentsPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    ) : activeAgent === "Compliance Monitor" ? (
+                      <div className="flex flex-col gap-5">
+                        {/* Action Section */}
+                        <div className="border border-dashed border-[#A0A8C2] rounded-[10px] p-5 flex flex-col gap-[10px]">
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Action</h3>
+                          <input
+                            type="text"
+                            value={cmAction}
+                            onChange={(e) => setCmAction(e.target.value)}
+                            className="w-full border rounded-md px-3 py-2 text-sm"
+                            placeholder="Describe what to do"
+                          />
+                        </div>
+
+                        {/* Parameters Section */}
+                        <div className="border border-dashed border-[#A0A8C2] rounded-[10px] p-5 flex flex-col gap-[12px]">
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Parameters</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="md:col-span-1">
+                              <label className="block text-xs text-gray-500 mb-1">Jurisdictions</label>
+                              <input
+                                type="text"
+                                value={cmJurisdictionsText}
+                                onChange={(e) => setCmJurisdictionsText(e.target.value)}
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                placeholder="e.g., EU, US"
+                              />
+                              <div className="text-[10px] text-gray-500 mt-1">Comma or newline separated</div>
+                            </div>
+                            <div className="md:col-span-1">
+                              <label className="block text-xs text-gray-500 mb-1">Topics</label>
+                              <input
+                                type="text"
+                                value={cmTopicsText}
+                                onChange={(e) => setCmTopicsText(e.target.value)}
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                placeholder="e.g., data_protection, privacy"
+                              />
+                              <div className="text-[10px] text-gray-500 mt-1">Comma or newline separated</div>
+                            </div>
+                            <div className="md:col-span-1">
+                              <label className="block text-xs text-gray-500 mb-1">Since</label>
+                              <input
+                                type="date"
+                                value={cmSince}
+                                onChange={(e) => setCmSince(e.target.value)}
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                              />
+                              <div className="text-[10px] text-gray-500 mt-1">ISO date; time set 00:00Z</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end items-center gap-[15px]">
+                          <button
+                            onClick={checkCompliance}
+                            disabled={cmLoading}
+                            className="h-9 px-[15px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-right leading-[14.52px] disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {cmLoading ? "Running..." : "Run"}
+                          </button>
+                        </div>
+
+                        {cmResult && (
+                          <div className="mt-2 border rounded-lg p-4 bg-white space-y-3">
+                            {/* Summary */}
+                            <div>
+                              <div className="text-xs font-semibold text-gray-700 mb-1">Summary</div>
+                              <div className="text-sm text-gray-800">
+                                {cmResult?.plan?.ui_summary || cmResult?.content || "No summary returned."}
+                              </div>
+                            </div>
+
+                            {/* Tool selection */}
+                            {cmResult?.plan?.decision === "tool" && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-700">Selected Tool:</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {cmResult?.plan?.tool_name}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Params */}
+                            {cmResult?.plan?.params && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-1">Parameters</div>
+                                <div className="text-xs text-gray-700 bg-gray-50 border rounded p-3 overflow-auto max-h-48">
+                                  <pre>{JSON.stringify(cmResult?.plan?.params, null, 2)}</pre>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Next Steps */}
+                            {Array.isArray(cmResult?.plan?.next_steps) && cmResult.plan.next_steps.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-1">Next steps</div>
+                                <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                                  {cmResult.plan.next_steps.map((s: string, i: number) => (
+                                    <li key={i}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Results */}
+                            {cmItems.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Results</div>
+                                <div className="divide-y border rounded-md bg-gray-50">
+                                  {cmItems.map((r: any, idx: number) => (
+                                    <div key={idx} className="p-3">
+                                      <div className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                                        {r.source && (
+                                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-800">{r.source}</span>
+                                        )}
+                                        {r.url ? (
+                                          <a href={r.url} target="_blank" rel="noreferrer" className="hover:underline">{r.title || r.url}</a>
+                                        ) : (
+                                          <span>{r.title || "Untitled"}</span>
+                                        )}
+                                      </div>
+                                      {r.summary && (
+                                        <div className="text-xs text-gray-600 mt-1 line-clamp-2">{r.summary}</div>
+                                      )}
+                                      {r.date && (
+                                        <div className="text-xs text-gray-500 mt-1">{r.date}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : activeAgent === "Copyright Detector" ? (
+                      <div className="flex flex-col gap-5">
+                        {/* Action Select */}
+                        <div className="border border-dashed border-[#A0A8C2] rounded-[10px] p-5 flex flex-col gap-[10px]">
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Action</h3>
+                          <select
+                            value={cdAction}
+                            onChange={(e) => setCdAction(e.target.value)}
+                            className="w-full border rounded-md px-3 py-2 text-sm"
+                          >
+                            <option value="monitor">Monitor</option>
+                            <option value="analyze">Analyze</option>
+                            <option value="trigger_legal">Trigger Legal</option>
+                            <option value="alert">Alert</option>
+                          </select>
+                        </div>
+
+                        {/* Parameters */}
+                        <div className="border border-dashed border-[#A0A8C2] rounded-[10px] p-5 flex flex-col gap-[12px]">
+                          <h3 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Parameters</h3>
+                          {cdAction === "monitor" && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div className="md:col-span-2">
+                                <label className="block text-xs text-gray-500 mb-1">Search Terms</label>
+                                <input
+                                  type="text"
+                                  value={cdSearchTerms}
+                                  onChange={(e) => setCdSearchTerms(e.target.value)}
+                                  className="w-full border rounded-md px-3 py-2 text-sm"
+                                  placeholder="e.g., brand name, product name"
+                                />
+                                <div className="text-[10px] text-gray-500 mt-1">Comma or newline separated</div>
+                              </div>
+                              <div className="md:col-span-1 grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">From</label>
+                                  <input type="date" value={cdFrom} onChange={(e)=>setCdFrom(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">To</label>
+                                  <input type="date" value={cdTo} onChange={(e)=>setCdTo(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {cdAction === "analyze" && (
+                            <div className="grid grid-cols-1 gap-3">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Original Content ID</label>
+                                <input type="text" value={cdOriginalId} onChange={(e)=>setCdOriginalId(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm" />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Suspect Content</label>
+                                <Textarea value={cdSuspect} onChange={(e)=>setCdSuspect(e.target.value)} className="w-full min-h-[120px] text-[12px]" />
+                              </div>
+                            </div>
+                          )}
+                          {(cdAction === "trigger_legal" || cdAction === "alert") && (
+                            <div className="text-[12px] text-gray-500">Submit to generate a plan with required fields and next steps.</div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end items-center gap-[15px]">
+                          <button
+                            onClick={runCopyright}
+                            disabled={cdLoading}
+                            className="h-9 px-[15px] bg-[#3B43D6] rounded-[5px] text-[12px] font-semibold text-white text-right leading-[14.52px] disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {cdLoading ? "Running..." : "Run"}
+                          </button>
+                        </div>
+
+                        {cdResult && (
+                          <div className="mt-2 border rounded-lg p-4 bg-white space-y-3">
+                            <div>
+                              <div className="text-xs font-semibold text-gray-700 mb-1">Summary</div>
+                              <div className="text-sm text-gray-800">{cdResult?.plan?.ui_summary || cdResult?.content || "No summary returned."}</div>
+                            </div>
+                            {cdResult?.plan?.decision === "tool" && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-700">Selected Tool:</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{cdResult?.plan?.tool_name}</span>
+                              </div>
+                            )}
+                            {cdResult?.plan?.params && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-1">Parameters</div>
+                                <div className="text-xs text-gray-700 bg-gray-50 border rounded p-3 overflow-auto max-h-48">
+                                  <pre>{JSON.stringify(cdResult?.plan?.params, null, 2)}</pre>
+                                </div>
+                              </div>
+                            )}
+                            {Array.isArray(cdResult?.plan?.next_steps) && cdResult.plan.next_steps.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-1">Next steps</div>
+                                <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                                  {cdResult.plan.next_steps.map((s: string, i: number) => (
+                                    <li key={i}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {cdItems.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Results</div>
+                                <div className="divide-y border rounded-md bg-gray-50">
+                                  {cdItems.map((r: any, idx: number) => (
+                                    <div key={idx} className="p-3">
+                                      <div className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                                        {r.source && (<span className="inline-block px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-800">{r.source}</span>)}
+                                        {r.url ? (
+                                          <a href={r.url} target="_blank" rel="noreferrer" className="hover:underline">{r.title || r.url}</a>
+                                        ) : (
+                                          <span>{r.title || "Untitled"}</span>
+                                        )}
+                                      </div>
+                                      {r.summary && (<div className="text-xs text-gray-600 mt-1 line-clamp-2">{r.summary}</div>)}
+                                      {r.date && (<div className="text-xs text-gray-500 mt-1">{r.date}</div>)}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <>
