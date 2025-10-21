@@ -256,11 +256,11 @@ export default function Component() {
 
     try {
       const response = await fetch(`/api/members/remove`, {
-        method: "DELETE",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: companyId,
-          user_id: memberToDelete.user_id,
+          member_user_id: memberToDelete.user_id,
         }),
       });
 
@@ -284,11 +284,11 @@ export default function Component() {
 
     try {
       const response = await fetch(`/api/members/update-role`, {
-        method: "PUT",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_id: companyId,
-          user_id: memberToChangeRole.user_id,
+          member_user_id: memberToChangeRole.user_id,
           new_role: newRole,
         }),
       });
