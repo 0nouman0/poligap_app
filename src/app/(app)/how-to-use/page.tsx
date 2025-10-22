@@ -16,7 +16,7 @@ export default function HowToUsePage() {
     { id: "policy-generator", title: "Policy Generator" },
     { id: "idea-analyzer", title: "Idea Analyzer (Beta)" },
     { id: "ai-agents", title: "AI Agents" },
-    { id: "rulebase", title: "RuleBase" },
+    { id: "rulebase", title: "Rules" },
     { id: "upload-assets", title: "Upload Assets" },
     { id: "history", title: "History & Audit Logs" },
     { id: "tips", title: "Tips & Best Practices" },
@@ -140,7 +140,7 @@ export default function HowToUsePage() {
           <div>
             <p className="font-medium text-foreground">Poligap USP</p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Stepper UX with rulebase augmentation.</li>
+              <li>Stepper UX with rules augmentation.</li>
               <li>Clear gap severity and suggestions with exportable summaries.</li>
             </ul>
           </div>
@@ -149,7 +149,7 @@ export default function HowToUsePage() {
             <ol className="list-decimal pl-6 space-y-1">
               <li>Select standards relevant to your domain.</li>
               <li>Upload the policy or document (PDF/DOC/TXT).</li>
-              <li>Optionally enable RuleBase and run analysis.</li>
+              <li>Optionally enable Rules and run analysis.</li>
               <li>Review scored results and suggested remediations.</li>
             </ol>
           </div>
@@ -190,7 +190,7 @@ export default function HowToUsePage() {
             <p className="font-medium text-foreground">Steps</p>
             <ol className="list-decimal pl-6 space-y-1">
               <li>Upload the contract and define review goals.</li>
-              <li>Select relevant standards or rulebases.</li>
+              <li>Select relevant standards or rules.</li>
               <li>Run analysis and review flagged clauses.</li>
               <li>Export the summary and assign follow-ups.</li>
             </ol>
@@ -329,10 +329,10 @@ export default function HowToUsePage() {
         </CardContent>
       </Card>
 
-      {/* RuleBase */}
+      {/* Rules */}
       <Card id="rulebase">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><NotebookPen className="h-5 w-5"/> RuleBase</CardTitle>
+          <CardTitle className="flex items-center gap-2"><NotebookPen className="h-5 w-5"/> Rules</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <div>
@@ -346,14 +346,14 @@ export default function HowToUsePage() {
           <div>
             <p className="font-medium text-foreground">Poligap USP</p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Attach rulebases to specific runs for augmented results.</li>
+              <li>Attach rules to specific runs for augmented results.</li>
               <li>Track coverage and impact over iterations.</li>
             </ul>
           </div>
           <div>
             <p className="font-medium text-foreground">Steps</p>
             <ol className="list-decimal pl-6 space-y-1">
-              <li>Create a rulebase and define checks.</li>
+              <li>Create rules and define checks.</li>
               <li>Apply during Compliance/Contract analyses.</li>
               <li>Review enriched gaps and refine rules.</li>
             </ol>
@@ -365,7 +365,7 @@ export default function HowToUsePage() {
               <li>Use insights to tighten internal policies.</li>
             </ul>
           </div>
-          <Link href="/rulebase"><Button variant="outline" className="mt-2 cursor-pointer">Open RuleBase</Button></Link>
+          <Link href="/rulebase"><Button variant="outline" className="mt-2 cursor-pointer">Open Rules</Button></Link>
         </CardContent>
       </Card>
 
@@ -426,7 +426,7 @@ export default function HowToUsePage() {
           <div>
             <p className="font-medium text-foreground">Poligap USP</p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Snapshotting of results and rulebase usage.</li>
+              <li>Snapshotting of results and rules usage.</li>
               <li>Quick links back into the original context.</li>
             </ul>
           </div>
@@ -458,7 +458,7 @@ export default function HowToUsePage() {
           <ul className="list-disc pl-6 space-y-1">
             <li><span className="font-medium">Provide context</span>: clearer prompts and document metadata improve results.</li>
             <li><span className="font-medium">Iterate</span>: refine outputs in Chat by asking focused follow-ups.</li>
-            <li><span className="font-medium">Leverage rulebases</span> for repeatable, auditable analyses.</li>
+            <li><span className="font-medium">Leverage rules</span> for repeatable, auditable analyses.</li>
             <li><span className="font-medium">Use History</span> to track progress and share summaries.</li>
           </ul>
         </CardContent>

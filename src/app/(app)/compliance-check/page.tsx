@@ -20,6 +20,8 @@ import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { deleteCacheKey, CACHE_KEYS } from '@/lib/cache';
 import { useRulebaseStore } from "@/stores/rulebase-store";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatGlobalDate } from "@/utils/date.util";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 
 interface ComplianceStandard {
   id: string;
@@ -428,16 +430,22 @@ export default function ComplianceCheckPage() {
   // Use Zustand stores for caching
   const { logs: auditLogs, isLoading: isLoadingLogs, fetchLogs: fetchAuditLogsFromStore, addLog } = useAuditLogsStore();
   const { rules, fetchRules } = useRulebaseStore();
+  const { trackComplianceCheck, trackPageVisit } = useActivityTracker();
+
+  // Track page visit
+  useEffect(() => {
+    trackPageVisit('compliance-check');
+  }, [trackPageVisit]);
   
   const [selectedStandards, setSelectedStandards] = useState<string[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [applyRuleBase, setApplyRuleBase] = useState(false);
+  const [applyRules, setApplyRules] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<ComplianceResult[]>([]);
   const [isAssetPickerOpen, setIsAssetPickerOpen] = useState(false);
   const [analysisMethod, setAnalysisMethod] = useState<string>("");
-  const [appliedRuleBase, setAppliedRuleBase] = useState<boolean>(false);
+  const [appliedRules, setAppliedRules] = useState<boolean>(false);
   const [rulebaseCount, setRulebaseCount] = useState<number>(0);
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<string>("all");
   // dialogMode controls whether the Audit Log dialog shows 'issues' or 'suggestions'
@@ -554,7 +562,7 @@ export default function ComplianceCheckPage() {
       setUploadedFile(null);
       setResults([]);
       setIsAnalyzing(false);
-      setApplyRuleBase(false);
+      setApplyRules(false);
       
     } catch (e) {
       console.error('Save & Exit failed to save some logs', e);
@@ -571,7 +579,7 @@ export default function ComplianceCheckPage() {
       setUploadedFile(null);
       setResults([]);
       setIsAnalyzing(false);
-      setApplyRuleBase(false);
+      setApplyRules(false);
     }
   };
 
@@ -614,7 +622,7 @@ export default function ComplianceCheckPage() {
           gaps: result.gaps,
           suggestions: result.suggestions,
           fullResult: result,
-          rulebase: { applied: appliedRuleBase, ruleCount: rulebaseCount, method: analysisMethod }
+          rulebase: { applied: appliedRules, ruleCount: rulebaseCount, method: analysisMethod }
         }
       };
 
@@ -638,12 +646,21 @@ export default function ComplianceCheckPage() {
         if (json?.log) {
           addLog(json.log);
         }
+        
+        // Clear cache for fresh data
+        const userId = getUserId();
+        if (userId) {
+          deleteCacheKey(CACHE_KEYS.AUDIT_LOGS(userId));
+          await fetchAuditLogsFromStore(userId, true);
+        }
       }
       
-      // Refresh audit logs from store (will use cache or fetch if needed)
-      fetchAuditLogsFromStore(userId, true);
-      // Invalidate recent activity cache so home dashboard refreshes
-      try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
+      // Track compliance check activity with detailed results
+      if (uploadedFile && selectedStandards.length > 0) {
+        const overallScore = result.score || 75;
+        const status = result.status || 'partial';
+        trackComplianceCheck(uploadedFile.name, selectedStandards, overallScore, status);
+      }
     } catch (error) {
       console.error('Error saving audit log:', error);
     }
@@ -666,7 +683,7 @@ export default function ComplianceCheckPage() {
       const formData = new FormData();
       formData.append('file', uploadedFile);
       formData.append('selectedStandards', JSON.stringify(selectedStandards));
-      formData.append('applyRuleBase', String(applyRuleBase));
+      formData.append('applyRuleBase', String(applyRules));
 
       const response = await fetch('/api/compliance-analysis', { method: 'POST', body: formData });
       const data = await response.json();
@@ -676,7 +693,7 @@ export default function ComplianceCheckPage() {
 
       console.log('Analysis completed using:', data.method || 'unknown method');
       setAnalysisMethod(data.method || 'unknown');
-      if (typeof data.appliedRuleBase !== 'undefined') setAppliedRuleBase(!!data.appliedRuleBase);
+      if (typeof data.appliedRuleBase !== 'undefined') setAppliedRules(!!data.appliedRuleBase);
       if (typeof data.ruleCount !== 'undefined') setRulebaseCount(Number(data.ruleCount) || 0);
 
       const analysis = data.analysis;
@@ -890,7 +907,10 @@ export default function ComplianceCheckPage() {
         }
         console.debug('Task created');
         // Invalidate recent activity cache so new task shows up on home
-        try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
+        const userId = getUserId();
+        if (userId) {
+          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY(userId)); } catch(e) { /* ignore */ }
+        }
       }
     } catch (err) {
       console.error('Error creating task', err);
@@ -1191,10 +1211,10 @@ export default function ComplianceCheckPage() {
                     Analysis Options
                   </span>
                   <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
-                    Apply RuleBase  |  Use your custom company rules during analysis
+                    Apply Rules  |  Use your custom company rules during analysis
                   </span>
                 </div>
-                <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} className="flex-shrink-0" />
+                <Switch checked={applyRules} onCheckedChange={setApplyRules} className="flex-shrink-0" />
               </div>
 
               {/* Selected Standards Card */}
@@ -1297,7 +1317,7 @@ export default function ComplianceCheckPage() {
                               {result.fileName}
                             </h3>
                             <p className="text-[12px] font-semibold leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
-                              Analyzed against {result.standard} on {new Date(result.uploadDate).toLocaleDateString()}
+                              Analyzed against {result.standard} on {formatGlobalDate(result.uploadDate)}
                             </p>
                           </div>
                         </div>
@@ -1922,14 +1942,14 @@ export default function ComplianceCheckPage() {
                             <div className="flex items-center gap-3 font-body-12 text-muted-foreground dark:text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {logDate.toLocaleDateString()}
+                                {formatGlobalDate(log.analysisDate)}
                               </span>
                               <span className="flex items-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
                                 {log.gapsCount} issues
                               </span>
                               {log?.analysisMethod?.includes('+rulebase') && (
-                                <span className="flex items-center gap-1" title="RuleBase applied">
+                                <span className="flex items-center gap-1" title="Rules applied">
                                   <BookOpen className="h-3 w-3 text-teal-600 dark:text-teal-400" />
                                   RB
                                 </span>
@@ -2009,16 +2029,16 @@ export default function ComplianceCheckPage() {
                 <div>
                   <div className="font-semibold">{selectedAuditLog.fileName}</div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(selectedAuditLog.analysisDate).toLocaleString()} • {selectedAuditLog.standards.map(s => s.toUpperCase()).join(', ')}
+                    {formatGlobalDate(selectedAuditLog.analysisDate, { showTime: true })} • {selectedAuditLog.standards.map(s => s.toUpperCase()).join(', ')}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className={getStatusColor(selectedAuditLog.status)}>{selectedAuditLog.status}</Badge>
                   <Badge variant="outline">{selectedAuditLog.score}%</Badge>
                   {(selectedAuditLog.snapshot?.rulebase?.applied || selectedAuditLog.analysisMethod?.includes('+rulebase')) && (
-                    <Badge variant="outline" className="flex items-center gap-1" title={`RuleBase ${selectedAuditLog.snapshot?.rulebase?.applied ? 'applied' : 'detected from method'}`}>
+                    <Badge variant="outline" className="flex items-center gap-1" title={`Rules ${selectedAuditLog.snapshot?.rulebase?.applied ? 'applied' : 'detected from method'}`}>
                       <BookOpen className="h-3 w-3" />
-                      RuleBase
+                      Rules
                       {typeof selectedAuditLog.snapshot?.rulebase?.ruleCount === 'number' && selectedAuditLog.snapshot.rulebase.ruleCount > 0 && (
                         <span>({selectedAuditLog.snapshot.rulebase.ruleCount})</span>
                       )}

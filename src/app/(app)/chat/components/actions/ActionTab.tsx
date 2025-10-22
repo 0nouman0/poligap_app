@@ -32,27 +32,43 @@ export const ActionTab = ({
   const [isCreatingDocument, setIsCreatingDocument] = useState("");
 
   const onExportAsPDF = useCallback(async () => {
-    if (exportReactComponentAsPDF) {
-      setIsExporting(message.id);
-      await exportReactComponentAsPDF(
-        <div
-          className="m-10"
-          style={{
-            fontFamily: "Inter !important",
-          }}
-        >
-          <MarkdownRenderer>{message.content}</MarkdownRenderer>
-        </div>,
-        {
-          title: "AI Agent",
-          fileName: `${message.content?.slice(0, 20) ?? "AI Agent"}`,
-          fileFormat: "pdf",
-        }
-      );
+    setIsExporting(message.id);
+    try {
+      const markdown = message.content ?? "";
+      const fileName = `${message.content?.slice(0, 20) ?? "AI Agent"}`;
+
+      const res = await fetch("/api/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdown, fileName }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({} as any));
+        throw new Error(err?.error || `Export failed with status ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
       toastSuccess("Exported as PDF");
+    } catch (error) {
+      toastError(
+        `Failed to export as PDF  ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    } finally {
       setIsExporting("");
     }
-  }, [message, exportReactComponentAsPDF]);
+  }, [message]);
 
   const onExportAsMarkdown = useCallback(() => {
     setIsExporting(message.id);

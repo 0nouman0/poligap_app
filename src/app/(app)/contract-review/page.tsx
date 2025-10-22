@@ -18,6 +18,18 @@ import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { deleteCacheKey, CACHE_KEYS } from '@/lib/cache';
 import { useContractReviewStore } from "@/store/contractReview";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatGlobalDate } from "@/utils/date.util";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
+
+// Helper to escape HTML when rendering plain text into a printable document
+function escapeHtml(unsafe: string) {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 interface RequiredSection {
   title: string;
@@ -690,10 +702,16 @@ const templatePreviewSections: TemplatePreviewSection[] = [
   }
 ];
 
-export default function ContractReview() {
+export default function ContractReviewPage() {
   const { userData } = useUserStore();
-  const { logs: allAuditLogs, isLoading: logsLoading, addLog, fetchLogs } = useAuditLogsStore();
+  const { addLog } = useAuditLogsStore();
   const crStore = useContractReviewStore();
+  const { trackContractReview, trackPageVisit } = useActivityTracker();
+
+  // Track page visit
+  useEffect(() => {
+    trackPageVisit('contract-review');
+  }, [trackPageVisit]);
 
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -704,7 +722,9 @@ export default function ContractReview() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"template" | "custom">("template");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [applyRuleBase, setApplyRuleBase] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStep, setAnalysisStep] = useState("");
+  const [applyRules, setApplyRules] = useState(false);
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filteredTemplates = useMemo(() => {
@@ -721,6 +741,9 @@ export default function ContractReview() {
   const customTemplateInputRef = useRef<HTMLInputElement | null>(null);
   const [customTemplateInputKey, setCustomTemplateInputKey] = useState(0);
   const [customTemplateFile, setCustomTemplateFile] = useState<File | null>(null);
+
+  // Get audit logs from store
+  const { logs: allAuditLogs, isLoading: logsLoading, fetchLogs } = useAuditLogsStore();
 
   // Fetch audit logs on mount
   useEffect(() => {
@@ -848,8 +871,18 @@ export default function ContractReview() {
     };
 
     setIsAnalyzing(true);
+    setAnalysisProgress(0);
+    setAnalysisStep("Initializing analysis...");
+
+    // Helper function to simulate progress updates
+    const updateProgress = (progress: number, step: string) => {
+      setAnalysisProgress(progress);
+      setAnalysisStep(step);
+    };
+
     try {
       // Extract text from uploaded file
+      updateProgress(10, "Extracting text from document...");
       let extractedText = '';
       
       extractedText = await extractFileText(uploadedFile);
@@ -857,6 +890,7 @@ export default function ContractReview() {
         throw new Error('Could not extract text from the uploaded file. Please try a different PDF or contact support.');
       }
 
+      updateProgress(30, "Preparing analysis template...");
       // Build template clauses for analysis
       const clauses = selectedTemplate?.requiredSections?.map(s => ({
         title: s.title,
@@ -866,6 +900,7 @@ export default function ContractReview() {
         guidelines: []
       })) || [];
 
+      updateProgress(50, `AI is reviewing ${uploadedFile.name} for potential issues and improvements...`);
       // Call Gemini API for analysis
       const response = await fetch('/api/contract-analyze', {
         method: 'POST',
@@ -883,8 +918,10 @@ export default function ContractReview() {
         throw new Error(errorData?.error || 'Analysis failed');
       }
 
+      updateProgress(70, "Processing analysis results...");
       const analysisData = await response.json();
       
+      updateProgress(90, "Finalizing contract review...");
       // Create document with real analysis results
       const document: ExtractedDocument = {
         id: `doc-${Date.now()}`,
@@ -965,7 +1002,7 @@ export default function ContractReview() {
             mediumIssues: document.gaps?.filter(g => g.severity === 'medium').length || 0,
             lowIssues: document.gaps?.filter(g => g.severity === 'low').length || 0,
             analysisDate: new Date().toISOString(),
-            applyRuleBase: applyRuleBase,
+            applyRules: applyRules,
           }
         };
 
@@ -1020,7 +1057,7 @@ export default function ContractReview() {
         if (userData?.userId) {
           fetchLogs(userData.userId, true).catch(() => {});
           // Invalidate recent-activity cache so home page will refresh
-          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
+          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY(userData.userId)); } catch(e) { /* ignore */ }
         }
       } catch (logError) {
         console.error('Failed to save audit log:', logError);
@@ -1049,6 +1086,11 @@ export default function ContractReview() {
         }
       }
 
+      updateProgress(100, "Analysis complete!");
+      
+      // Track the contract review activity
+      trackContractReview(uploadedFile.name, selectedTemplate?.name || 'Custom Template', document.overallScore);
+      
       toastSuccess('Analysis Complete', 'Your contract has been analyzed successfully');
     } catch (error) {
       console.error('Document extraction and analysis failed:', error);
@@ -1092,6 +1134,8 @@ export default function ContractReview() {
       }
     } finally {
       setIsAnalyzing(false);
+      setAnalysisProgress(0);
+      setAnalysisStep("");
     }
   };
 
@@ -1191,7 +1235,7 @@ export default function ContractReview() {
     setCustomTemplateFile(null);
     setExtractedDocument(null);
     setFinalInstructions('');
-    setApplyRuleBase(true);
+    setApplyRules(true);
     setSearchTerm('');
     setActiveTab('template');
     
@@ -1258,7 +1302,7 @@ export default function ContractReview() {
   };
 
   const formatDateShort = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return formatGlobalDate(date);
   };
 
   const nextStep = () => {
@@ -1987,7 +2031,7 @@ export default function ContractReview() {
                       Use your custom company rules during analysis
                     </p>
                   </div>
-                  <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
+                  <Switch checked={applyRules} onCheckedChange={setApplyRules} />
                 </div>
               </div>
             </div>
@@ -2038,13 +2082,41 @@ export default function ContractReview() {
         {currentStep === 4 && (
           <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-thin items-end pr-4">
             {/* Reviewer notes textarea before analysis */}
-            {!extractedDocument && (
+            {!extractedDocument && !isAnalyzing && (
               <Textarea
                 placeholder="Any final instructions for contract review..."
                 value={finalInstructions}
                 onChange={(e) => setFinalInstructions(e.target.value)}
                 className="min-h-[120px] w-full max-w-[1648px]"
               />
+            )}
+
+            {/* Progress Loader - Exact Match to Image */}
+            {isAnalyzing && (
+              <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1648px] min-h-[400px]">
+                <div className="text-center space-y-8 max-w-2xl">
+                  <h2 className="text-3xl font-semibold text-[#202020] dark:text-gray-100">
+                    Analyzing Contract
+                  </h2>
+                  <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
+                    {analysisStep || `AI is reviewing ${uploadedFile?.name || 'Detailed architecture assessment.pdf'} (application/pdf) for potential issues and improvements...`}
+                  </p>
+                  
+                  <div className="w-full space-y-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+                      <div 
+                        className="bg-[#3B43D6] h-1 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${analysisProgress}%` }}
+                      />
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-medium text-[#595959] dark:text-gray-400">
+                        {analysisProgress}% Complete
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Canvas after analysis */}
@@ -2065,23 +2137,24 @@ export default function ContractReview() {
                   Previous
                 </button>
                 
-                {!extractedDocument && (
+                {!extractedDocument && !isAnalyzing && (
                   <button
                     onClick={handleDocumentExtraction}
-                    disabled={!uploadedFile || isAnalyzing || !selectedTemplate}
+                    disabled={!uploadedFile || !selectedTemplate}
                     className="min-w-[220px] h-11 flex items-center gap-2 px-4 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold hover:bg-[#2F36B0] disabled:opacity-50 disabled:cursor-not-allowed justify-center"
                   >
-                    {isAnalyzing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        <span className="whitespace-nowrap text-sm">Extract & Analyze with AI</span>
-                      </>
-                    )}
+                    <FileText className="h-4 w-4" />
+                    <span className="whitespace-nowrap text-sm">Extract & Analyze with AI</span>
+                  </button>
+                )}
+
+                {isAnalyzing && (
+                  <button
+                    disabled
+                    className="min-w-[120px] h-11 flex items-center gap-2 px-6 bg-[#8B93FF] text-white rounded-full text-sm font-medium cursor-not-allowed justify-center"
+                  >
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <span className="whitespace-nowrap text-sm">Analyzing...</span>
                   </button>
                 )}
                 
@@ -2121,21 +2194,79 @@ export default function ContractReview() {
                 </div>
                     {extractedDocument && (
                       <div className="flex items-center gap-3">
-                        <Button
-                          onClick={handleDownloadReport}
-                          className="min-w-[180px] h-10 px-5 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download Report
-                        </Button>
-                        <Button
-                          onClick={handleDownloadResults}
-                          variant="outline"
-                          className="min-w-[180px] h-10 px-5 border-[#DEE3ED] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download JSON
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              // Download as Markdown (.md)
+                              const revised = crStore.exportRevisedDocument ? crStore.exportRevisedDocument() : extractedDocument.fullText;
+                              const baseName = (extractedDocument.fileName || 'revised-document').replace(/\.[^/.]+$/, '');
+                              const blob = new Blob([revised || ''], { type: 'text/markdown;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${baseName}.md`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              toastSuccess('Downloaded', 'Revised document (.md) downloaded');
+                            }}
+                            className="min-w-[140px] h-10 px-4 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                          >
+                            <Download className="h-4 w-4" />
+                            .MD
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              // Download as TXT
+                              const revised = crStore.exportRevisedDocument ? crStore.exportRevisedDocument() : extractedDocument.fullText;
+                              const baseName = (extractedDocument.fileName || 'revised-document').replace(/\.[^/.]+$/, '');
+                              const blob = new Blob([revised || ''], { type: 'text/plain;charset=utf-8' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${baseName}.txt`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              toastSuccess('Downloaded', 'Revised document (.txt) downloaded');
+                            }}
+                            variant="outline"
+                            className="min-w-[140px] h-10 px-4 border-[#DEE3ED] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                          >
+                            <Download className="h-4 w-4" />
+                            .TXT
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              // Open printable window for PDF (user can save as PDF via print dialog)
+                              const revised = crStore.exportRevisedDocument ? crStore.exportRevisedDocument() : extractedDocument.fullText;
+                              const baseName = (extractedDocument.fileName || 'revised-document').replace(/\.[^/.]+$/, '');
+                              const printWindow = window.open('', '_blank');
+                              if (!printWindow) {
+                                toastError('Popup blocked', 'Unable to open print window. Please allow popups and try again.');
+                                return;
+                              }
+                              const html = `<!doctype html><html><head><meta charset="utf-8"><title>${baseName}</title><style>body{font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:40px;} pre{white-space:pre-wrap;word-wrap:break-word;font-size:13px;line-height:1.45;}</style></head><body><pre>${escapeHtml(revised || '')}</pre></body></html>`;
+                              printWindow.document.open();
+                              printWindow.document.write(html);
+                              printWindow.document.close();
+                              // Try to auto-trigger print; browsers may block without user gesture
+                              setTimeout(() => {
+                                try { printWindow.print(); } catch (e) { /* ignore */ }
+                              }, 500);
+                            }}
+                            className="min-w-[140px] h-10 px-4 bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold rounded-[8px] flex items-center gap-2 justify-center"
+                          >
+                            <Download className="h-4 w-4" />
+                            PDF (Print)
+                          </Button>
+                        </div>
+
+                        
                         <Button
                           onClick={handleStartNewReview}
                           variant="outline"

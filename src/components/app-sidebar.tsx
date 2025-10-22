@@ -97,7 +97,7 @@ const navigationItems = [
     page: "/ai-agents" as PageType,
   },
   {
-    title: "RuleBase",
+    title: "Rules",
     icon: NotebookPen,
     page: "/rulebase" as PageType,
   },
@@ -140,8 +140,8 @@ export function AppSidebar() {
   // Show all navigation items for Poligap interface
   const visibleNavigationItems = navigationItems;
 
-  // Show all bottom navigation items for Poligap interface
-  const visibleBottomNavigationItems = bottomNavigationItems;
+  // Show bottom navigation items, but hide Settings for now
+  const visibleBottomNavigationItems = bottomNavigationItems.filter(item => item.title !== 'Settings');
 
   // console.log("visibleBottomNavigationItems =>", visibleBottomNavigationItems);
 

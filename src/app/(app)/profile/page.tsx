@@ -35,11 +35,104 @@ import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/utils/user.util";
 import { useUserProfile, UserProfile } from "@/lib/hooks/useUserProfile";
 import { createClient } from "@/lib/supabase/client";
+import { formatGlobalDate } from "@/utils/date.util";
+
+// Comprehensive country list for profile selection
+const COUNTRIES = [
+  "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia","Australia","Austria",
+  "Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bhutan",
+  "Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde","Cambodia",
+  "Cameroon","Canada","Central African Republic","Chad","Chile","China","Colombia","Comoros","Congo (Brazzaville)","Congo (Kinshasa)",
+  "Costa Rica","Côte d'Ivoire","Croatia","Cuba","Cyprus","Czech Republic","Denmark","Djibouti","Dominica","Dominican Republic",
+  "Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini","Ethiopia","Fiji","Finland",
+  "France","Gabon","Gambia","Georgia","Germany","Ghana","Greece","Grenada","Guatemala","Guinea",
+  "Guinea-Bissau","Guyana","Haiti","Honduras","Hungary","Iceland","India","Indonesia","Iran","Iraq",
+  "Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kuwait",
+  "Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg",
+  "Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico",
+  "Micronesia","Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar","Namibia","Nauru",
+  "Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman",
+  "Pakistan","Palau","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar",
+  "Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino","Sao Tome and Principe","Saudi Arabia",
+  "Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa",
+  "South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland","Syria","Taiwan",
+  "Tajikistan","Tanzania","Thailand","Timor-Leste","Togo","Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan",
+  "Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Vanuatu","Vatican City",
+  "Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"
+];
 
 interface EditableField {
   field: keyof UserData;
   value: string;
   isEditing: boolean;
+}
+
+// Module-level editable field component to avoid remounting on every render
+function EditableFieldComponent({
+  fieldName,
+  label,
+  value,
+  icon: Icon,
+  type = 'text',
+  isGlobalEditMode,
+  editableFields,
+  updateFieldValue,
+  validateField,
+}: {
+  fieldName: string;
+  label: string;
+  value: string;
+  icon: any;
+  type?: string;
+  isGlobalEditMode: boolean;
+  editableFields: Record<string, EditableField>;
+  updateFieldValue: (fieldName: string, value: string) => void;
+  validateField: (fieldName: string, value: string) => { isValid: boolean; error?: string };
+}) {
+  const isEditing = isGlobalEditMode && editableFields[fieldName]?.isEditing;
+  const editValue = editableFields[fieldName]?.value ?? value ?? '';
+  const validation = isEditing ? validateField(fieldName, editValue) : { isValid: true };
+  const hasError = isEditing && !validation.isValid;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let newValue = e.target.value;
+    if (fieldName === 'mobile') {
+      newValue = newValue.replace(/[^0-9\s\-\(\)\+]/g, '');
+    } else if (fieldName === 'name') {
+      newValue = newValue.replace(/[^a-zA-Z\s\-'\.]/g, '');
+    }
+    updateFieldValue(fieldName, newValue);
+  };
+
+  return (
+    <div className="flex flex-col">
+      <div className={`p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
+        <div className="flex items-center gap-3 mb-1">
+          <Icon className={`h-4 w-4 ${hasError ? 'text-red-500' : 'text-[#6A707C]'}`} />
+          <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>{label}</Label>
+        </div>
+        <div className="ml-4 sm:ml-7">
+          {isEditing ? (
+            <Input
+              type={type}
+              value={editValue}
+              onChange={handleInputChange}
+              className={`h-8 w-full border-[#E4E4E4] focus:border-[#3B43D6] ${hasError ? 'border-red-400 focus:border-red-500' : ''}`}
+              placeholder={`Enter ${label.toLowerCase()}`}
+            />
+          ) : (
+            <p className="text-sm text-[#6A707C] py-1">{value || 'Not provided'}</p>
+          )}
+        </div>
+      </div>
+      {hasError && validation.error && (
+        <p className="text-xs text-red-600 mt-1 ml-10 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          {validation.error}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function UserProfilePage() {
@@ -213,24 +306,35 @@ export default function UserProfilePage() {
     if (!country || country.trim().length === 0) {
       return { isValid: false, error: 'Country is required' };
     }
-    if (country.trim().length < 2) {
-      return { isValid: false, error: 'Please select a valid country' };
+    const normalized = country.trim();
+    if (normalized.length < 2 || normalized.length > 56) {
+      return { isValid: false, error: 'Please select a valid country name' };
+    }
+    // Allow letters, spaces, ampersand, hyphens and periods (e.g., "Côte d'Ivoire" may be normalized by backend)
+    const countryRegex = /^[a-zA-Z\s\-\&\.']+$/;
+    if (!countryRegex.test(normalized)) {
+      return { isValid: false, error: 'Country name contains invalid characters' };
     }
     return { isValid: true };
   };
 
   const validateDesignation = (designation: string): { isValid: boolean; error?: string } => {
     if (designation && designation.trim().length > 0) {
-      if (designation.trim().length < 2) {
-        return { isValid: false, error: 'Designation must be at least 2 characters' };
+      const d = designation.trim();
+      if (d.length < 2) {
+        return { isValid: false, error: 'Job Title must be at least 2 characters' };
       }
-      if (designation.trim().length > 100) {
-        return { isValid: false, error: 'Designation must not exceed 100 characters' };
+      if (d.length > 100) {
+        return { isValid: false, error: 'Job Title must not exceed 100 characters' };
       }
-      // Allow letters, numbers, spaces, and common punctuation
-      const designationRegex = /^[a-zA-Z0-9\s\-\/,\.&()]+$/;
-      if (!designationRegex.test(designation)) {
-        return { isValid: false, error: 'Designation contains invalid characters' };
+      // No long runs of punctuation, allow letters, numbers and common job-title punctuation
+      const designationRegex = /^[a-zA-Z0-9][a-zA-Z0-9\s\-\/\,\.\&()]{0,98}[a-zA-Z0-9\)]?$/;
+      if (!designationRegex.test(d)) {
+        return { isValid: false, error: 'Job Title contains invalid characters or formatting' };
+      }
+      // Disallow titles that are only numbers or punctuation
+      if (/^[0-9\W_]+$/.test(d)) {
+        return { isValid: false, error: 'Job Title must contain letters' };
       }
     }
     return { isValid: true };
@@ -647,13 +751,9 @@ export default function UserProfilePage() {
       const { day, month, year } = parseDate(dateStr);
       if (!day || !month || !year) return 'Not provided';
       
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      
-      const monthName = monthNames[parseInt(month) - 1] || month;
-      return `${monthName} ${day}, ${year}`;
+      // Create a date object and use global format
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return formatGlobalDate(dateObj);
     };
 
     // Generate options
@@ -751,77 +851,7 @@ export default function UserProfilePage() {
     );
   };
 
-  // Editable field component
-  const EditableFieldComponent = ({ 
-    fieldName, 
-    label, 
-    value, 
-    icon: Icon, 
-    type = 'text' 
-  }: { 
-    fieldName: string; 
-    label: string; 
-    value: string; 
-    icon: any; 
-    type?: string; 
-  }) => {
-    const isEditing = isGlobalEditMode && editableFields[fieldName]?.isEditing;
-    // Use ?? instead of || to allow empty strings
-    const editValue = editableFields[fieldName]?.value ?? value ?? '';
-    
-    // Real-time validation
-    const validation = isEditing ? validateField(fieldName, editValue) : { isValid: true };
-    const hasError = isEditing && !validation.isValid;
-
-    // Input validation handler with character filtering
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let newValue = e.target.value;
-      
-      // Apply field-specific input filtering
-      if (fieldName === 'mobile') {
-        // Allow only digits, spaces, hyphens, parentheses, and + at start
-        newValue = newValue.replace(/[^0-9\s\-\(\)\+]/g, '');
-      } else if (fieldName === 'name') {
-        // Allow only letters, spaces, hyphens, apostrophes, and periods
-        newValue = newValue.replace(/[^a-zA-Z\s\-'\.]/g, '');
-      }
-      
-      updateFieldValue(fieldName, newValue);
-    };
-
-    return (
-      <div className="flex flex-col">
-        <div className={`p-3 rounded-lg border ${hasError ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
-          <div className="flex items-center gap-3 mb-1">
-            <Icon className={`h-4 w-4 ${hasError ? 'text-red-500' : 'text-[#6A707C]'}`} />
-            <Label className={`text-sm font-medium ${hasError ? 'text-red-600' : 'text-[#2D2F34]'}`}>{label}</Label>
-          </div>
-          <div className="ml-4 sm:ml-7">
-            {isEditing ? (
-              <Input
-                type={type}
-                value={editValue}
-                onChange={handleInputChange}
-                className={`h-8 w-full border-[#E4E4E4] focus:border-[#3B43D6] ${hasError ? 'border-red-400 focus:border-red-500' : ''}`}
-                placeholder={`Enter ${label.toLowerCase()}`}
-              />
-            ) : (
-              <p className="text-sm text-[#6A707C] py-1">
-                {value || 'Not provided'}
-              </p>
-            )}
-          </div>
-        </div>
-        {/* Validation error message */}
-        {hasError && validation.error && (
-          <p className="text-xs text-red-600 mt-1 ml-10 flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            {validation.error}
-          </p>
-        )}
-      </div>
-    );
-  };
+  
 
   // Render the page even during initial load, but show skeletons while initializing
   // If there's absolutely no profileData after initialization, show a helpful empty state
@@ -1012,6 +1042,10 @@ export default function UserProfilePage() {
                     label="Full Name"
                     value={profileData?.name || ''}
                     icon={User}
+                    isGlobalEditMode={isGlobalEditMode}
+                    editableFields={editableFields}
+                    updateFieldValue={updateFieldValue}
+                    validateField={validateField}
                   />
                   {/* Email field - Display only (managed by Supabase Auth) */}
                   <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
@@ -1034,14 +1068,44 @@ export default function UserProfilePage() {
                     value={profileData?.mobile || ''}
                     icon={Phone}
                     type="tel"
+                    isGlobalEditMode={isGlobalEditMode}
+                    editableFields={editableFields}
+                    updateFieldValue={updateFieldValue}
+                    validateField={validateField}
                   />
                   <DOBFieldComponent />
-                  <EditableFieldComponent
-                    fieldName="country"
-                    label="Country"
-                    value={profileData?.country || ''}
-                    icon={MapPin}
-                  />
+                  {/* Country selection: use a select dropdown when editing */}
+                  <div className="flex flex-col">
+                    <div className={`p-3 rounded-lg border ${isGlobalEditMode && !validateCountry(editableFields['country']?.value ?? profileData?.country ?? '').isValid ? 'border-red-400 bg-red-50/50' : 'border-[#E6E6E6]'}`}>
+                      <div className="flex items-center gap-3 mb-1">
+                        <MapPin className={`h-4 w-4 text-[#6A707C]`} />
+                        <Label className="text-sm font-medium text-[#2D2F34]">Country</Label>
+                      </div>
+                      <div className="ml-4 sm:ml-7">
+                        {isGlobalEditMode ? (
+                          <select
+                            value={editableFields['country']?.value ?? profileData?.country ?? ''}
+                            onChange={(e) => updateFieldValue('country', e.target.value)}
+                            className="h-8 w-full border-[#E4E4E4] focus:border-[#3B43D6] rounded-md px-2 text-[13px]"
+                          >
+                            <option value="">Select country</option>
+                            {COUNTRIES.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-sm text-[#6A707C] py-1">{profileData?.country || 'Not provided'}</p>
+                        )}
+                      </div>
+                    </div>
+                    {/* Inline validation message */}
+                    {isGlobalEditMode && (() => {
+                      const v = validateCountry(editableFields['country']?.value ?? profileData?.country ?? '');
+                      return (!v.isValid && v.error) ? (
+                        <p className="text-xs text-red-600 mt-1 ml-10 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{v.error}</p>
+                      ) : null;
+                    })()}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1058,6 +1122,10 @@ export default function UserProfilePage() {
                     label="Job Title"
                     value={profileData?.designation || ''}
                     icon={Briefcase}
+                    isGlobalEditMode={isGlobalEditMode}
+                    editableFields={editableFields}
+                    updateFieldValue={updateFieldValue}
+                    validateField={validateField}
                   />
                   
                   {/* About Section */}
@@ -1156,7 +1224,7 @@ export default function UserProfilePage() {
                     <div className="flex justify-between">
                       <span className="text-sm">Member Since:</span>
                       <span className="text-sm text-muted-foreground">
-                        {profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}
+                        {profileData?.createdAt ? formatGlobalDate(profileData.createdAt) : 'N/A'}
                       </span>
                     </div>
                   </div>

@@ -9,6 +9,8 @@ import { Search } from "lucide-react";
 import { useRulebaseStore } from "@/stores/rulebase-store";
 import { ConfirmDialog } from "@/components/modals/ConfirmDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatGlobalDate } from "@/utils/date.util";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 
 interface RuleItem {
   _id?: string;
@@ -149,8 +151,9 @@ const PREDEFINED_RULES = [
   }
 ];
 
-export default function RuleBasePage() {
+export default function RulesPage() {
   const { rules, isLoading: loading, fetchRules, addRule, deleteRule } = useRulebaseStore();
+  const { trackRulesAction } = useActivityTracker();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -260,6 +263,7 @@ export default function RuleBasePage() {
         createdAt: new Date().toISOString(),
       };
       addRule(localRule);
+      trackRulesAction('created', newRuleName);
       setIsCreateOpen(false);
       setNewRuleName("");
       setNewRuleDesc("");
@@ -271,7 +275,9 @@ export default function RuleBasePage() {
   const confirmDeleteRule = async () => {
     if (!pendingDeleteRule?._id) return;
     const ruleId = pendingDeleteRule._id;
+    const ruleName = pendingDeleteRule.name;
     deleteRule(ruleId);
+    trackRulesAction('deleted', ruleName);
     try {
       await fetch("/api/rulebase", {
         method: "DELETE",
@@ -423,7 +429,7 @@ export default function RuleBasePage() {
       <ConfirmDialog
         open={confirmOpen}
         title="Delete rule?"
-        description={`This will permanently remove "${pendingDeleteRule?.name || 'this rule'}" from your RuleBase.`}
+        description={`This will permanently remove "${pendingDeleteRule?.name || 'this rule'}" from your Rules.`}
         confirmText="Delete Rule"
         onCancel={() => { setConfirmOpen(false); setPendingDeleteRule(null); }}
         onConfirm={confirmDeleteRule}
@@ -440,7 +446,7 @@ export default function RuleBasePage() {
               </svg>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19.36px]">RuleBase</h1>
+              <h1 className="text-[16px] font-semibold text-[#2D2F34] leading-[19.36px]">Rules</h1>
               <p className="text-[12px] text-[#6A707C] leading-[14.52px]">
                 Manage your company's custom compliance and contract rules
               </p>
@@ -550,7 +556,7 @@ export default function RuleBasePage() {
                 <div className="text-center">
                   <h3 className="text-[14px] font-semibold text-[#2D2F34] mb-2">No rules yet</h3>
                   <p className="text-[12px] font-medium text-[#717171] leading-[18px] max-w-[300px]">
-                    {searchTerm ? `No rules found matching "${searchTerm}"` : 'Create your first rule to get started with your compliance rulebase.'}
+                    {searchTerm ? `No rules found matching "${searchTerm}"` : 'Create your first rule to get started with your compliance rules.'}
                   </p>
                 </div>
                 <button
@@ -636,7 +642,7 @@ export default function RuleBasePage() {
                       {/* Footer with timestamp */}
                       {rule.updatedAt && (
                         <div className="text-[10px] text-[#717171] mt-2 pt-2 border-t border-[#F0F0F0]">
-                          Updated {new Date(rule.updatedAt).toLocaleDateString()}
+                          Updated {formatGlobalDate(rule.updatedAt)}
                         </div>
                       )}
                     </div>
@@ -652,7 +658,7 @@ export default function RuleBasePage() {
             <div className="flex flex-col gap-2">
               <h2 className="text-[16px] font-semibold text-[#202020] leading-[19.36px]">Predefined Rule Templates</h2>
               <p className="text-[12px] font-medium text-[#717171] leading-[14.52px]">
-                Choose from 20 industry-standard templates to quickly set up your rulebase
+                Choose from 20 industry-standard templates to quickly set up your rules
               </p>
             </div>
 
