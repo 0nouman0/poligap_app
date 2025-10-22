@@ -49,83 +49,111 @@ export async function POST(req: NextRequest) {
     console.log("Initializing Gemini...");
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Use latest Gemini Flash 2.0/2.5 models for advanced contract analysis
+    // Prioritize stable models first, then newer models, then experimental ones
     const models = [
-      "gemini-2.0-flash-exp",
-      "gemini-exp-1206", 
-      "gemini-2.0-flash-thinking-exp-1219",
       "gemini-1.5-flash-latest",
-      "gemini-1.5-flash-002",
+      "gemini-1.5-flash-002", 
       "gemini-1.5-flash",
-      "gemini-1.5-pro"
+      "gemini-1.5-pro-latest",
+      "gemini-1.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-thinking-exp-1219",
+      "gemini-2.0-flash-exp",
+      "gemini-exp-1206"
     ];
-    let model;
-    let modelUsed = "";
     
-    for (const modelName of models) {
-      try {
-        model = genAI.getGenerativeModel({ model: modelName });
-        modelUsed = modelName;
-        console.log(`Using model: ${modelName}`);
-        break;
-      } catch (e) {
-        console.log(`Model ${modelName} not available, trying next...`);
-        continue;
-      }
-    }
-    
-    if (!model) {
-      throw new Error("No available Gemini models");
-    }
-
     const prompt = createAnalysisPrompt(text, templateClauses, contractType || "contract");
     console.log("Generated prompt length:", prompt.length);
 
-    console.log("Calling Gemini API...");
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        topK: 1,
-        topP: 0.8,
-        maxOutputTokens: 8192,
-        responseMimeType: "application/json",
-      },
-    });
+    // Retry with exponential backoff and model fallback
+    let lastError: any = null;
+    let modelUsed = "";
+    
+    for (let attempt = 0; attempt < 3; attempt++) {
+      for (const modelName of models) {
+        try {
+          console.log(`Attempt ${attempt + 1}: Trying model ${modelName}`);
+          const model = genAI.getGenerativeModel({ model: modelName });
+          
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              topK: 1,
+              topP: 0.8,
+              maxOutputTokens: 8192,
+              responseMimeType: "application/json",
+            },
+          });
+          
+          modelUsed = modelName;
+          console.log(`✅ Success with model: ${modelName}`);
+          
+          const response = await result.response;
+          const analysisText = response.text();
+          console.log("Gemini response received, length:", analysisText.length);
+          const parsed = parseAnalysisResult(analysisText, text);
+          console.log("Analysis parsed successfully, suggestions count:", parsed.suggestions.length);
 
-    const response = await result.response;
-    const analysisText = response.text();
-    console.log("Gemini response received, length:", analysisText.length);
-    const parsed = parseAnalysisResult(analysisText, text);
-    console.log("Analysis parsed successfully, suggestions count:", parsed.suggestions.length);
+          // Save to Supabase
+          try {
+            const { data: analysisRecord, error: insertError } = await supabase
+              .from('document_analysis')
+              .insert({
+                user_id: user.id,
+                document_id: `contract_${Date.now()}`,
+                title: `${contractType || 'Contract'} Analysis`,
+                compliance_standard: 'Contract Review',
+                score: parsed.overallScore * 100, // Convert to percentage
+                metrics: { ...parsed, analysisMethod: 'contract-review' },
+              })
+              .select()
+              .single();
 
-    // Save contract analysis to Supabase using Postgrest
-    try {
-      const { data: analysisRecord, error: insertError } = await supabase
-        .from('document_analysis')
-        .insert({
-          user_id: user.id,
-          document_id: `contract_${Date.now()}`,
-          title: `${contractType || 'Contract'} Analysis`,
-          compliance_standard: 'Contract Review',
-          score: parsed.overallScore * 100, // Convert to percentage
-          metrics: { ...parsed, analysisMethod: 'contract-review' },
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Failed to save contract analysis to Supabase:', insertError);
-        // Continue even if saving fails
-      } else {
-        console.log('Contract analysis saved successfully:', analysisRecord?.id);
+            if (insertError) {
+              console.error('Failed to save contract analysis to Supabase:', insertError);
+            } else {
+              console.log('Contract analysis saved successfully:', analysisRecord?.id);
+            }
+          } catch (saveError) {
+            console.error('Failed to save contract analysis to Supabase:', saveError);
+          }
+          
+          return NextResponse.json({ success: true, modelUsed, ...parsed });
+          
+        } catch (error: any) {
+          lastError = error;
+          console.log(`❌ Model ${modelName} failed:`, error.message);
+          
+          // Check if it's a quota/rate limit error
+          if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+            console.log(`⏳ Quota exceeded for ${modelName}, trying next model...`);
+            continue; // Try next model immediately
+          }
+          
+          // Check if it's a service unavailable error
+          if (error.message?.includes('503') || error.message?.includes('overloaded')) {
+            console.log(`🔄 Service overloaded for ${modelName}, trying next model...`);
+            continue; // Try next model immediately
+          }
+          
+          // For other errors, continue to next model
+          continue;
+        }
       }
-    } catch (error) {
-      console.error('Failed to save contract analysis to Supabase:', error);
-      // Continue even if saving fails
+      
+      // If all models failed in this attempt, wait before retrying
+      if (attempt < 2) {
+        const waitTime = Math.pow(2, attempt) * 1000; // 1s, 2s exponential backoff
+        console.log(`⏳ All models failed, waiting ${waitTime}ms before retry ${attempt + 2}...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
 
-    return NextResponse.json({ success: true, modelUsed, ...parsed });
+    // If all attempts failed, throw the last error
+    console.error("All Gemini models and retry attempts failed");
+    throw lastError || new Error("All Gemini models are currently unavailable");
   } catch (error) {
     console.error("contract-analyze error:", error);
     

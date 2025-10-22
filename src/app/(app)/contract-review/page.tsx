@@ -724,6 +724,7 @@ export default function ContractReviewPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState("");
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [applyRules, setApplyRules] = useState(false);
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -860,6 +861,7 @@ export default function ContractReviewPage() {
     
     // Clear any existing data and reset error state
     setExtractedDocument(null);
+    setAnalysisError(null);
     crStore.setExtractedDocument(null);
     crStore.setSuggestions([]);
     
@@ -915,7 +917,18 @@ export default function ContractReviewPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData?.error || 'Analysis failed');
+        const errorMessage = errorData?.error || 'Analysis failed';
+        
+        // Handle specific error types
+        if (errorMessage.includes('overloaded') || errorMessage.includes('503')) {
+          throw new Error('AI service is currently overloaded. Please try again in a few minutes.');
+        } else if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+          throw new Error('AI service quota exceeded. Please try again later or contact support.');
+        } else if (errorMessage.includes('unavailable')) {
+          throw new Error('AI analysis service is temporarily unavailable. Please try again in a few minutes.');
+        }
+        
+        throw new Error(errorMessage);
       }
 
       updateProgress(70, "Processing analysis results...");
@@ -1095,6 +1108,7 @@ export default function ContractReviewPage() {
     } catch (error) {
       console.error('Document extraction and analysis failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setAnalysisError(errorMessage);
       toastError('Analysis Failed', `Document processing failed: ${errorMessage}`);
       
       // Log the failure to audit logs
@@ -2114,6 +2128,39 @@ export default function ContractReviewPage() {
                         {analysisProgress}% Complete
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {analysisError && !isAnalyzing && !extractedDocument && (
+              <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1648px] min-h-[400px]">
+                <div className="text-center space-y-6 max-w-2xl">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto bg-red-100 rounded-full">
+                    <AlertTriangle className="w-8 h-8 text-red-600" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-[#202020] dark:text-gray-100">
+                    Analysis Failed
+                  </h2>
+                  <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
+                    {analysisError}
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <Button
+                      onClick={handleDocumentExtraction}
+                      className="bg-[#3B43D6] text-white hover:bg-[#2F36B0] px-6 py-3 rounded-xl"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Try Again
+                    </Button>
+                    <Button
+                      onClick={() => setAnalysisError(null)}
+                      variant="outline"
+                      className="px-6 py-3 rounded-xl"
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               </div>
