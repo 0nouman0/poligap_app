@@ -28,10 +28,37 @@ const signInSchema = z.object({
   password: z
     .string()
     .min(1, "Password is required")
-    .min(6, "Password must be at least 6 characters"),
+    .min(8, "Password must be at least 8 characters"),
 });
 
 type SignInFormData = z.infer<typeof signInSchema>;
+
+// Compact rotating facts box for the right panel
+function DidYouKnow() {
+  const facts = [
+    { t: "AI accelerates contract reviews by 40–60% in enterprise legal ops.", c: "Gartner Legal Tech Hype Cycle, 2024" },
+    { t: "Automated compliance checks can reduce audit prep time by ~35%.", c: "Deloitte RegTech Survey, 2023" },
+    { t: "Policy templates mapped to controls cut downstream rework by ~25%.", c: "ISACA Governance Insights, 2023" },
+    { t: "Early standards alignment lowers remediation costs by up to 30%.", c: "NIST CSF Adoption Report, 2022" },
+    { t: "Clause libraries reduce drafting variance and negotiation cycles.", c: "WorldCC Contracting Benchmarks, 2023" },
+    { t: "Proactive monitoring decreases regulatory incident exposure.", c: "BCG Compliance Outlook, 2024" },
+    { t: "AI triage improves review prioritization for high‑risk contracts.", c: "ACLA Legal Operations Study, 2024" },
+    { t: "Structured reviews improve obligation tracking and KPI reporting.", c: "PwC Risk & Controls Study, 2023" },
+    { t: "Automated summaries lift stakeholder comprehension and velocity.", c: "McKinsey GenAI Use‑Cases, 2024" },
+    { t: "Central policy governance improves auditability and change control.", c: "ISACA Audit Considerations, 2024" },
+  ];
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setIdx((i) => (i + 1) % facts.length), 3500);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 shadow-xs italic">
+      <div className="text-[12px] text-indigo-900 min-h-[34px] transition-opacity duration-300">{facts[idx].t}</div>
+      <div className="text-[10px] text-indigo-700/80 mt-1">[{idx + 1}] {facts[idx].c}</div>
+    </div>
+  );
+}
 
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +70,115 @@ export default function SignInPage() {
   const prevThemeRef = useRef<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
   const supabase = createClient();
+
+  // Forgot Password UI state
+  const [showForgot, setShowForgot] = useState(false);
+  const [fpStep, setFpStep] = useState<"email" | "otp">("email");
+  const [fpEmail, setFpEmail] = useState("");
+  const [fpOTP, setFpOTP] = useState("");
+  const [fpNewPass, setFpNewPass] = useState("");
+  const [fpLoading, setFpLoading] = useState(false);
+  const [fpMessage, setFpMessage] = useState<string | null>(null);
+
+  // Right panel: animated feature showcase
+  const features = [
+    {
+      phrase: "Check compliances",
+      title: "Regulatory Change Monitoring",
+      subtitle: "Track evolving obligations across jurisdictions in real time.",
+      suggestion: "Consider reviewing new ISO and GDPR updates impacting your policies.",
+      progress: 62,
+      actions: ["Prioritize", "Review", "Acknowledge"],
+    },
+    {
+      phrase: "Review contracts",
+      title: "AI‑Assisted Contract Review",
+      subtitle: "Identify risks, deviations, and missing clauses instantly.",
+      suggestion: "Clause variance detected: strengthen indemnity and data security terms.",
+      progress: 78,
+      actions: ["Flag Risk", "Edit Clause", "Approve"],
+    },
+    {
+      phrase: "Generate policies",
+      title: "Policy Generation & Governance",
+      subtitle: "Draft, align, and version policies with measurable controls.",
+      suggestion: "Draft aligns with SOC 2 controls; add incident response escalation steps.",
+      progress: 54,
+      actions: ["Refine", "Map Controls", "Publish"],
+    },
+    {
+      phrase: "Monitor standards",
+      title: "Standards Alignment",
+      subtitle: "Continuously benchmark against ISO, NIST, SOC 2, and more.",
+      suggestion: "NIST CSF gaps detected in Protect (PR.PT) domain—recommend remediation.",
+      progress: 41,
+      actions: ["Create Task", "Assign", "Track"],
+    },
+  ] as const;
+  const phrases = features.map(f => f.phrase);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [targetProgress, setTargetProgress] = useState<number>(features[0].progress);
+  const current = features[phraseIndex % features.length];
+
+  // Step-by-step flow animation (Upload → Parse → Edit → Download)
+  const steps = [
+    { key: "upload", title: "Upload", desc: "Drag & drop documents for instant intake." },
+    { key: "parse", title: "Parse", desc: "Extract entities, clauses, and metadata." },
+    { key: "edit", title: "Edit", desc: "Refine with AI suggestions and controls." },
+    { key: "download", title: "Export", desc: "Download polished outputs and share." },
+  ] as const;
+  const [stepIndex, setStepIndex] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStepIndex((i) => (i + 1) % steps.length), 1400);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const full = phrases[phraseIndex % phrases.length];
+    const speed = deleting ? 40 : 70;
+    const timer = setTimeout(() => {
+      if (!deleting) {
+        const next = full.slice(0, typed.length + 1);
+        setTyped(next);
+        if (next === full) {
+          setTimeout(() => setDeleting(true), 900);
+        }
+      } else {
+        const next = full.slice(0, typed.length - 1);
+        setTyped(next);
+        if (next.length === 0) {
+          setDeleting(false);
+          setPhraseIndex((i) => (i + 1) % phrases.length);
+        }
+      }
+    }, speed);
+    return () => clearTimeout(timer);
+  }, [typed, deleting, phraseIndex]);
+
+  // When phrase (feature) changes, animate progress towards its target
+  useEffect(() => {
+    const newTarget = features[phraseIndex % features.length].progress;
+    setTargetProgress(newTarget);
+  }, [phraseIndex]);
+
+  useEffect(() => {
+    if (progress === targetProgress) return;
+    const step = progress < targetProgress ? 1 : -1;
+    const id = setInterval(() => {
+      setProgress((p) => {
+        const np = p + step;
+        if ((step > 0 && np >= targetProgress) || (step < 0 && np <= targetProgress)) {
+          clearInterval(id);
+          return targetProgress;
+        }
+        return np;
+      });
+    }, 12);
+    return () => clearInterval(id);
+  }, [targetProgress, progress]);
 
   useEffect(() => {
     setMounted(true);
@@ -69,6 +205,56 @@ export default function SignInPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Forgot Password helpers
+  const sendReset = async () => {
+    if (!fpEmail) {
+      setFpMessage("Please enter your email.");
+      return;
+    }
+    setFpLoading(true);
+    setFpMessage(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(fpEmail, {
+        redirectTo: `${window.location.origin}/auth/signin`,
+      });
+      if (error) throw error;
+      setFpMessage("Reset email sent. Check your inbox for the OTP or link.");
+      setFpStep("otp");
+    } catch (e: any) {
+      setFpMessage(e?.message || "Failed to send reset email");
+    } finally {
+      setFpLoading(false);
+    }
+  };
+
+  const submitOtpReset = async () => {
+    if (!fpEmail || !fpOTP || !fpNewPass) {
+      setFpMessage("Enter email, OTP, and new password.");
+      return;
+    }
+    setFpLoading(true);
+    setFpMessage(null);
+    try {
+      const { data: sessionData, error: verifyErr } = await supabase.auth.verifyOtp({
+        email: fpEmail,
+        token: fpOTP,
+        type: "recovery",
+      });
+      if (verifyErr) throw verifyErr;
+
+      const { error: updErr } = await supabase.auth.updateUser({ password: fpNewPass });
+      if (updErr) throw updErr;
+
+      setFpMessage("Password updated. You can now sign in.");
+      setFpStep("email");
+      setShowForgot(false);
+    } catch (e: any) {
+      setFpMessage(e?.message || "Reset failed. Check OTP and try again.");
+    } finally {
+      setFpLoading(false);
+    }
+  };
 
   const {
     register,
@@ -242,31 +428,168 @@ export default function SignInPage() {
               </Button>
             </form>
                 <div className="mt-4 text-center font-body-14 text-secondary">
-                  {"Don't have an account? "}
-                  <Link
-                    href="/auth/signup"
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgot(true); setFpStep("email"); setFpMessage(null); }}
                     className="text-base-purple hover:text-base-purple-hover font-body-14-medium"
                   >
-                    Sign up
-                  </Link>
+                    Forgot password?
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right: Illustration panel (purple background) */}
-          <div className="hidden lg:flex w-full lg:w-[40%] items-center justify-center bg-[rgba(223,214,244,1)] p-0">
-            <div className="relative w-full h-full rounded-lg overflow-hidden">
-              {/* Illustration image slightly shifted left and covering the panel */}
-              <Image
-                src="/sso-login.webp"
-                alt="Sign in illustration"
-                fill
-                className="object-cover object-left -translate-x-6 w-full h-full"
-                priority
-              />
+          {/* Right: Animated feature showcase (light theme) */}
+          <div className="hidden lg:flex w-full lg:w-[40%] items-center justify-center bg-white p-6">
+            <div className="w-full max-w-xl text-gray-900 rounded-2xl border border-gray-200 shadow-sm p-6">
+              <div className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs bg-indigo-50 text-indigo-700">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+                Powered by Advanced AI Technology
+              </div>
+              <h2 className="text-2xl md:text-3xl font-semibold leading-tight">
+                All‑in‑One Comprehensive Tool for
+                <br />
+                <span className="bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">AI‑Powered Legal & Compliance</span>
+              </h2>
+              <div className="mt-5 text-base text-gray-600 min-h-[28px]">
+                <span className="text-gray-500">Current focus: </span>
+                <span className="font-medium text-gray-900">{typed}<span className="animate-pulse">|</span></span>
+              </div>
+              {/* Mockup card */}
+              <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                  poligap.com/dashboard
+                </div>
+                <div className="mt-4 rounded-lg bg-gray-50 border border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 grid place-items-center">✦</div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{current.title}</div>
+                        <div className="text-xs text-gray-600">{current.subtitle}</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">In Progress</span>
+                  </div>
+                  <div className="mt-4 text-sm text-gray-700">
+                    Insight: {current.suggestion}
+                  </div>
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-[width] duration-300" style={{ width: `${progress}%` }} />
+                  </div>
+                  <div className="mt-4 flex gap-2 text-xs">
+                    {current.actions.map((a, i) => (
+                      <span key={i} className="px-3 py-1 rounded-md bg-gray-100 text-gray-800 border border-gray-200">{a}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Step-by-step flow */}
+              <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                {/* Stepper */}
+                <div className="flex items-center justify-between">
+                  {steps.map((s, i) => (
+                    <div key={s.key} className="flex-1 flex items-center">
+                      <div className={`relative z-10 h-8 w-8 rounded-full grid place-items-center text-xs font-semibold ${i <= stepIndex ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-600"}`}>
+                        {i + 1}
+                      </div>
+                      {i < steps.length - 1 && (
+                        <div className={`mx-2 h-1 rounded-full flex-1 ${i < stepIndex ? "bg-indigo-400" : "bg-gray-200"}`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {/* Step copy */}
+                <div className="mt-3">
+                  <div className="text-sm font-medium text-gray-900">{steps[stepIndex].title}</div>
+                  <div className="text-xs text-gray-600">{steps[stepIndex].desc}</div>
+                </div>
+                {/* Preview area */}
+                <div className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 min-h-[120px]">
+                  {stepIndex === 0 && (
+                    <div className="text-center text-gray-600">
+                      <div className="mx-auto mb-2 h-10 w-10 rounded-md bg-indigo-100 text-indigo-600 grid place-items-center">⬆️</div>
+                      <div className="text-sm font-medium">Upload documents</div>
+                      <div className="text-xs">PDF, DOCX, or TXT up to 25MB</div>
+                    </div>
+                  )}
+                  {stepIndex === 1 && (
+                    <div>
+                      <div className="text-xs text-gray-600 mb-2">Parsing… extracting key clauses</div>
+                      <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-[pulse_1.2s_ease-in-out_infinite] w-2/3" />
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] text-gray-700">
+                        <div className="rounded-md bg-white border p-2">Parties: 2</div>
+                        <div className="rounded-md bg-white border p-2">Effective Date: 2025‑01‑01</div>
+                        <div className="rounded-md bg-white border p-2">Term: 24 months</div>
+                      </div>
+                    </div>
+                  )}
+                  {stepIndex === 2 && (
+                    <div>
+                      <div className="text-xs text-gray-600 mb-2">AI Editor</div>
+                      <div className="rounded-md border bg-white p-2 text-[11px] leading-5">
+                        <span className="bg-yellow-100 text-yellow-800 px-1 rounded">Suggestion:</span> Strengthen confidentiality survival clause from 2 → 5 years.
+                      </div>
+                      <div className="mt-2 flex gap-2 text-[10px]">
+                        <span className="px-2 py-1 rounded-md bg-gray-100 border">Accept</span>
+                        <span className="px-2 py-1 rounded-md bg-gray-100 border">Modify</span>
+                        <span className="px-2 py-1 rounded-md bg-gray-100 border">Comment</span>
+                      </div>
+                    </div>
+                  )}
+                  {stepIndex === 3 && (
+                    <div className="text-center">
+                      <div className="mx-auto mb-2 h-10 w-10 rounded-md bg-green-100 text-green-700 grid place-items-center">⬇️</div>
+                      <div className="text-sm font-medium text-gray-900">Export ready</div>
+                      <div className="text-xs text-gray-600">Download PDF / DOCX or share a secure link</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Did you know - compact facts below capsule */}
+              <div className="mt-5">
+                <DidYouKnow />
+              </div>
             </div>
           </div>
+          {/* Forgot Password Modal */}
+          {showForgot && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/30" onClick={() => setShowForgot(false)} />
+              <div className="relative w-[420px] bg-white rounded-lg shadow-lg border p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[16px] font-semibold text-[#202020]">Reset password</h3>
+                  <button onClick={() => setShowForgot(false)} className="text-gray-500">✕</button>
+                </div>
+                {fpMessage && (
+                  <div className="text-xs text-gray-700 bg-gray-50 border rounded p-2">{fpMessage}</div>
+                )}
+                {fpStep === "email" ? (
+                  <div className="space-y-3">
+                    <Label htmlFor="fpEmail" className="font-title-14">Email</Label>
+                    <Input id="fpEmail" type="email" value={fpEmail} onChange={(e)=>setFpEmail(e.target.value)} placeholder="you@example.com" />
+                    <Button onClick={sendReset} disabled={fpLoading} className="w-full bg-base-purple hover:bg-base-purple-hover text-white">
+                      {fpLoading ? "Sending…" : "Send reset email / OTP"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <Label htmlFor="fpOTP" className="font-title-14">OTP from email</Label>
+                    <Input id="fpOTP" value={fpOTP} onChange={(e)=>setFpOTP(e.target.value)} placeholder="Enter OTP" />
+                    <Label htmlFor="fpNewPass" className="font-title-14">New password</Label>
+                    <Input id="fpNewPass" type="password" value={fpNewPass} onChange={(e)=>setFpNewPass(e.target.value)} placeholder="Enter new password" />
+                    <Button onClick={submitOtpReset} disabled={fpLoading} className="w-full bg-base-purple hover:bg-base-purple-hover text-white">
+                      {fpLoading ? "Updating…" : "Update password"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
   );
