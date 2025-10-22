@@ -129,8 +129,8 @@ function KnowledgePageContent() {
       const response = await res.json();
       return {
         token: response.token,
-        expiresAt: response.expires_at,
-        connectLinkUrl: response.connect_link_url,
+        expires_at: response.expires_at,
+        connect_link_url: response.connect_link_url,
       };
     },
   });

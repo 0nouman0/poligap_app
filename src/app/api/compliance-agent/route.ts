@@ -1,6 +1,14 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy initialize the client to avoid build-time errors
+let client: OpenAI | null = null;
+
+function getClient() {
+  if (!client) {
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return client;
+}
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +43,7 @@ Guidance:
 - If inputs are missing, set decision to "none" and provide clear next_steps to collect them.
 `;
 
-    const completion = await client.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model,
       messages: [
         { role: "system", content: systemPrompt },
