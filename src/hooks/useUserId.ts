@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { useUserStore } from '@/stores/user-store';
 
 /**
- * Custom hook for managing userId with proper fallbacks
+ * Custom hook for managing userId
  * 
  * Priority order:
  * 1. User store (Zustand)
  * 2. localStorage
- * 3. Environment variable fallback
  * 
  * @returns userId string or null if not available
  */
@@ -34,12 +33,7 @@ export function useUserId(): string | null {
         return storedUserId;
       }
 
-      // Priority 3: Environment fallback
-      const fallbackId = process.env.NEXT_PUBLIC_FALLBACK_USER_ID;
-      if (fallbackId && isValidUserId(fallbackId)) {
-        return fallbackId;
-      }
-
+      // No fallback - user must be authenticated
       return null;
     };
 
@@ -93,11 +87,7 @@ export function useUserIdWithLoading(): {
         return storedUserId;
       }
 
-      const fallbackId = process.env.NEXT_PUBLIC_FALLBACK_USER_ID;
-      if (fallbackId && isValidUserId(fallbackId)) {
-        return fallbackId;
-      }
-
+      // No fallback - user must be authenticated
       return null;
     };
 

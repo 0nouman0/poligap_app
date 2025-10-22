@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@/lib/supabase/server";
+import { createPortkeyClient, getAvailableModels, getBestAvailableModel, type ModelConfig } from "@/lib/portkey/client";
 
 export async function POST(req: NextRequest) {
   let text = "";
@@ -37,62 +38,88 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) {
-      console.log("No API key found");
+    // Get available AI models
+    const availableModels = getAvailableModels();
+    console.log("Available AI models:", availableModels.map(m => `${m.provider}/${m.model}`));
+
+    if (availableModels.length === 0) {
+      console.log("No API keys configured");
       return NextResponse.json(
-        { error: "Gemini API key not configured on server" },
+        { error: "No AI models available. Please configure API keys." },
         { status: 500 }
       );
     }
 
-    console.log("Initializing Gemini...");
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Prioritize stable models first, then newer models, then experimental ones
-    const models = [
-      "gemini-1.5-flash-latest",
-      "gemini-1.5-flash-002", 
-      "gemini-1.5-flash",
-      "gemini-1.5-pro-latest",
-      "gemini-1.5-pro",
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-2.0-flash-thinking-exp-1219",
-      "gemini-2.0-flash-exp",
-      "gemini-exp-1206"
-    ];
-    
     const prompt = createAnalysisPrompt(text, templateClauses, contractType || "contract");
     console.log("Generated prompt length:", prompt.length);
 
     // Retry with exponential backoff and model fallback
     let lastError: any = null;
     let modelUsed = "";
+    let providerUsed = "";
     
-    for (let attempt = 0; attempt < 3; attempt++) {
-      for (const modelName of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      for (const modelConfig of availableModels) {
         try {
-          console.log(`Attempt ${attempt + 1}: Trying model ${modelName}`);
-          const model = genAI.getGenerativeModel({ model: modelName });
+          console.log(`Attempt ${attempt + 1}: Trying ${modelConfig.provider}/${modelConfig.model}`);
           
-          const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
+          let analysisText = "";
+          
+          // Use Portkey for supported providers
+          if (modelConfig.provider !== 'gemini') {
+            const portkey = createPortkeyClient(modelConfig.provider);
+            
+            if (!portkey) {
+              console.log(`Portkey client unavailable for ${modelConfig.provider}`);
+              continue;
+            }
+
+            const response = await portkey.chat.completions.create({
+              model: modelConfig.model,
+              messages: [
+                { role: "system", content: "You are an expert legal AI assistant specializing in contract analysis." },
+                { role: "user", content: prompt }
+              ],
               temperature: 0.1,
-              topK: 1,
-              topP: 0.8,
-              maxOutputTokens: 8192,
-              responseMimeType: "application/json",
-            },
-          });
+              max_tokens: 8192,
+              response_format: { type: "json_object" }
+            });
+
+            analysisText = response.choices[0]?.message?.content || "";
+            modelUsed = modelConfig.model;
+            providerUsed = modelConfig.provider;
+            
+          } else {
+            // Direct Gemini API for Gemini models
+            const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+            if (!apiKey) {
+              console.log("Gemini API key not found");
+              continue;
+            }
+
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: modelConfig.model });
+            
+            const result = await model.generateContent({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.1,
+                topK: 1,
+                topP: 0.8,
+                maxOutputTokens: 8192,
+                responseMimeType: "application/json",
+              },
+            });
+            
+            const response = await result.response;
+            analysisText = response.text();
+            modelUsed = modelConfig.model;
+            providerUsed = "gemini";
+          }
           
-          modelUsed = modelName;
-          console.log(`✅ Success with model: ${modelName}`);
+          console.log(`✅ Success with ${providerUsed}/${modelUsed}`);
+          console.log("AI response received, length:", analysisText.length);
           
-          const response = await result.response;
-          const analysisText = response.text();
-          console.log("Gemini response received, length:", analysisText.length);
           const parsed = parseAnalysisResult(analysisText, text);
           console.log("Analysis parsed successfully, suggestions count:", parsed.suggestions.length);
 
@@ -120,7 +147,12 @@ export async function POST(req: NextRequest) {
             console.error('Failed to save contract analysis to Supabase:', saveError);
           }
           
-          return NextResponse.json({ success: true, modelUsed, ...parsed });
+          return NextResponse.json({ 
+            success: true, 
+            modelUsed, 
+            providerUsed,
+            ...parsed 
+          });
           
         } catch (error: any) {
           lastError = error;

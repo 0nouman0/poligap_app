@@ -154,20 +154,6 @@ export const userApi = {
     return node;
   },
 
-  async getProfileFallback(userId: string) {
-    // For now, same as getProfile but with shorter TTL
-    const cacheKey = `gql_profile_fallback_${userId}`;
-    const cached = persistentCache.get(cacheKey);
-    if (cached) return cached;
-
-    const supabase = createSupabaseClient();
-    const { data } = await supabase.auth.getSession();
-    const gql = createGraphQLClient(data.session?.access_token);
-    const res: any = await gql.request(queries.getProfile, { id: userId });
-    const node = res?.profilesCollection?.edges?.[0]?.node || null;
-    if (node) persistentCache.set(cacheKey, node, 300);
-    return node;
-  },
 
   async updateProfile(userId: string, profileData: any) {
     const supabase = createSupabaseClient();
@@ -185,9 +171,8 @@ export const userApi = {
       banner: profileData?.banner,
       company_name: profileData?.company_name,
     });
-    // Invalidate caches
+    // Invalidate cache
     persistentCache.set(`gql_profile_${userId}`, res?.updateprofilesCollection?.records?.[0], 0);
-    persistentCache.set(`gql_profile_fallback_${userId}`, res?.updateprofilesCollection?.records?.[0], 0);
     return res?.updateprofilesCollection?.records?.[0] || null;
   },
 };
@@ -243,7 +228,7 @@ export async function preloadCriticalData(userId: string) {
   console.log('🚀 Preloading critical data...');
   
   const preloadPromises = [
-    userApi.getProfile(userId).catch(() => userApi.getProfileFallback(userId)),
+    userApi.getProfile(userId).catch(() => null),
     auditApi.getLogs(userId).catch(() => null),
     chatApi.getHistory(userId).catch(() => null),
   ];

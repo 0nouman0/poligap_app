@@ -181,10 +181,13 @@ export const useGlobalChatStore = create((set: any) => ({
       | PlaygroundChatMessage[]
       | ((prevMessages: PlaygroundChatMessage[]) => PlaygroundChatMessage[])
   ) =>
-    set((state: any) => ({
-      messages:
-        typeof messages === "function" ? messages(state.messages) : messages,
-    })),
+    set((state: any) => {
+      const newMessages = typeof messages === "function" ? messages(state.messages) : messages;
+      // Prevent memory leak - keep only last 100 messages
+      return {
+        messages: newMessages.slice(-100)
+      };
+    }),
   clearMessages: () => set({ messages: [] }),
 
   // Auto-save messages to MongoDB

@@ -12,6 +12,95 @@ export const PORTKEY_VIRTUAL_KEYS = {
 };
 
 /**
+ * Available AI models configuration
+ */
+export interface ModelConfig {
+  provider: 'openai' | 'aws' | 'groq' | 'openrouter' | 'gemini';
+  model: string;
+  available: boolean;
+}
+
+/**
+ * Detect available API keys and return model configurations
+ * @returns Array of available model configurations
+ */
+export function getAvailableModels(): ModelConfig[] {
+  const models: ModelConfig[] = [];
+
+  // Check OpenAI
+  if (process.env.PORTKEY_API_KEY && PORTKEY_VIRTUAL_KEYS.OPENAI) {
+    models.push({
+      provider: 'openai',
+      model: 'gpt-4o',
+      available: true
+    });
+  }
+
+  // Check AWS
+  if (process.env.PORTKEY_API_KEY && PORTKEY_VIRTUAL_KEYS.AWS) {
+    models.push({
+      provider: 'aws',
+      model: 'claude-3-5-sonnet-20241022',
+      available: true
+    });
+  }
+
+  // Check Groq
+  if (process.env.PORTKEY_API_KEY && PORTKEY_VIRTUAL_KEYS.GROQ) {
+    models.push({
+      provider: 'groq',
+      model: 'llama-3.3-70b-versatile',
+      available: true
+    });
+  }
+
+  // Check OpenRouter
+  if (process.env.PORTKEY_API_KEY && PORTKEY_VIRTUAL_KEYS.OPENROUTER) {
+    models.push({
+      provider: 'openrouter',
+      model: 'anthropic/claude-3.5-sonnet',
+      available: true
+    });
+  }
+
+  // Check Gemini (direct, not through Portkey)
+  if (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+    models.push({
+      provider: 'gemini',
+      model: 'gemini-2.0-flash-exp',
+      available: true
+    });
+  }
+
+  return models;
+}
+
+/**
+ * Get the best available model for contract analysis
+ * Priority: GPT-4o > Claude > Llama > Gemini
+ */
+export function getBestAvailableModel(): ModelConfig | null {
+  const models = getAvailableModels();
+  
+  if (models.length === 0) {
+    return null;
+  }
+
+  // Priority order
+  const priorities: Array<'openai' | 'aws' | 'openrouter' | 'groq' | 'gemini'> = 
+    ['openai', 'aws', 'openrouter', 'groq', 'gemini'];
+  
+  for (const priority of priorities) {
+    const model = models.find(m => m.provider === priority);
+    if (model) {
+      return model;
+    }
+  }
+
+  return models[0];
+}
+
+/**
  * Create a Portkey client instance with multi-provider support
  * Portkey provides unified API access, caching, fallbacks, and analytics
  * @param provider - Which virtual key to use (openai, aws, groq, openrouter)

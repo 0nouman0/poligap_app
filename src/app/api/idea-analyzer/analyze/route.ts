@@ -1,8 +1,34 @@
 import { NextResponse } from "next/server";
+import { createPortkeyClient, getBestAvailableModel } from '@/lib/portkey/client';
 
-async function summarizeWithGemini(prompt: string) {
+async function summarizeWithAI(prompt: string) {
+  // Try Portkey first with best available model
+  const bestModel = getBestAvailableModel();
+  
+  if (bestModel && bestModel.provider !== 'gemini') {
+    try {
+      const portkey = createPortkeyClient(bestModel.provider);
+      if (portkey) {
+        const response = await portkey.chat.completions.create({
+          model: bestModel.model,
+          messages: [
+            { role: 'system', content: 'You are a startup and product strategy analyst. Return strict JSON only.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 4096,
+          response_format: { type: 'json_object' }
+        });
+        return response.choices[0]?.message?.content || '';
+      }
+    } catch (e) {
+      console.error('Portkey analysis failed:', e);
+    }
+  }
+  
+  // Fallback to direct Gemini
   const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("no_gemini_key");
+  if (!key) throw new Error("no_ai_key");
   const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + key, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -80,7 +106,7 @@ export async function POST(req: Request) {
     const prompt = buildPrompt(inputs, findings);
 
     let raw = '';
-    try { raw = await summarizeWithGemini(prompt) } catch {}
+    try { raw = await summarizeWithAI(prompt) } catch {}
     if (!raw) {
       try { raw = await summarizeWithKrooloAI(prompt) } catch {}
     }

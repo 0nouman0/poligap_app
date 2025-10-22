@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createPortkeyClient, getBestAvailableModel } from '@/lib/portkey/client';
 
 function toMarkdownSafe(text?: string): string {
   if (!text) return "";
@@ -80,25 +81,50 @@ ${applyRuleBase ? 'Apply stricter, audit-ready phrasing and ensure clause-level 
 
 Return a clear, sectioned document with headings (1., 1.1 etc.), a short preamble, definitions (if applicable), obligations, responsibilities, exceptions, enforcement, review cadence, and change log placeholder.`;
 
-  // Try Gemini (if key configured via env GEMINI_API_KEY and a simple endpoint downstream)
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) {
+  // Try Portkey with best available model
+  const bestModel = getBestAvailableModel();
+  if (bestModel) {
     try {
-      const resp = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      console.log(`Using ${bestModel.provider}/${bestModel.model} for policy generation`);
+      
+      if (bestModel.provider !== 'gemini') {
+        // Use Portkey
+        const portkey = createPortkeyClient(bestModel.provider);
+        if (portkey) {
+          const response = await portkey.chat.completions.create({
+            model: bestModel.model,
+            messages: [
+              { role: 'system', content: 'You are a compliance policy writer. Generate clear, professional policy documents.' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4096
+          });
+          const text = response.choices[0]?.message?.content;
+          if (text) return toMarkdownSafe(text);
         }
-      );
-      const json = await resp.json();
-      const text = json?.candidates?.[0]?.content?.parts
-        ?.map((p: any) => p?.text)
-        .filter(Boolean)
-        .join("\n\n");
-      if (text) return toMarkdownSafe(text as string);
+      } else {
+        // Direct Gemini API
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (geminiKey) {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${bestModel.model}:generateContent?key=` + geminiKey,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            }
+          );
+          const json = await resp.json();
+          const text = json?.candidates?.[0]?.content?.parts
+            ?.map((p: any) => p?.text)
+            .filter(Boolean)
+            .join("\n\n");
+          if (text) return toMarkdownSafe(text as string);
+        }
+      }
     } catch (e) {
+      console.error('Portkey/AI generation failed:', e);
       // fallthrough to Kroolo AI
     }
   }

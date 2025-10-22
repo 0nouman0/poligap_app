@@ -1,6 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getAIClient } from "@/lib/ai-client";
+import { z } from "zod";
+
+// Rate limiting map (in-memory, reset on server restart)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 10; // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+
+// Input validation schema
+const chatRequestSchema = z.object({
+  user_query: z.string().min(1, "Query cannot be empty").max(5000, "Query too long"),
+  session_id: z.string().optional(),
+  max_tokens: z.number().int().min(1).max(8000).default(4000),
+  temperature: z.number().min(0).max(2).default(0.7),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,20 +31,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const requestBody = await request.json();
-    const {
-      user_query,
-      session_id,
-      max_tokens = 4000,
-      temperature = 0.7,
-    } = requestBody;
+    // Rate limiting check
+    const userId = user.id;
+    const now = Date.now();
+    const userLimit = rateLimitMap.get(userId);
+    
+    if (userLimit) {
+      if (now < userLimit.resetTime) {
+        if (userLimit.count >= RATE_LIMIT) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Rate limit exceeded",
+              message: `Too many requests. Please wait ${Math.ceil((userLimit.resetTime - now) / 1000)} seconds.`,
+              retryAfter: Math.ceil((userLimit.resetTime - now) / 1000)
+            }),
+            { 
+              status: 429, 
+              headers: { 
+                "Content-Type": "application/json",
+                "Retry-After": String(Math.ceil((userLimit.resetTime - now) / 1000))
+              } 
+            }
+          );
+        }
+        userLimit.count++;
+      } else {
+        rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      }
+    } else {
+      rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    }
 
-    if (!user_query) {
+    // Input validation
+    const requestBody = await request.json();
+    const validationResult = chatRequestSchema.safeParse(requestBody);
+    
+    if (!validationResult.success) {
       return new Response(
-        JSON.stringify({ error: "Missing user_query" }),
+        JSON.stringify({ 
+          error: "Invalid input",
+          details: validationResult.error.errors
+        }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    const {
+      user_query,
+      session_id,
+      max_tokens,
+      temperature,
+    } = validationResult.data;
 
     // Get conversation history if session_id is provided
     const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];

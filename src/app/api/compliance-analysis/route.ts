@@ -1,84 +1,115 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompliancePrompt } from '@/lib/compliance-prompt';
 import { createClient } from '@/lib/supabase/server';
+import { createPortkeyClient, getAvailableModels, getBestAvailableModel } from '@/lib/portkey/client';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini AI with direct file upload
-async function analyzeWithGemini(file: File, selectedStandards: string[]): Promise<any> {
+// AI analysis with Portkey + multi-provider support
+async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<any> {
   try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    // Get available models
+    const availableModels = getAvailableModels();
+    console.log('Available models for compliance analysis:', availableModels.map(m => `${m.provider}/${m.model}`));
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY not found in environment variables');
+    if (availableModels.length === 0) {
+      throw new Error('No AI models available. Please configure API keys.');
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Try a list of model IDs to avoid regional/version issues (prefer newest first)
-    const candidateModels = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro'
-    ];
-
-    // Convert file to base64 for Gemini
-    const arrayBuffer = await file.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-
-    // Determine MIME type
-    let mimeType = file.type;
-    if (!mimeType && file.name.endsWith('.pdf')) {
-      mimeType = 'application/pdf';
-    }
-
-    console.log(`Sending file to Gemini: ${file.name} (${mimeType}, ${file.size} bytes)`);
+    // Extract text from file first
+    const extractedText = await extractTextFromFile(file);
+    console.log(`Extracted ${extractedText.length} characters from ${file.name}`);
 
     const prompt = getCompliancePrompt(selectedStandards, 'ANALYZE_UPLOADED_FILE');
+    const fullPrompt = `${prompt}\n\nDocument Content:\n${extractedText.substring(0, 50000)}`; // Limit to 50k chars
 
     let lastErr: unknown = null;
-    for (const modelId of candidateModels) {
-      try {
-        const model = genAI.getGenerativeModel({ model: modelId });
-        const result = await model.generateContent([
-          { inlineData: { data: base64Data, mimeType } },
-          { text: prompt }
-        ]);
-        const response = await result.response;
-        const text = response.text();
+    let responseText = '';
 
-        console.log(`Gemini response received from ${modelId}:`, text.substring(0, 200) + '...');
+    // Try each available model
+    for (const modelConfig of availableModels) {
+      try {
+        console.log(`Attempting compliance analysis with ${modelConfig.provider}/${modelConfig.model}`);
+        
+        if (modelConfig.provider !== 'gemini') {
+          // Use Portkey for non-Gemini providers
+          const portkey = createPortkeyClient(modelConfig.provider);
+          
+          if (!portkey) {
+            console.log(`Portkey client unavailable for ${modelConfig.provider}`);
+            continue;
+          }
+
+          const response = await portkey.chat.completions.create({
+            model: modelConfig.model,
+            messages: [
+              { role: 'system', content: 'You are an expert compliance analyst. Return valid JSON responses only.' },
+              { role: 'user', content: fullPrompt }
+            ],
+            temperature: 0.1,
+            max_tokens: 8192,
+            response_format: { type: 'json_object' }
+          });
+
+          responseText = response.choices[0]?.message?.content || '';
+          
+        } else {
+          // Use direct Gemini API for Gemini models
+          const apiKey = process.env.GEMINI_API_KEY;
+          if (!apiKey) {
+            console.log('Gemini API key not found');
+            continue;
+          }
+
+          const genAI = new GoogleGenerativeAI(apiKey);
+          const model = genAI.getGenerativeModel({ model: modelConfig.model });
+          
+          const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 8192,
+              responseMimeType: 'application/json'
+            }
+          });
+          
+          const response = await result.response;
+          responseText = response.text();
+        }
+
+        console.log(`✅ Success with ${modelConfig.provider}/${modelConfig.model}`);
+        console.log('Response preview:', responseText.substring(0, 200) + '...');
 
         // Try to parse JSON response
         try {
-          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const analysisResult = JSON.parse(jsonMatch[0]);
             return analysisResult;
           } else {
-            throw new Error('No JSON found in Gemini response');
+            throw new Error('No JSON found in AI response');
           }
         } catch (parseError) {
-          console.warn(`Failed to parse Gemini JSON response from ${modelId}:`, parseError);
+          console.warn(`Failed to parse JSON response from ${modelConfig.provider}:`, parseError);
           // Create structured response from the text
-          return createStructuredResponseFromText(text);
+          return createStructuredResponseFromText(responseText);
         }
+        
       } catch (err) {
         lastErr = err;
-        // Try next model on 404 or model errors
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`Gemini model ${modelId} failed, trying next if available. Reason: ${msg}`);
+        console.warn(`Model ${modelConfig.provider}/${modelConfig.model} failed: ${msg}`);
         continue;
       }
     }
-    // If none of the Gemini models succeeded, throw to allow caller to try fallback
+    
+    // If all models failed, throw error
     throw lastErr instanceof Error
       ? new Error(lastErr.message)
-      : new Error('All Gemini models failed');
+      : new Error('All AI models failed');
 
   } catch (error) {
-    console.error('Gemini AI analysis failed:', error);
-    throw new Error(`Gemini AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('AI analysis failed:', error);
+    throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -315,19 +346,19 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Try Gemini AI analysis
+    // Try AI analysis with Portkey multi-provider support
     let analysisResult;
-    let method = 'gemini';
+    let method = 'portkey';
 
     try {
-      console.log('Attempting Gemini AI analysis with direct file upload...');
-      analysisResult = await analyzeWithGemini(file, selectedStandards);
-      console.log('Gemini AI analysis completed successfully');
+      console.log('Attempting AI analysis with multi-provider support...');
+      analysisResult = await analyzeWithAI(file, selectedStandards);
+      console.log('✅ AI analysis completed successfully');
 
-    } catch (geminiError) {
-      console.error('Gemini AI analysis failed:', geminiError);
+    } catch (aiError) {
+      console.error('AI analysis failed:', aiError);
       return NextResponse.json({
-        error: `Analysis failed: ${geminiError instanceof Error ? geminiError.message : 'Unknown error'}`
+        error: `Analysis failed: ${aiError instanceof Error ? aiError.message : 'Unknown error'}`
       }, { status: 500 });
     }
 

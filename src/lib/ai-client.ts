@@ -53,7 +53,10 @@ class AIClient {
     this.apiKey = process.env.PORTKEY_API_KEY || "";
     
     if (!this.apiKey) {
-      console.warn("⚠️ PORTKEY_API_KEY not found. AI features may not work.");
+      throw new Error(
+        "PORTKEY_API_KEY is required but not set in environment variables. " +
+        "Please set PORTKEY_API_KEY in your .env.local file."
+      );
     }
 
     // Initialize Portkey client

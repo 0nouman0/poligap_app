@@ -228,25 +228,18 @@ const useAIChatStreamHandler = ({
         ? "Global_chat"
         : agent_name;
       
-      // Use local Next.js API routes instead of external Kroolo AI service
+      // Use local Next.js API routes with Portkey routing
       const apiUrl = '/api/ai-chat/stream-chat';
       
       const session_id = isPublic ? publicUserId : selectedConversation._id;
 
-      // Map any non-Gemini model to Gemini
-      let geminiModel = selectedLlmModel?.modelId || "gemini-2.0-flash-exp";
-      if (!geminiModel.startsWith("gemini-")) {
-        // If not a Gemini model, use default Gemini model
-        geminiModel = "gemini-2.0-flash-exp";
-        console.log(`⚠️ Model ${selectedLlmModel?.modelId} is not supported. Using ${geminiModel} instead.`);
-      }
-
-      // Simplified request data for local Gemini API
+      // Let Portkey handle model routing - don't force any specific model
+      // The AI client will select the best provider based on task type
       const requestData: any = {
         user_query: "",
         session_id,
-        model: geminiModel,
         max_tokens: 4000,
+        temperature: 0.7,
       };
 
       if (typeof input === "string") {
