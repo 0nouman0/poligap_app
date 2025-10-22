@@ -1,10 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-// Disable Portkey and use Gemini directly
-const USE_PORTKEY = false;
+import { getAIClient } from "@/lib/ai-client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,20 +22,14 @@ export async function POST(request: NextRequest) {
       user_query,
       session_id,
       max_tokens = 4000,
+      temperature = 0.7,
     } = requestBody;
-    let model = requestBody.model || "gemini-2.0-flash-exp";
 
     if (!user_query) {
       return new Response(
         JSON.stringify({ error: "Missing user_query" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
-    }
-
-    // Validate and ensure we're using a Gemini model
-    if (!model || !model.startsWith("gemini-")) {
-      console.warn(`⚠️ Invalid model "${model}" requested. Using default Gemini model.`);
-      model = "gemini-2.0-flash-exp";
     }
 
     // Get conversation history if session_id is provided
@@ -66,73 +56,94 @@ export async function POST(request: NextRequest) {
     // Add current query
     messages.push({ role: "user", content: user_query });
 
-    console.log('🔄 Using Direct Gemini API for chat streaming');
+    console.log('🔄 Using Portkey unified AI client for chat streaming');
 
-    // Direct Gemini implementation
-    // Convert messages back to Gemini format
-    const conversationHistory: Array<{ role: string; parts: Array<{ text: string }> }> = messages
-      .slice(0, -1) // Exclude the current query
-      .map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }));
+    // Get AI client and create streaming completion
+    const aiClient = getAIClient();
+    
+    try {
+      const portkeyStream = await aiClient.createStreamingCompletion(messages, {
+        taskType: "chat",
+        strategy: "balanced", // Use balanced strategy for chat
+        temperature,
+        maxTokens: max_tokens,
+      });
 
-    const model_instance = genAI.getGenerativeModel({ 
-      model,
-      generationConfig: {
-        maxOutputTokens: max_tokens,
-      },
-    });
+      // Convert Portkey stream to SSE format expected by frontend
+      const encoder = new TextEncoder();
+      let fullContent = "";
+      
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            const reader = (portkeyStream as any).getReader();
+            const decoder = new TextDecoder();
 
-    // Start a chat session with history
-    const chat = model_instance.startChat({
-      history: conversationHistory,
-    });
+            while (true) {
+              const { done, value } = await reader.read();
+              
+              if (done) {
+                // Send completion signal
+                const completionData = `data: ${JSON.stringify({ 
+                  event: "RunCompleted",
+                  content: fullContent,
+                  created_at: Date.now()
+                })}\n\n`;
+                controller.enqueue(encoder.encode(completionData));
+                controller.close();
+                break;
+              }
 
-    // Stream the response
-    const result = await chat.sendMessageStream(user_query);
-
-    // Create a ReadableStream for SSE with RunResponse format
-    const encoder = new TextEncoder();
-    let fullContent = "";
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            fullContent += text;
-            
-            // Send in RunResponse format expected by frontend
-            const data = `data: ${JSON.stringify({ 
-              event: "RunResponseContent",
-              content: fullContent,
-              created_at: Date.now()
-            })}\n\n`;
-            controller.enqueue(encoder.encode(data));
+              // Parse SSE chunk
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
+              
+              for (const line of lines) {
+                try {
+                  const jsonStr = line.replace(/^data: /, '');
+                  const parsed = JSON.parse(jsonStr);
+                  
+                  // Extract content from different possible formats
+                  const content = parsed.choices?.[0]?.delta?.content || 
+                                 parsed.choices?.[0]?.text || 
+                                 parsed.content || 
+                                 '';
+                  
+                  if (content) {
+                    fullContent += content;
+                    
+                    // Send in RunResponse format expected by frontend
+                    const data = `data: ${JSON.stringify({ 
+                      event: "RunResponseContent",
+                      content: fullContent,
+                      created_at: Date.now()
+                    })}\n\n`;
+                    controller.enqueue(encoder.encode(data));
+                  }
+                } catch (parseError) {
+                  // Skip invalid JSON chunks
+                  continue;
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Streaming error:", error);
+            controller.error(error);
           }
-          
-          // Send completion signal
-          const completionData = `data: ${JSON.stringify({ 
-            event: "RunCompleted",
-            content: fullContent,
-            created_at: Date.now()
-          })}\n\n`;
-          controller.enqueue(encoder.encode(completionData));
-          controller.close();
-        } catch (error) {
-          console.error("Streaming error:", error);
-          controller.error(error);
-        }
-      },
-    });
+        },
+      });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    } catch (streamError: any) {
+      console.error("Portkey streaming error:", streamError);
+      throw streamError;
+    }
   } catch (error: any) {
     console.error("Stream chat error:", error);
     return new Response(

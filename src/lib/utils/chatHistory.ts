@@ -229,7 +229,12 @@ export async function getChatHistory(
     const gql = createGraphQLClient(accessToken);
     const res: any = await gql.request(queries.getConversations, { userId });
     const edges = res?.agent_conversationsCollection?.edges || [];
-    const conversations = edges.map((e: any) => e.node);
+    const conversations = edges.map((e: any) => ({
+      ...e.node,
+      // Include OpenAI Assistant fields
+      hasOpenAIThread: !!e.node.openai_thread_id,
+      hasAssistant: !!e.node.openai_assistant_id,
+    }));
 
     return {
       success: true,
@@ -239,6 +244,81 @@ export async function getChatHistory(
     };
   } catch (error) {
     console.error('Error retrieving chat history:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Create a conversation with OpenAI Assistant support
+ */
+export async function createConversationWithAssistant(
+  params: {
+    chatName: string;
+    userId: string;
+    companyId?: string;
+    openaiThreadId?: string;
+    openaiAssistantId?: string;
+    assistantMetadata?: any;
+  }
+): Promise<{ 
+  success: boolean; 
+  conversation?: any; 
+  error?: string;
+}> {
+  try {
+    const accessToken = await getAccessToken();
+    const gql = createGraphQLClient(accessToken);
+    
+    const res: any = await gql.request(queries.createConversation, {
+      chat_name: params.chatName,
+      user_id: params.userId,
+      company_id: params.companyId,
+      openai_thread_id: params.openaiThreadId,
+      openai_assistant_id: params.openaiAssistantId,
+      assistant_metadata: params.assistantMetadata,
+    });
+    
+    const conversation = res?.insertIntoagent_conversationsCollection?.records?.[0];
+    
+    return {
+      success: true,
+      conversation,
+    };
+  } catch (error) {
+    console.error('Error creating conversation:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Update conversation with OpenAI thread and assistant info
+ */
+export async function updateConversationThread(
+  conversationId: string,
+  threadId: string,
+  assistantId?: string,
+  metadata?: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const accessToken = await getAccessToken();
+    const gql = createGraphQLClient(accessToken);
+    
+    await gql.request(queries.updateConversationThread, {
+      id: conversationId,
+      openai_thread_id: threadId,
+      openai_assistant_id: assistantId,
+      assistant_metadata: metadata,
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating conversation thread:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

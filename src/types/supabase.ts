@@ -17,34 +17,46 @@ export type Database = {
       agent_conversations: {
         Row: {
           agent_id: string | null
+          assistant_metadata: Json | null
           chat_name: string
           company_id: string | null
           created_at: string | null
           id: string
+          openai_assistant_id: string | null
+          openai_thread_id: string | null
           status: string | null
           summary: string | null
+          thread_created_at: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           agent_id?: string | null
+          assistant_metadata?: Json | null
           chat_name: string
           company_id?: string | null
           created_at?: string | null
           id?: string
+          openai_assistant_id?: string | null
+          openai_thread_id?: string | null
           status?: string | null
           summary?: string | null
+          thread_created_at?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           agent_id?: string | null
+          assistant_metadata?: Json | null
           chat_name?: string
           company_id?: string | null
           created_at?: string | null
           id?: string
+          openai_assistant_id?: string | null
+          openai_thread_id?: string | null
           status?: string | null
           summary?: string | null
+          thread_created_at?: string | null
           updated_at?: string | null
           user_id?: string | null
         }

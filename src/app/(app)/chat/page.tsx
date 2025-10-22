@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button";
 import RecentChatIcon from "@/assets/icons/doc-comment-icon.svg";
 import useGlobalChatStore from "./store/global-chat-store";
 import { useCompanyStore } from "@/stores/company-store";
-import { useUserStore } from "@/stores/user-store";
+import { useUserIdWithLoading } from "@/hooks/useUserId";
 import { ChatSkeleton } from "@/components/ui/page-loader";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Force dynamic rendering for real-time chat functionality
 export const dynamic = 'force-dynamic';
@@ -19,37 +18,15 @@ export const dynamic = 'force-dynamic';
 const AgentChat = () => {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const searchParams = useSearchParams();
-  // Only use companyId if it's a valid UUID format, otherwise null
+  
+  // Simplified companyId validation
   const companyId = selectedCompany?.companyId && 
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedCompany.companyId)
     ? selectedCompany.companyId 
     : null;
-  const { userData } = useUserStore();
   
-  // Better user ID handling with proper fallbacks
-  const [userId, setUserId] = useState<string>("");
-
-  useEffect(() => {
-    const getUserId = () => {
-      if (typeof window === 'undefined') return "";
-      
-      const storedUserId = localStorage.getItem('user_id');
-      
-      // Priority: userData from store > localStorage > fallback
-      if (userData?.userId && userData.userId !== "undefined" && userData.userId !== "null") {
-        return userData.userId;
-      } else if (storedUserId && storedUserId !== "undefined" && storedUserId !== "null") {
-        return storedUserId;
-      } else {
-        // Use environment variable fallback or default
-        return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || "68da404605eeba8349fc9d10";
-      }
-    };
-
-    const id = getUserId();
-    setUserId(id);
-    console.log("Chat page - userData?.userId:", userData?.userId, "localStorage:", localStorage.getItem('user_id'), "final userId:", id, "companyId:", companyId);
-  }, [userData?.userId, companyId]);
+  // Use clean userId hook
+  const { userId, isLoading: userIdLoading } = useUserIdWithLoading();
 
   // recent chats
   const [isMobile, setIsMobile] = useState(false);
@@ -135,62 +112,9 @@ const AgentChat = () => {
     setRecentChatsOpen(!recentChatsOpen);
   };
 
-  // Don't render until we have a userId
-  if (!userId) {
-    return (
-      <main className="flex h-full items-center justify-center p-8">
-        <div className="w-full max-w-4xl space-y-4">
-          {/* Chat Header Skeleton */}
-          <div className="flex items-center gap-3 mb-6">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="flex-1">
-              <Skeleton className="h-5 w-32 mb-2" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-          </div>
-
-          {/* Messages Skeleton */}
-          <div className="space-y-4">
-            {/* User message */}
-            <div className="flex justify-end">
-              <div className="max-w-[70%] space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5 ml-auto" />
-              </div>
-            </div>
-
-            {/* Bot message */}
-            <div className="flex justify-start">
-              <div className="max-w-[70%] space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            </div>
-
-            {/* User message */}
-            <div className="flex justify-end">
-              <div className="max-w-[70%] space-y-2">
-                <Skeleton className="h-4 w-full" />
-              </div>
-            </div>
-
-            {/* Bot message */}
-            <div className="flex justify-start">
-              <div className="max-w-[70%] space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5" />
-              </div>
-            </div>
-          </div>
-
-          {/* Input Area Skeleton */}
-          <div className="mt-6 pt-4 border-t">
-            <Skeleton className="h-12 w-full rounded-lg" />
-          </div>
-        </div>
-      </main>
-    );
+  // Show loading skeleton while userId is being resolved
+  if (userIdLoading) {
+    return <ChatSkeleton />;
   }
 
   return (

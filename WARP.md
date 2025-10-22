@@ -2,6 +2,15 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
+## 📄 Documentation Rule
+
+**IMPORTANT:** All `.md` documentation files (except `README.md` and `WARP.md` in root) must be placed in the `docs/` directory.
+
+- ✅ `docs/guides/FEATURE_NAME.md`
+- ✅ `docs/architecture/SYSTEM_NAME.md`
+- ✅ `docs/reports/AUDIT_NAME.md`
+- ❌ `FEATURE_DOC.md` (root level)
+
 ## Project Overview
 
 Poligap AI is an enterprise search & compliance platform built with Next.js 15, React 19, and Supabase. The application provides AI-powered compliance checking, contract review, policy generation, and enterprise search capabilities.

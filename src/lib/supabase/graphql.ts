@@ -117,6 +117,10 @@ export const queries = {
             chat_name
             summary
             status
+            openai_thread_id
+            openai_assistant_id
+            assistant_metadata
+            thread_created_at
             created_at
             updated_at
           }
@@ -130,19 +134,57 @@ export const queries = {
       $chat_name: String!
       $user_id: UUID!
       $company_id: UUID
+      $openai_thread_id: String
+      $openai_assistant_id: String
+      $assistant_metadata: JSON
     ) {
       insertIntoagent_conversationsCollection(
         objects: [{
           chat_name: $chat_name
           user_id: $user_id
           company_id: $company_id
+          openai_thread_id: $openai_thread_id
+          openai_assistant_id: $openai_assistant_id
+          assistant_metadata: $assistant_metadata
+          thread_created_at: "now()"
           status: "active"
         }]
       ) {
         records {
           id
           chat_name
+          openai_thread_id
+          openai_assistant_id
           created_at
+        }
+      }
+    }
+  `,
+
+  updateConversationThread: `
+    mutation UpdateConversationThread(
+      $id: UUID!
+      $openai_thread_id: String
+      $openai_assistant_id: String
+      $assistant_metadata: JSON
+    ) {
+      updateagent_conversationsCollection(
+        filter: { id: { eq: $id } }
+        set: {
+          openai_thread_id: $openai_thread_id
+          openai_assistant_id: $openai_assistant_id
+          assistant_metadata: $assistant_metadata
+          thread_created_at: "now()"
+          updated_at: "now()"
+        }
+      ) {
+        records {
+          id
+          openai_thread_id
+          openai_assistant_id
+          assistant_metadata
+          thread_created_at
+          updated_at
         }
       }
     }
