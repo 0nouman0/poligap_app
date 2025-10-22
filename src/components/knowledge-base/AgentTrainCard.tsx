@@ -1,6 +1,6 @@
 import { FileText, Link } from "lucide-react";
 import { IoLogoYoutube } from "react-icons/io5";
-import dayjs from "dayjs";
+import { formatGlobalDate } from "@/utils/date.util";
 import useAiAgentsStore from "@/stores/ai-agents-store";
 import { useAgentRevampStore } from "@/stores/agent-revamp-store";
 import LoadingSpinner from "./knowledge-loader/LoadingSpinner";
@@ -136,9 +136,9 @@ const AgentTrainCard = () => {
         </TertiaryButton>
         <p className="text-[13px] font-medium text-[var(--secondary-text-color)]">
           Last trained on{" "}
-          {dayjs(createdAgentDetailData?.lastTrained).format(
-            "h:mm A MMM D, YYYY"
-          )}
+          {formatGlobalDate(createdAgentDetailData?.lastTrained, {
+            showTime: true,
+          })}
         </p>
       </div>
     </div>

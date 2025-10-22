@@ -18,17 +18,11 @@ import {
 import { useUserStore } from "@/stores/user-store";
 import Link from "next/link";
 import { DashboardSkeleton } from "@/components/ui/page-loader";
-import { useRecentActivity, useOverviewStats } from "@/lib/queries/useHome";
+import { useOverviewStats } from "@/lib/queries/useHome";
+import { formatGlobalDate } from "@/utils/date.util";
+import RecentActivity from "@/components/recent-activity";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 
-interface ActivityItem {
-  id: string;
-  type: 'compliance' | 'contract' | 'policy' | 'upload';
-  title: string;
-  description: string;
-  status: 'completed' | 'in_progress' | 'failed';
-  timestamp: string;
-  fileName?: string;
-}
 
 interface OverviewStats {
   complianceChecks: number;
@@ -39,21 +33,13 @@ interface OverviewStats {
 
 export default function HomePage() {
   const { userData } = useUserStore();
-  const { data: recentActivity = [], isLoading: isLoadingActivity } = useRecentActivity();
   const { data: overviewStats = { complianceChecks: 0, contractsReviewed: 0, policiesGenerated: 0, trainingModules: 0 }, isLoading: isLoadingStats } = useOverviewStats();
+  const { trackPageVisit } = useActivityTracker();
 
-  // Deduplicate recent activity items by id to prevent duplicate-key React warnings
-  const dedupedRecentActivity = React.useMemo(() => {
-    const seen = new Set<string>();
-    const out: ActivityItem[] = [];
-    for (const act of recentActivity) {
-      if (!seen.has(act.id)) {
-        out.push(act);
-        seen.add(act.id);
-      }
-    }
-    return out;
-  }, [recentActivity]);
+  // Track page visit
+  React.useEffect(() => {
+    trackPageVisit('home');
+  }, [trackPageVisit]);
   
   // Get current time-based greeting
   const getGreeting = () => {
@@ -65,75 +51,12 @@ export default function HomePage() {
 
   // Get current date
   const getCurrentDate = () => {
-    return new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const date = new Date();
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const globalDate = formatGlobalDate(date);
+    return `${weekday}, ${globalDate}`;
   };
 
-  // Helper function to get activity icon
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'compliance': return Shield;
-      case 'contract': return FileText;
-      case 'policy': return BookOpen;
-      case 'upload': return Upload;
-      default: return Clock;
-    }
-  };
-
-  // Helper function to get activity icon background color
-  const getActivityIconBg = (type: string) => {
-    switch (type) {
-      case 'compliance': return 'bg-blue-100 dark:bg-blue-500/20';
-      case 'contract': return 'bg-green-100 dark:bg-green-500/20';
-      case 'policy': return 'bg-purple-100 dark:bg-purple-500/20';
-      case 'upload': return 'bg-orange-100 dark:bg-orange-500/20';
-      default: return 'bg-accent dark:bg-accent';
-    }
-  };
-
-  // Helper function to get activity icon color
-  const getActivityIconColor = (type: string) => {
-    switch (type) {
-      case 'compliance': return 'text-blue-600 dark:text-blue-400';
-      case 'contract': return 'text-green-600 dark:text-green-400';
-      case 'policy': return 'text-purple-600 dark:text-purple-400';
-      case 'upload': return 'text-orange-600 dark:text-orange-400';
-      default: return 'text-muted-foreground dark:text-muted-foreground';
-    }
-  };
-
-  // Helper function to get status badge styling
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return { text: 'Completed', className: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/20' };
-      case 'in_progress':
-        return { text: 'In Progress', className: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/20' };
-      case 'failed':
-        return { text: 'Failed', className: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/20' };
-      default:
-        return { text: 'Unknown', className: 'text-muted-foreground dark:text-muted-foreground bg-accent dark:bg-accent' };
-    }
-  };
-
-  // Helper function to format timestamp
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    
-    return date.toLocaleDateString();
-  };
 
   const features = [
     {
@@ -263,52 +186,7 @@ export default function HomePage() {
               View All →
             </Link>
           </div>
-          <div className="bg-card dark:bg-card border border-border dark:border-border rounded-2xl shadow-sm p-4">
-            {isLoadingActivity ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3 animate-pulse">
-                    <div className="flex-1">
-                      <div className="h-3 bg-accent dark:bg-accent rounded w-2/3 mb-1"></div>
-                      <div className="h-2 bg-accent dark:bg-accent rounded w-1/3"></div>
-                    </div>
-                    <div className="w-12 h-4 bg-accent dark:bg-accent rounded-full"></div>
-                  </div>
-                ))}
-              </div>
-            ) : recentActivity.length > 0 ? (
-              <div className="space-y-3">
-                {dedupedRecentActivity.map((activity) => {
-                  const statusBadge = getStatusBadge(activity.status);
-
-                  return (
-                    <div key={activity.id} className="flex items-center gap-3 py-1">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground dark:text-foreground truncate">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
-                          {activity.fileName || activity.description.split(' ').slice(0, 4).join(' ')}... • {formatTimestamp(activity.timestamp)}
-                        </p>
-                      </div>
-                      {/* status badge removed as requested */}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3 animate-pulse">
-                    <div className="w-6 h-6 bg-accent dark:bg-accent rounded-full"></div>
-                    <div className="flex-1">
-                      <div className="h-3 bg-accent dark:bg-accent rounded w-2/3 mb-1"></div>
-                      <div className="h-2 bg-accent dark:bg-accent rounded w-1/3"></div>
-                    </div>
-                    <div className="w-12 h-4 bg-accent dark:bg-accent rounded-full"></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <RecentActivity limit={5} showHeader={false} compact={true} />
         </div>
 
         {/* Statistics Overview */}

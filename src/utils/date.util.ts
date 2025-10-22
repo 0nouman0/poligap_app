@@ -169,3 +169,90 @@ export const formatRelativeTime = (
   const diffInYears = Math.floor(diffInDays / 365);
   return `${diffInYears} year${diffInYears === 1 ? "" : "s"} ago`;
 };
+
+/**
+ * Helper function to get ordinal suffix for day numbers (1st, 2nd, 3rd, 4th, etc.)
+ * @param day - Day number
+ * @returns Day with ordinal suffix
+ */
+const getOrdinalSuffix = (day: number): string => {
+  if (day >= 11 && day <= 13) {
+    return `${day}th`;
+  }
+  
+  const lastDigit = day % 10;
+  switch (lastDigit) {
+    case 1:
+      return `${day}st`;
+    case 2:
+      return `${day}nd`;
+    case 3:
+      return `${day}rd`;
+    default:
+      return `${day}th`;
+  }
+};
+
+/**
+ * Formats a date in the global format: "10th Oct 2025"
+ * This is the standard date format used throughout the application
+ * @param date - Date string or Date object
+ * @param options - Formatting options
+ * @returns Formatted date string in global format
+ */
+export const formatGlobalDate = (
+  date: string | Date | null | undefined,
+  options: {
+    showTime?: boolean;
+    timeFormat?: "12h" | "24h";
+  } = {}
+): string => {
+  if (!date) return "-";
+
+  const { showTime = false, timeFormat = "12h" } = options;
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) return "-";
+
+  const shortMonthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  const day = dateObj.getDate();
+  const month = dateObj.getMonth();
+  const year = dateObj.getFullYear();
+  const hours = dateObj.getHours();
+  const minutes = dateObj.getMinutes();
+
+  // Format date part in global format: "10th Oct 2025"
+  const dayWithOrdinal = getOrdinalSuffix(day);
+  const monthName = shortMonthNames[month];
+  let dateStr = `${dayWithOrdinal} ${monthName} ${year}`;
+
+  // Add time if requested
+  if (showTime) {
+    let timeStr = "";
+
+    if (timeFormat === "12h") {
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const displayHours = hours % 12 || 12;
+      timeStr = ` ${displayHours}:${String(minutes).padStart(2, "0")} ${ampm}`;
+    } else {
+      timeStr = ` ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+
+    dateStr += timeStr;
+  }
+
+  return dateStr;
+};
+
+/**
+ * Formats current date in global format
+ * @returns Current date in global format (e.g., "10th Oct 2025")
+ */
+export const getCurrentGlobalDate = (): string => {
+  return formatGlobalDate(new Date());
+};

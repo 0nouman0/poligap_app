@@ -63,7 +63,7 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
     if (!force) {
       const cached = cacheManager.get<Rule[]>(cacheKey, { prefix: 'rulebase' });
       if (cached) {
-        console.log('✅ Using cached rulebase from cache manager');
+        console.log('✅ Using cached rules from cache manager');
         set({ rules: cached, isLoading: false, error: null, lastFetched: Date.now() });
         return;
       }
@@ -72,17 +72,17 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔄 Fetching rulebase from API...');
+      console.log('🔄 Fetching rules from API...');
       const response = await fetch('/api/rulebase');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch rulebase');
+        throw new Error('Failed to fetch rules');
       }
       
       const data = await response.json();
       
       if (Array.isArray(data.rules)) {
-        // Cache the results with 10 minute TTL (rulebase changes less frequently)
+        // Cache the results with 10 minute TTL (rules change less frequently)
         cacheManager.set(cacheKey, data.rules, {
           ttl: 10 * 60 * 1000,
           prefix: 'rulebase'
@@ -99,9 +99,9 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch rulebase';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch rules';
       set({ isLoading: false, error: errorMessage });
-      console.error('❌ Error fetching rulebase:', error);
+      console.error('❌ Error fetching rules:', error);
     }
   },
 

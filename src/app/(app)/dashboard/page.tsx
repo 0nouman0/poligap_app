@@ -28,6 +28,9 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useUserStore } from "@/stores/user-store";
 import { toastError } from "@/components/toast-varients";
+import { formatGlobalDate } from "@/utils/date.util";
+import RecentActivity from "@/components/recent-activity";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AnalyticsData {
@@ -99,6 +102,12 @@ export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('30');
+  const { trackPageVisit } = useActivityTracker();
+
+  // Track page visit
+  useEffect(() => {
+    trackPageVisit('dashboard');
+  }, [trackPageVisit]);
 
   const features = [
     {
@@ -248,12 +257,12 @@ export default function DashboardPage() {
               Good afternoon, {userData?.name || 'User'}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
+              {(() => {
+                const date = new Date();
+                const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+                const globalDate = formatGlobalDate(date);
+                return `${weekday}, ${globalDate}`;
+              })()}
             </p>
           </div>
         </div>
@@ -319,12 +328,12 @@ export default function DashboardPage() {
             Good afternoon, {userData?.name || 'User'}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            {(() => {
+              const date = new Date();
+              const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+              const globalDate = formatGlobalDate(date);
+              return `${weekday}, ${globalDate}`;
+            })()}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -527,45 +536,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {analytics?.activity.recent.length ? (
-                <div className="space-y-4">
-                  {analytics.activity.recent.slice(0, 8).map((activity, index) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full ${
-                        activity.type === 'search' ? 'bg-blue-100 text-blue-600' :
-                        activity.type === 'analysis' ? 'bg-green-100 text-green-600' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>
-                        {activity.type === 'search' ? <Search className="h-3 w-3" /> :
-                         activity.type === 'analysis' ? <FileText className="h-3 w-3" /> :
-                         <Activity className="h-3 w-3" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(activity.timestamp).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No recent activity</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <RecentActivity limit={5} showHeader={true} compact={false} />
 
           {/* Flagged Issues */}
           {analytics && analytics.flaggedIssues?.total && analytics.flaggedIssues.total > 0 && (

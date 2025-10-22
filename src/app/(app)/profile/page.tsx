@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/utils/user.util";
 import { useUserProfile, UserProfile } from "@/lib/hooks/useUserProfile";
 import { createClient } from "@/lib/supabase/client";
+import { formatGlobalDate } from "@/utils/date.util";
 
 // Comprehensive country list for profile selection
 const COUNTRIES = [
@@ -750,13 +751,9 @@ export default function UserProfilePage() {
       const { day, month, year } = parseDate(dateStr);
       if (!day || !month || !year) return 'Not provided';
       
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      
-      const monthName = monthNames[parseInt(month) - 1] || month;
-      return `${monthName} ${day}, ${year}`;
+      // Create a date object and use global format
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return formatGlobalDate(dateObj);
     };
 
     // Generate options
@@ -1227,7 +1224,7 @@ export default function UserProfilePage() {
                     <div className="flex justify-between">
                       <span className="text-sm">Member Since:</span>
                       <span className="text-sm text-muted-foreground">
-                        {profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 'N/A'}
+                        {profileData?.createdAt ? formatGlobalDate(profileData.createdAt) : 'N/A'}
                       </span>
                     </div>
                   </div>

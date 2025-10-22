@@ -88,132 +88,202 @@ export async function POST(req: Request) {
     }
 
     const combined = prependLogo(markdown as string, logo as string | undefined);
-    // 1) Try LaTeX pipeline first (Markdown -> LaTeX -> PDF via node-latex)
+    
+    // Use React PDF renderer as the primary method for reliability
     try {
-      const os = await import('node:os');
-      const path = await import('node:path');
-      const fs = await import('node:fs/promises');
-      const { Readable } = await import('node:stream');
-      const latexMod: any = await import('node-latex');
-
-      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'latex-export-'));
-      let logoPath: string | undefined;
-      if (logo && typeof logo === 'string' && logo.startsWith('data:')) {
-        const match = /^data:(.*?);base64,(.*)$/.exec(logo);
-        if (match) {
-          const ext = (match[1] || 'image/png').includes('jpeg') ? 'jpg' : 'png';
-          const buf = Buffer.from(match[2], 'base64');
-          logoPath = path.join(tmpDir, `logo.${ext}`);
-          await fs.writeFile(logoPath, buf);
-        }
-      }
-
-      const bodyLatex = mdToLatex(markdown as string);
-      const logoBlock = logoPath ? `\\begin{center}\\includegraphics[height=3cm]{${path.basename(logoPath)}}\\end{center}` : '';
-      const texDoc = `\\documentclass[11pt]{article}
-\\usepackage[margin=1in]{geometry}
-\\usepackage[T1]{fontenc}
-\\usepackage[utf8]{inputenc}
-\\usepackage{hyperref}
-\\usepackage{graphicx}
-\\usepackage{enumitem}
-\\setlist{itemsep=4pt, topsep=4pt}
-\\title{${escapeLatex(fileName.replace(/-/g, ' '))}}
-\\date{}
-\\begin{document}
-${logoBlock}
-${bodyLatex}
-\\end{document}`;
-
-      // Write logo file into inputs path
-      const inputs: string[] = logoPath ? [tmpDir] : [];
-      const stream = latexMod.default ? latexMod.default(Readable.from([texDoc]), { inputs }) : latexMod(Readable.from([texDoc]), { inputs });
-      const chunks: Buffer[] = [];
-      const pdfBuffer: Buffer = await new Promise((resolve, reject) => {
-        stream.on('data', (d: Buffer) => chunks.push(d));
-        stream.on('error', reject);
-        stream.on('finish', () => resolve(Buffer.concat(chunks)));
-      });
-      return new NextResponse(pdfBuffer, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename=${fileName}.pdf`,
-          "X-Engine": "node-latex",
+      const React = (await import("react")).default;
+      const pdfMod: any = await import("@react-pdf/renderer");
+      const { Document, Page, View, Text, Image, StyleSheet } = pdfMod;
+      
+      // Enhanced styles for better formatting
+      const styles = StyleSheet.create({
+        page: { 
+          padding: 40,
+          fontFamily: 'Helvetica',
+          fontSize: 11,
+          lineHeight: 1.6,
+          color: '#333333'
         },
+        logoWrap: { 
+          alignItems: 'center', 
+          marginBottom: 24,
+          paddingBottom: 16,
+          borderBottom: '1 solid #e0e0e0'
+        },
+        logo: { 
+          height: 60, 
+          width: 'auto', 
+          maxWidth: 200,
+          objectFit: 'contain' 
+        },
+        title: {
+          fontSize: 18,
+          fontWeight: 'bold',
+          marginBottom: 16,
+          color: '#2c3e50',
+          textAlign: 'center'
+        },
+        heading1: {
+          fontSize: 16,
+          fontWeight: 'bold',
+          marginTop: 20,
+          marginBottom: 12,
+          color: '#2c3e50'
+        },
+        heading2: {
+          fontSize: 14,
+          fontWeight: 'bold',
+          marginTop: 16,
+          marginBottom: 10,
+          color: '#34495e'
+        },
+        heading3: {
+          fontSize: 12,
+          fontWeight: 'bold',
+          marginTop: 12,
+          marginBottom: 8,
+          color: '#7f8c8d'
+        },
+        paragraph: {
+          marginBottom: 10,
+          textAlign: 'justify'
+        },
+        listItem: {
+          marginBottom: 4,
+          marginLeft: 16
+        },
+        code: {
+          fontFamily: 'Courier',
+          backgroundColor: '#f8f9fa',
+          padding: 8,
+          fontSize: 10,
+          marginBottom: 10,
+          border: '1 solid #e9ecef'
+        },
+        bold: {
+          fontWeight: 'bold'
+        },
+        italic: {
+          fontStyle: 'italic'
+        }
       });
-    } catch (latexErr) {
-      console.error('[export-pdf] node-latex failed:', latexErr);
-    }
 
-    // 2) Fallback: Try global CLI 'md-to-pdf', then final fallback with @react-pdf/renderer
-    try {
-      const os = await import('node:os');
-      const path = await import('node:path');
-      const fs = await import('node:fs/promises');
-      const { spawn } = await import('node:child_process');
-      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mdtopdf-'));
-      const mdPath = path.join(tmpDir, `${fileName}.md`);
-      const pdfPath = path.join(tmpDir, `${fileName}.pdf`);
-      await fs.writeFile(mdPath, combined, 'utf8');
+      // Simple markdown parser for React PDF
+      const parseMarkdown = (text: string) => {
+        const lines = text.split('\n');
+        const elements: any[] = [];
+        let currentParagraph = '';
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          if (!line) {
+            if (currentParagraph) {
+              elements.push(
+                React.createElement(Text, { style: styles.paragraph, key: `p-${i}` }, currentParagraph.trim())
+              );
+              currentParagraph = '';
+            }
+            continue;
+          }
+          
+          // Headers
+          if (line.startsWith('### ')) {
+            if (currentParagraph) {
+              elements.push(
+                React.createElement(Text, { style: styles.paragraph, key: `p-${i}` }, currentParagraph.trim())
+              );
+              currentParagraph = '';
+            }
+            elements.push(
+              React.createElement(Text, { style: styles.heading3, key: `h3-${i}` }, line.substring(4))
+            );
+          } else if (line.startsWith('## ')) {
+            if (currentParagraph) {
+              elements.push(
+                React.createElement(Text, { style: styles.paragraph, key: `p-${i}` }, currentParagraph.trim())
+              );
+              currentParagraph = '';
+            }
+            elements.push(
+              React.createElement(Text, { style: styles.heading2, key: `h2-${i}` }, line.substring(3))
+            );
+          } else if (line.startsWith('# ')) {
+            if (currentParagraph) {
+              elements.push(
+                React.createElement(Text, { style: styles.paragraph, key: `p-${i}` }, currentParagraph.trim())
+              );
+              currentParagraph = '';
+            }
+            elements.push(
+              React.createElement(Text, { style: styles.heading1, key: `h1-${i}` }, line.substring(2))
+            );
+          } else if (line.startsWith('- ') || line.startsWith('* ')) {
+            if (currentParagraph) {
+              elements.push(
+                React.createElement(Text, { style: styles.paragraph, key: `p-${i}` }, currentParagraph.trim())
+              );
+              currentParagraph = '';
+            }
+            elements.push(
+              React.createElement(Text, { style: styles.listItem, key: `li-${i}` }, `• ${line.substring(2)}`)
+            );
+          } else if (line.startsWith('```')) {
+            // Skip code fence markers for now
+            continue;
+          } else {
+            currentParagraph += (currentParagraph ? ' ' : '') + line;
+          }
+        }
+        
+        if (currentParagraph) {
+          elements.push(
+            React.createElement(Text, { style: styles.paragraph, key: 'final-p' }, currentParagraph.trim())
+          );
+        }
+        
+        return elements;
+      };
 
-      await new Promise<void>((resolve, reject) => {
-        const proc = spawn('md-to-pdf', ['--output', pdfPath, mdPath], { shell: true });
-        let stderr = '';
-        proc.stderr.on('data', (d) => { stderr += d.toString(); });
-        proc.on('error', reject);
-        proc.on('close', (code) => {
-          if (code === 0) resolve();
-          else reject(new Error(`md-to-pdf CLI exit ${code}: ${stderr}`));
-        });
-      });
-
-      const buffer = await fs.readFile(pdfPath);
+      const content = parseMarkdown(markdown as string);
+      
+      const PDFDoc = React.createElement(Document, null,
+        React.createElement(Page, { size: 'A4', style: styles.page },
+          // Logo section
+          logo ? React.createElement(View, { style: styles.logoWrap },
+            React.createElement(Image, { style: styles.logo, src: logo as string })
+          ) : null,
+          
+          // Title
+          React.createElement(Text, { style: styles.title }, 
+            fileName.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+          ),
+          
+          // Content
+          React.createElement(View, null, ...content)
+        )
+      );
+      
+      const inst = pdfMod.pdf(PDFDoc);
+      const buffer = await inst.toBuffer();
+      
       return new NextResponse(buffer, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename=${fileName}.pdf`,
-          "X-Export-Fallback": "md-to-pdf-cli",
+          "X-Export-Engine": "react-pdf-renderer",
         },
       });
-    } catch (cliErr) {
-      console.error('[export-pdf] md-to-pdf CLI failed:', cliErr);
-      // Final fallback: generate a simple PDF with @react-pdf/renderer so the user still gets a file
-      try {
-        const React = (await import("react")).default;
-        const pdfMod: any = await import("@react-pdf/renderer");
-        const { Document, Page, View, Text, Image, StyleSheet } = pdfMod;
-        const styles = StyleSheet.create({
-          page: { padding: 32 },
-          logoWrap: { alignItems: 'center', marginBottom: 16 },
-          logo: { height: 80, width: 180, objectFit: 'contain' },
-          content: { fontSize: 12, lineHeight: 1.4, whiteSpace: 'pre-wrap' },
-        });
-        const FallbackDoc = (
-          React.createElement(Document, null,
-            React.createElement(Page, { size: 'A4', style: styles.page },
-              logo ? React.createElement(View, { style: styles.logoWrap },
-                React.createElement(Image, { style: styles.logo, src: logo as string })
-              ) : null,
-              React.createElement(Text, { style: styles.content }, combined)
-            )
-          )
-        );
-        const inst = pdfMod.pdf(FallbackDoc);
-        const buffer = await inst.toBuffer();
-        return new NextResponse(buffer, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename=${fileName}.pdf`,
-            "X-Export-Fallback": "react-pdf",
-          },
-        });
-      } catch (fallbackErr) {
-        return NextResponse.json({ error: "PDF export failed" }, { status: 500 });
-      }
+      
+    } catch (pdfErr) {
+      console.error('[export-pdf] React PDF failed:', pdfErr);
+      return NextResponse.json({ 
+        error: "PDF export failed", 
+        details: (pdfErr as Error).message 
+      }, { status: 500 });
     }
+    
   } catch (e) {
     console.error("[export-pdf] unexpected error:", e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

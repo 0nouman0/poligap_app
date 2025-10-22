@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useCallback } from "react";
 
 import type { MessageProps, TabData, TabType } from "./../../../types/agent";
 import AgentThinkingLoader from "../Chat-Components/AgentThinkingLoader";
@@ -11,6 +11,7 @@ import Images from "./../Multimedia/Images";
 import Videos from "./../Multimedia/Videos";
 import ReferenceCards from "./ReferenceCards";
 import ToolCalls from "./ToolCards";
+import { toastSuccess, toastError } from "@/components/toast-varients";
 
 const AgentMessage = ({
   message,
@@ -20,6 +21,49 @@ const AgentMessage = ({
 }: MessageProps) => {
   const { streamingErrorMessage, isStreaming } = useAgentStore();
   const [activeTab, setActiveTab] = useState<TabType>("content");
+  const [isLiked, setIsLiked] = useState(false);
+  const [isDisliked, setIsDisliked] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  // Handle like button click
+  const handleLike = useCallback(() => {
+    if (isLiked) {
+      setIsLiked(false);
+      toastSuccess("Like removed");
+    } else {
+      setIsLiked(true);
+      setIsDisliked(false); // Remove dislike if it was active
+      toastSuccess("Message liked");
+    }
+  }, [isLiked]);
+
+  // Handle dislike button click
+  const handleDislike = useCallback(() => {
+    if (isDisliked) {
+      setIsDisliked(false);
+      toastSuccess("Dislike removed");
+    } else {
+      setIsDisliked(true);
+      setIsLiked(false); // Remove like if it was active
+      toastSuccess("Message disliked");
+    }
+  }, [isDisliked]);
+
+  // Handle copy button click
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content ?? "");
+      setIsCopied(true);
+      toastSuccess("Message copied to clipboard");
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (error) {
+      toastError("Failed to copy message");
+    }
+  }, [message.content]);
 
   const tabs: TabData[] = [{ id: "content", label: "Poligap AI", icon: "poligap" }];
 
@@ -216,20 +260,86 @@ const AgentMessage = ({
         {/* Action Buttons */}
         {message.content && isStreaming !== message.id && (
           <div className="flex items-center gap-2 select-none">
-            <button className="p-1.5 hover:bg-accent dark:hover:bg-accent rounded transition-colors" title="Thumbs up">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-muted-foreground dark:text-muted-foreground" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button 
+              onClick={handleLike}
+              className={`p-1.5 hover:bg-accent dark:hover:bg-accent rounded transition-colors ${
+                isLiked ? 'bg-green-100 dark:bg-green-900/20' : ''
+              }`} 
+              title={isLiked ? "Remove like" : "Like this message"}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill={isLiked ? "currentColor" : "none"} 
+                stroke="currentColor" 
+                className={`transition-colors ${
+                  isLiked 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-muted-foreground dark:text-muted-foreground'
+                }`} 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
                 <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
               </svg>
             </button>
-            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Thumbs down">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button 
+              onClick={handleDislike}
+              className={`p-1.5 hover:bg-accent dark:hover:bg-accent rounded transition-colors ${
+                isDisliked ? 'bg-red-100 dark:bg-red-900/20' : ''
+              }`} 
+              title={isDisliked ? "Remove dislike" : "Dislike this message"}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill={isDisliked ? "currentColor" : "none"} 
+                stroke="currentColor" 
+                className={`transition-colors ${
+                  isDisliked 
+                    ? 'text-red-600 dark:text-red-400' 
+                    : 'text-muted-foreground dark:text-muted-foreground'
+                }`} 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
                 <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
               </svg>
             </button>
-            <button className="p-1.5 hover:bg-gray-100 rounded transition-colors" title="Copy">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#717171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            <button 
+              onClick={handleCopy}
+              className={`p-1.5 hover:bg-accent dark:hover:bg-accent rounded transition-colors ${
+                isCopied ? 'bg-blue-100 dark:bg-blue-900/20' : ''
+              }`} 
+              title={isCopied ? "Copied!" : "Copy message"}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                className={`transition-colors ${
+                  isCopied 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-muted-foreground dark:text-muted-foreground'
+                }`} 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                {isCopied ? (
+                  <path d="M20 6L9 17l-5-5" />
+                ) : (
+                  <>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </>
+                )}
               </svg>
             </button>
           </div>
