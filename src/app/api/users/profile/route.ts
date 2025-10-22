@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     console.log('Fetching profile for userId:', userId);
 
     // Fetch profile using GraphQL
-    const response: any = await gqlService.query('getProfile', { id: userId });
-    const profile = extractNode(response.profilesCollection);
+    const profileResponse: any = await gqlService.query('getProfile', { id: userId });
+    const profile = extractNode(profileResponse.profilesCollection);
 
     if (!profile) {
       return NextResponse.json(
@@ -112,8 +112,8 @@ export async function PUT(req: NextRequest) {
     }
 
     // Update profile using GraphQL
-    const response: any = await gqlService.query('updateProfile', variables);
-    const updatedProfile = response.updateprofilesCollection.records[0];
+    const updateResponse: any = await gqlService.query('updateProfile', variables);
+    const updatedProfile = updateResponse.updateprofilesCollection.records[0];
 
     if (!updatedProfile) {
       return NextResponse.json(

@@ -1,85 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCompliancePrompt } from '@/lib/compliance-prompt';
 import { createClient } from '@/lib/supabase/server';
-import { createPortkeyClient, getAvailableModels, getBestAvailableModel } from '@/lib/portkey/client';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { createPortkeyClient, getAvailableModels } from '@/lib/portkey/client';
 
-// AI analysis with Portkey + multi-provider support
+// AI analysis with Portkey ONLY - no Gemini parsing
 async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<any> {
   try {
-    // Get available models
-    const availableModels = getAvailableModels();
-    console.log('Available models for compliance analysis:', availableModels.map(m => `${m.provider}/${m.model}`));
+    // Get available models (Portkey only, skip Gemini)
+    const availableModels = getAvailableModels().filter(m => m.provider !== 'gemini');
+    console.log('Available Portkey models:', availableModels.map(m => `${m.provider}/${m.model}`));
 
     if (availableModels.length === 0) {
-      throw new Error('No AI models available. Please configure API keys.');
+      throw new Error('No Portkey models available. Please configure PORTKEY_API_KEY.');
     }
 
-    // Extract text from file first
-    const extractedText = await extractTextFromFile(file);
-    console.log(`Extracted ${extractedText.length} characters from ${file.name}`);
+    // Read file as text for sending to AI
+    const fileText = await file.text();
+    console.log(`Read ${fileText.length} characters from ${file.name}`);
 
     const prompt = getCompliancePrompt(selectedStandards, 'ANALYZE_UPLOADED_FILE');
-    const fullPrompt = `${prompt}\n\nDocument Content:\n${extractedText.substring(0, 50000)}`; // Limit to 50k chars
+    const fullPrompt = `${prompt}\n\nDocument Content:\n${fileText.substring(0, 50000)}`;
 
     let lastErr: unknown = null;
-    let responseText = '';
 
-    // Try each available model
+    // Try each Portkey model
     for (const modelConfig of availableModels) {
       try {
         console.log(`Attempting compliance analysis with ${modelConfig.provider}/${modelConfig.model}`);
         
-        if (modelConfig.provider !== 'gemini') {
-          // Use Portkey for non-Gemini providers
-          const portkey = createPortkeyClient(modelConfig.provider);
-          
-          if (!portkey) {
-            console.log(`Portkey client unavailable for ${modelConfig.provider}`);
-            continue;
-          }
-
-          const response = await portkey.chat.completions.create({
-            model: modelConfig.model,
-            messages: [
-              { role: 'system', content: 'You are an expert compliance analyst. Return valid JSON responses only.' },
-              { role: 'user', content: fullPrompt }
-            ],
-            temperature: 0.1,
-            max_tokens: 8192,
-            response_format: { type: 'json_object' }
-          });
-
-          responseText = response.choices[0]?.message?.content || '';
-          
-        } else {
-          // Use direct Gemini API for Gemini models
-          const apiKey = process.env.GEMINI_API_KEY;
-          if (!apiKey) {
-            console.log('Gemini API key not found');
-            continue;
-          }
-
-          const genAI = new GoogleGenerativeAI(apiKey);
-          const model = genAI.getGenerativeModel({ model: modelConfig.model });
-          
-          const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json'
-            }
-          });
-          
-          const response = await result.response;
-          responseText = response.text();
+        const portkey = createPortkeyClient(modelConfig.provider);
+        
+        if (!portkey) {
+          console.log(`Portkey client unavailable for ${modelConfig.provider}`);
+          continue;
         }
 
-        console.log(`✅ Success with ${modelConfig.provider}/${modelConfig.model}`);
-        console.log('Response preview:', responseText.substring(0, 200) + '...');
+        const response = await portkey.chat.completions.create({
+          model: modelConfig.model,
+          messages: [
+            { role: 'system', content: 'You are an expert compliance analyst. Analyze documents and return valid JSON responses.' },
+            { role: 'user', content: fullPrompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 8192,
+          response_format: { type: 'json_object' }
+        });
 
-        // Try to parse JSON response
+        const responseText = response.choices[0]?.message?.content || '';
+        const textStr = typeof responseText === 'string' ? responseText : JSON.stringify(responseText);
+        
+        console.log(`✅ Success with ${modelConfig.provider}/${modelConfig.model}`);
+        console.log('Response preview:', textStr.substring(0, 200) + '...');
+
+        // Parse JSON response
         try {
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
@@ -90,7 +63,6 @@ async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<a
           }
         } catch (parseError) {
           console.warn(`Failed to parse JSON response from ${modelConfig.provider}:`, parseError);
-          // Create structured response from the text
           return createStructuredResponseFromText(responseText);
         }
         
@@ -102,10 +74,10 @@ async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<a
       }
     }
     
-    // If all models failed, throw error
+    // If all Portkey models failed, throw error
     throw lastErr instanceof Error
       ? new Error(lastErr.message)
-      : new Error('All AI models failed');
+      : new Error('All Portkey models failed');
 
   } catch (error) {
     console.error('AI analysis failed:', error);
@@ -113,61 +85,8 @@ async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<a
   }
 }
 
-// Simple text extraction helper
-async function extractTextFromFile(file: File): Promise<string> {
-  try {
-    if (file.type.includes('text') || file.name.endsWith('.txt')) {
-      return await file.text();
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const decoder = new TextDecoder('utf-8', { fatal: false });
-    const content = decoder.decode(arrayBuffer);
-
-    // Basic text extraction - in production you'd want proper PDF/DOC parsers
-    if (file.type === 'application/pdf') {
-      // Very basic PDF text extraction
-      const textMatches = content.match(/\([^)]{10,}\)/g);
-      if (textMatches) {
-        return textMatches
-          .map(match => match.replace(/^\(|\)$/g, ''))
-          .filter(t => t.length > 5)
-          .join(' ');
-      }
-    }
-
-    // Extract readable text sequences
-    const readableText = content.match(/[a-zA-Z\s.,!?;:'"()-]{20,}/g);
-    if (readableText) {
-      return readableText.join(' ').replace(/\s+/g, ' ').trim();
-    }
-
-    throw new Error('Could not extract readable text from file');
-
-  } catch (error) {
-    throw new Error(`Text extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-// Heuristic to detect poor/garbled extraction (module scope)
-function isReadable(text: string): boolean {
-  if (!text) return false;
-  const length = text.length;
-  const wordCount = (text.match(/\b\w+\b/g) || []).length;
-  const letters = (text.match(/[A-Za-z]/g) || []).length;
-  const letterRatio = letters / Math.max(1, length);
-  const uniqueChars = new Set(text.split('')).size;
-  const uniqueRatio = uniqueChars / Math.max(1, length);
-  const avgWordLen = length / Math.max(1, wordCount);
-
-  // Minimum thresholds indicating likely readable prose
-  const longEnough = length >= 500 || wordCount >= 80;
-  const sufficientLetters = letterRatio >= 0.4; // avoid mostly-binary/garbage
-  const reasonableUniqueness = uniqueRatio >= 0.05; // avoid repeated same chars
-  const reasonableAvgWord = avgWordLen >= 3 && avgWordLen <= 12;
-
-  return longEnough && sufficientLetters && reasonableUniqueness && reasonableAvgWord;
-}
+// Removed unnecessary text extraction helpers
+// Portkey models (GPT-4, Claude) can handle document text directly
 
 // Create structured response from unstructured text
 function createStructuredResponseFromText(text: string): any {

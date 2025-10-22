@@ -122,6 +122,10 @@ export const ICONS: IconTypeMap = {
   deepseek_icon: DeepseekIcon,
   meta_icon: MetaIcon,
   gemini_icon: GeminiIcon,
+  openai_icon: OpenAILogo,
+  groq_icon: GroqLogo,
+  claude_icon: AnthropicLogo,
+  portkey_icon: PoligapIcon, // Using Poligap icon as placeholder for Portkey
   ppt_icon: PptIcon,
   pdf_icon: PdfIcon,
   txt_icon: TxtIcon,

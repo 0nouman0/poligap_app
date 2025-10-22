@@ -16,10 +16,6 @@ export async function GET(req: NextRequest) {
     
     const allUsers = currentUser ? [currentUser] : [];
     
-    if (error) {
-      throw new Error(`Supabase error: ${error.message}`);
-    }
-    
     console.log(`Found ${allUsers?.length || 0} users in database`);
     
     // Get the specific user ID from localStorage that's failing
@@ -39,7 +35,7 @@ export async function GET(req: NextRequest) {
         matchesSearch: searchUserId ? (user.id === searchUserId) : false
       })),
       // Try different search approaches for the failing user ID
-      searchResults: searchUserId ? await tryDifferentSearches(searchUserId, supabase) : null
+      searchResults: searchUserId ? await tryDifferentSearches(searchUserId, gqlService) : null
     };
 
     return createApiResponse({
@@ -66,30 +62,11 @@ async function tryDifferentSearches(userId: string, gqlService: any) {
     
     searches.push({ 
       method: 'id field', 
-      found: !!byId && !error, 
+      found: !!byId, 
       data: byId ? { _id: byId.id, email: byId.email } : null 
     });
   } catch (e) {
     searches.push({ method: 'id field', found: false, error: 'Failed' });
-  }
-
-  try {
-    // Search by email if userId looks like email
-    if (userId.includes('@')) {
-      const { data: byEmail, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', userId)
-        .single();
-      
-      searches.push({ 
-        method: 'email field', 
-        found: !!byEmail && !error, 
-        data: byEmail ? { _id: byEmail.id, email: byEmail.email } : null 
-      });
-    }
-  } catch (e) {
-    searches.push({ method: 'email field', found: false, error: 'Failed' });
   }
 
   return searches;
