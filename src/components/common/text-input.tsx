@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircleOutlineRounded } from "@mui/icons-material";
+import { CheckCircle } from "lucide-react";
 import Image from "next/image";
 
 export interface TextInputProps
@@ -18,7 +18,7 @@ export interface TextInputProps
   helper?: boolean;
 }
 
-export default function TextInput({
+export function TextInput({
   label,
   midText,
   maxLength = 200,
@@ -92,7 +92,7 @@ export default function TextInput({
 
         {successIcon && !error && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-            <CheckCircleOutlineRounded className="w-4 h-4 text-[#079455]" />
+            <CheckCircle className="w-4 h-4 text-[#079455]" />
           </span>
         )}
       </div>

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCompanyStore } from "@/stores/company-store";
-import KrooloMainLoader from "@/components/common/kroolo-main-loader";
+import { KrooloMainLoader } from "@/components/common/kroolo-main-loader";
 
 export default function KnowledgeBaseLayout({
   children,

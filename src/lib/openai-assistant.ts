@@ -336,6 +336,26 @@ class OpenAIAssistantClient {
   }
 
   /**
+   * Validate if a thread exists and is accessible
+   * Returns true if thread is valid, false otherwise
+   */
+  async validateThread(threadId: string): Promise<boolean> {
+    if (!threadId) {
+      return false;
+    }
+
+    try {
+      // Try to retrieve the thread - if it exists, this will succeed
+      await this.client.beta.threads.retrieve(threadId);
+      console.log("[Thread Validation] Thread is valid:", threadId);
+      return true;
+    } catch (error: any) {
+      console.error("[Thread Validation] Thread is invalid:", threadId, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Get thread messages
    */
   async getMessages(threadId: string, limit: number = 20) {

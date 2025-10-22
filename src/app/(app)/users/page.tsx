@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Search, Filter, X, UserPlus, MoreVertical, Edit, Trash2, Shield } from "lucide-react";
+import { Search, X, UserPlus, MoreVertical, Edit, Trash2, Shield, ListFilter } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/common/common-button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -46,7 +46,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FilterList } from "@mui/icons-material";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
 
 export type MemberIntegration = {
@@ -365,12 +364,7 @@ export default function Component() {
                   className="flex items-center gap-1 h-8 px-3 bg-white dark:bg-background border border-gray-200 dark:border-gray-600 rounded-sm text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-accent"
                   aria-label="Filter"
                 >
-                  {/* <Filter className="h-4 w-4" /> */}
-                  <FilterList
-                    className="placeholder-text"
-                    fontSize="small"
-                    sx={{ fontSize: "16px" }}
-                  />
+                  <ListFilter className="h-4 w-4" />
                   {selectedFilterCategory && selectedFilterValue ? (
                     <>
                       <span>Filter: {selectedFilterValue}</span>

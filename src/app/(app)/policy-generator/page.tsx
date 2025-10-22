@@ -277,7 +277,6 @@ export default function PolicyGeneratorPage() {
 
       // Save audit log for policy generation (store will be updated via addLog)
       await savePolicyAuditLog(data?.content || "");
-      console.log("Policy generation saved to history.");
     } catch (e) {
       setResult("Generation failed. Please try again.");
       setCurrentStep(4);

@@ -14,8 +14,7 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const signUpSchema = z.object({
@@ -117,7 +116,7 @@ export default function SignUpPage() {
                 <Label htmlFor="password" className="text-xs font-medium">Password</Label>
                 <div className="relative">
                   <Input id="password" type={showPassword ? "text" : "password"} placeholder="Create a password" {...register("password")} disabled={isLoading} className={cn("w-full px-3 py-2 pr-10 rounded-md border border-transparent outline-none bg-transparent shadow-none transition-colors hover:border-base-purple focus:border-base-purple focus-visible:border-base-purple", errors.password && "border border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-red-500/20 focus-visible:border-red-500")} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <VisibilityOffIcon className="h-4 w-4" /> : <VisibilityIcon className="h-4 w-4" />}</button>
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
                 </div>
                 {errors.password && <p className="text-xs text-error-red">{errors.password.message}</p>}
               </div>
@@ -125,7 +124,7 @@ export default function SignUpPage() {
                 <Label htmlFor="confirmPassword" className="text-xs font-medium">Confirm Password</Label>
                 <div className="relative">
                   <Input id="confirmPassword" type={showConfirmPassword ? "text" : "password"} placeholder="Confirm your password" {...register("confirmPassword")} disabled={isLoading} className={cn("w-full px-3 py-2 pr-10 rounded-md border border-transparent outline-none bg-transparent shadow-none transition-colors hover:border-base-purple focus:border-base-purple focus-visible:border-base-purple", errors.confirmPassword && "border border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-red-500/20 focus-visible:border-red-500")} />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showConfirmPassword ? <VisibilityOffIcon className="h-4 w-4" /> : <VisibilityIcon className="h-4 w-4" />}</button>
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
                 </div>
                 {errors.confirmPassword && <p className="text-xs text-error-red">{errors.confirmPassword.message}</p>}
               </div>

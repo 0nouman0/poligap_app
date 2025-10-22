@@ -176,8 +176,6 @@ export default function MyTasksPage() {
         toastError('Create Failed', 'User ID not found. Please log in again.');
         return;
       }
-
-      console.log('➕ Creating task for userId:', userId);
       
       const payload = {
         title,

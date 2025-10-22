@@ -511,7 +511,6 @@ export default function ComplianceCheckPage() {
     }
 
     const asset = assets[0]; // Get first asset (single selection)
-    console.log('📥 Asset selected:', asset.originalName, asset.url);
     
     try {
       // Fetch the actual file from Supabase Storage URL
@@ -528,7 +527,6 @@ export default function ComplianceCheckPage() {
         lastModified: new Date(asset.uploadDate).getTime()
       });
       
-      console.log('✅ File created from asset:', file.name, file.type, file.size);
       setUploadedFile(file);
       setIsAssetPickerOpen(false);
     } catch (error) {
@@ -601,7 +599,6 @@ export default function ComplianceCheckPage() {
   const saveAuditLog = async (result: ComplianceResult) => {
     try {
       const userId = getUserId();
-      console.log('💾 Saving audit log with userId:', userId, 'fileName:', result.fileName);
       
       if (!userId) {
         console.error('❌ Cannot save audit log: userId is null');
@@ -691,7 +688,6 @@ export default function ComplianceCheckPage() {
         throw new Error(data.error || 'Analysis failed');
       }
 
-      console.log('Analysis completed using:', data.method || 'unknown method');
       setAnalysisMethod(data.method || 'unknown');
       if (typeof data.appliedRuleBase !== 'undefined') setAppliedRules(!!data.appliedRuleBase);
       if (typeof data.ruleCount !== 'undefined') setRulebaseCount(Number(data.ruleCount) || 0);

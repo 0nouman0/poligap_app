@@ -14,8 +14,7 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import { toastError } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { clearOldCache } from "@/lib/utils/clear-old-cache";
 
@@ -399,9 +398,9 @@ export default function SignInPage() {
                     disabled={isLoading}
                   >
                     {showPassword ? (
-                      <VisibilityIcon className="h-4 w-4 " />
+                      <Eye className="h-4 w-4 " />
                     ) : (
-                      <VisibilityOffIcon className="h-4 w-4 " />
+                      <EyeOff className="h-4 w-4 " />
                     )}
                   </button>
                 </div>

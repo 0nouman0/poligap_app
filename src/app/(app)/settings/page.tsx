@@ -124,7 +124,6 @@ function SettingsPage() {
 
   // Debounced change handler for better performance
   const handleChange = useCallback((field: string, value: string) => {
-    console.log(`Updating ${field}:`, value);
     setProfile(prev => ({ ...prev, [field]: value }));
   }, []);
 
@@ -271,7 +270,6 @@ function SettingsPage() {
                     type="tel"
                     value={profile.mobile}
                     onChange={(e) => {
-                      console.log('Phone changing to:', e.target.value);
                       handleChange('mobile', e.target.value);
                     }}
                     placeholder="Enter your phone number"

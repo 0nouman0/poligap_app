@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle,
   ExternalLink,
+  Bell,
 } from "lucide-react";
 import {
   Table,
@@ -16,7 +17,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { NotificationAdd } from "@mui/icons-material";
+import { BellPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -176,10 +177,7 @@ export default function FlaggedIssuesTable() {
                   >
                     {issue.status === "new" ? (
                       <>
-                        <NotificationAdd
-                          className="mr-2"
-                          sx={{ fontSize: 16 }}
-                        />
+                        <Bell className="w-4 h-4 mr-2" />
                         New
                       </>
                     ) : (

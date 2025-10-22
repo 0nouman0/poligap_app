@@ -18,7 +18,7 @@ import {
 import Icon from "./../../ui/icon";
 import { LlmsList } from "./../../utils/utils";
 import { ModelSpecificationTooltip } from "./ModelTooltip";
-import { Button } from "@/components/common/common-button";
+import { Button } from "@/components/ui/button";
 
 export const LlmButton = ({
   value,

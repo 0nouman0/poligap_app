@@ -81,8 +81,6 @@ const RecentChats = ({
                       "68da404605eeba8349fc9d10";
   const actualCompanyId = (companyId && companyId !== "") ? companyId : "60f1b2b3c4d5e6f7a8b9c0d1";
 
-  console.log("RecentChats - userId:", userId, "storedUserId:", storedUserId, "actualUserId:", actualUserId, "actualCompanyId:", actualCompanyId);
-
   const groupedChats = (globalConversationList || {}) as Record<
     string,
     ChatItem[]
@@ -120,7 +118,6 @@ const RecentChats = ({
 
   const handleGoToChat = async (chatData: ChatItem) => {
     // debugger;
-    console.log("🔍 handleGoToChat called with:", chatData);
     
     // Validate chatData has a valid _id
     if (!chatData?._id) {
@@ -133,13 +130,10 @@ const RecentChats = ({
     });
     const resp = await getSelectedConversation({ conversationId: chatData._id }, chatData);
     if (resp) {
-      console.log("resp message ===>", resp);
       
       // Load chat history from Supabase - this updates the store messages
       const loadChatHistory = useGlobalChatStore.getState().loadChatHistory;
-      const messages = await loadChatHistory(chatData._id);
-      
-      console.log("📨 Loaded messages:", messages);
+      await loadChatHistory(chatData._id);
       
       // debugger;
       if (isMobile) setRecentChatsOpen(false);
@@ -149,7 +143,6 @@ const RecentChats = ({
     }
   };
 
-  console.log("globalConversationList ==>", globalConversationList);
   return (
     <>
       <ConfirmDialog

@@ -1,9 +1,11 @@
 import React from "react";
 
-type Props = {};
+interface KrooloMainLoaderProps {
+  message?: string;
+}
 
 // Lightweight Poligap splash replacing the Kroolo animation
-const KrooloMainLoader = (props: Props) => {
+const KrooloMainLoader = ({ message = "Loading Poligap…" }: KrooloMainLoaderProps) => {
   return (
     <div
       style={{
@@ -24,10 +26,10 @@ const KrooloMainLoader = (props: Props) => {
           height={120}
           style={{ display: "inline-block", marginBottom: 16, objectFit: 'contain' }}
         />
-        <div style={{ color: "#6B7280", fontSize: 14 }}>Loading Poligap…</div>
+        <div style={{ color: "#6B7280", fontSize: 14 }}>{message}</div>
       </div>
     </div>
   );
 };
 
-export default KrooloMainLoader;
+export { KrooloMainLoader };

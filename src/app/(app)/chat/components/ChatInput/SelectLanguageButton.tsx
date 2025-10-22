@@ -16,7 +16,7 @@ import {
 
 import type { SelectedLanguageTypeProps } from "./../../types/agent";
 import { LanguagesList } from "./../../utils/utils";
-import { Button } from "@/components/common/common-button";
+import { Button } from "@/components/ui/button";
 
 export const SelectLanguageButton = ({
   value,

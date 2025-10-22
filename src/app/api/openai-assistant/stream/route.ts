@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       user_query,
+      conversation_id,
       thread_id,
       assistant_id,
       additional_instructions,
@@ -50,11 +51,53 @@ export async function POST(request: NextRequest) {
 
     const assistantClient = getAssistantClient();
 
-    // Create or use existing thread
+    // Get thread from conversation or use provided thread_id
     let finalThreadId = thread_id;
+    let finalAssistantId = assistant_id;
+
+    // If conversation_id is provided, fetch thread_id and assistant_id from database
+    if (conversation_id && !finalThreadId) {
+      console.log("[OpenAI Stream] Fetching thread from conversation:", conversation_id);
+      
+      const { data: conversation, error: convError } = await supabase
+        .from("conversations")
+        .select("openai_thread_id, openai_assistant_id")
+        .eq("id", conversation_id)
+        .single();
+
+      if (convError) {
+        console.error("[OpenAI Stream] Error fetching conversation:", convError);
+      } else if (conversation) {
+        finalThreadId = conversation.openai_thread_id || finalThreadId;
+        finalAssistantId = conversation.openai_assistant_id || finalAssistantId;
+        console.log("[OpenAI Stream] Using thread:", finalThreadId, "assistant:", finalAssistantId);
+      }
+    }
+
+    // Validate existing thread or create new one
+    if (finalThreadId) {
+      // Validate thread exists in OpenAI
+      const isValid = await assistantClient.validateThread(finalThreadId);
+      if (!isValid) {
+        console.warn("[OpenAI Stream] Thread invalid, creating new one:", finalThreadId);
+        finalThreadId = null; // Force creation of new thread
+      }
+    }
+
+    // Create thread if none exists or validation failed
     if (!finalThreadId) {
+      console.log("[OpenAI Stream] Creating new thread");
       const thread = await assistantClient.createThread();
       finalThreadId = thread.id;
+      
+      // Update conversation with new thread_id if conversation_id provided
+      if (conversation_id) {
+        await supabase
+          .from("conversations")
+          .update({ openai_thread_id: finalThreadId })
+          .eq("id", conversation_id);
+        console.log("[OpenAI Stream] Saved thread to conversation:", finalThreadId);
+      }
     }
 
     // Add user message to thread
@@ -63,7 +106,7 @@ export async function POST(request: NextRequest) {
     // Create streaming run with SSE format
     const stream = await assistantClient.createStreamingRun(
       finalThreadId,
-      assistant_id,
+      finalAssistantId,
       additional_instructions
     );
 

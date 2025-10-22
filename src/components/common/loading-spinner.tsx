@@ -1,39 +1,31 @@
 import React from "react";
-import { CircularProgress, SxProps } from "@mui/material";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
   size?: number;
   noMargin?: boolean;
   margin?: number;
-  style?: React.CSSProperties;
-  sx?: SxProps;
+  className?: string;
 }
 
-export default function LoadingSpinner({
+export function LoadingSpinner({
   size = 20,
   noMargin = false,
   margin = 0,
-  ...props
+  className,
 }: LoadingSpinnerProps) {
   return (
-    <CircularProgress
-      disableShrink
-      style={{ color: "inherit" }}
-      color="inherit"
-      size={size}
-      sx={{
-        margin: noMargin ? 0 : margin,
-        marginRight: noMargin ? 0 : 1,
-        animation: "spin 800ms linear infinite",
-        "@keyframes spin": {
-          from: {
-            transform: "rotate(0deg)",
-          },
-          to: {
-            transform: "rotate(360deg)",
-          },
-        },
-        ...props?.sx,
+    <Loader2
+      className={cn(
+        "animate-spin text-current",
+        !noMargin && margin > 0 && `mr-${margin}`,
+        className
+      )}
+      style={{
+        width: size,
+        height: size,
+        margin: noMargin ? 0 : undefined,
       }}
     />
   );

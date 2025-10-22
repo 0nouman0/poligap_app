@@ -1,56 +1,72 @@
 import { createApiResponse } from "@/lib/apiResponse";
 import { NextRequest } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
-async function agentTitleGenerator(userPrompt: string) {
+/**
+ * Generate a conversation title using Portkey + OpenAI
+ * Uses gpt-4o-mini for fast, cost-effective title generation
+ */
+async function agentTitleGenerator(userPrompt: string): Promise<string> {
+  if (!userPrompt || userPrompt.trim().length === 0) {
+    return "New Chat";
+  }
+
   try {
-    if (!userPrompt) {
-      return "New Chat";
+    // Initialize OpenAI client with Portkey gateway
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: "https://api.portkey.ai/v1",
+      defaultHeaders: {
+        "x-portkey-api-key": process.env.PORTKEY_API_KEY || "",
+        "x-portkey-provider": "openai",
+      },
+    });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a title generator. Generate a concise, descriptive title (max 6 words) for chat conversations. Return ONLY the title, nothing else.",
+        },
+        {
+          role: "user",
+          content: userPrompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 20,
+    });
+
+    const generatedTitle = response.choices[0]?.message?.content?.trim();
+    
+    if (generatedTitle && generatedTitle.length > 0) {
+      // Remove quotes if present
+      return generatedTitle.replace(/^["']|["']$/g, "");
     }
 
-    // Use Gemini AI for title generation (more reliable)
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-        
-        const prompt = `Generate a very short chat title (max 5 words) for this user message: "${userPrompt}". Return only the title, no quotes or extra text.`;
-        const result = await model.generateContent(prompt);
-        const title = result.response.text().trim();
-        
-        return title || `Chat: ${userPrompt.split(' ').slice(0, 3).join(' ')}`;
-      } catch (geminiError) {
-        console.error("Gemini title generation failed:", geminiError);
-        // Fall through to simple title
-      }
-    }
-
-    // Simple fallback title generation
-    const words = userPrompt.split(' ').slice(0, 5).join(' ');
-    return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
+    throw new Error("Empty title returned from API");
   } catch (error) {
-    console.error("Title generation error:", error);
-    const words = userPrompt.split(' ').slice(0, 5).join(' ');
-    return `Chat: ${words}${words.length > 30 ? '...' : ''}`;
+    console.error("Title generation failed:", error);
+    throw error; // Re-throw to handle in route handler
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const { userPrompt } = await request.json();
-    console.log("generate-title userPrompt =>", userPrompt);
+    console.log("[Title Gen] Input:", userPrompt);
 
-    if (!userPrompt) {
-      console.error("Missing userPrompt");
+    if (!userPrompt || userPrompt.trim().length === 0) {
       return createApiResponse({
         success: false,
-        error: "Missing userPrompt",
+        error: "Missing or empty userPrompt",
         status: 400,
       });
     }
 
     const agentTitle = await agentTitleGenerator(userPrompt);
-    console.log("Generated title:", agentTitle);
+    console.log("[Title Gen] Success:", agentTitle);
 
     return createApiResponse({
       success: true,
@@ -58,11 +74,11 @@ export async function POST(request: NextRequest) {
       status: 200,
     });
   } catch (error) {
-    console.error("Error in agentTitleGenerator:", error);
+    console.error("[Title Gen] Error:", error);
     return createApiResponse({
       success: false,
-      error: "Failed to create conversation title",
-      status: 422,
+      error: error instanceof Error ? error.message : "Failed to generate title",
+      status: 500,
     });
   }
 }

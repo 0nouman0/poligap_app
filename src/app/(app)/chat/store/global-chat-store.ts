@@ -356,27 +356,50 @@ export const useGlobalChatStore = create((set: any) => ({
     }
   },
   createConversationAPI: async (requestData: any): Promise<any> => {
-    // debugger;
     try {
       set({
         isCreatingConversation: true,
       });
 
-      // const { data: resp } = await krooloHttpClient.post(
-      //   "/kroolo-ai/create-conversation",
-      //   requestData
-      // );
+      // Step 1: Create OpenAI thread first (for Assistant API conversations)
+      let openaiThreadId = null;
+      let openaiAssistantId = null;
+      
+      try {
+        console.log("[Conversation] Creating OpenAI thread...");
+        const threadRes = await fetch("/api/openai-assistant/stream?action=thread", {
+          method: "GET",
+        });
+        
+        if (threadRes.ok) {
+          const threadData = await threadRes.json();
+          if (threadData.success && threadData.thread_id) {
+            openaiThreadId = threadData.thread_id;
+            console.log("[Conversation] OpenAI thread created:", openaiThreadId);
+          }
+        }
+      } catch (threadError) {
+        console.warn("[Conversation] Failed to create OpenAI thread (non-critical):", threadError);
+        // Continue without thread - it will be created on first message if needed
+      }
+
+      // Step 2: Create conversation with thread info
+      const conversationPayload = {
+        ...requestData,
+        openai_thread_id: openaiThreadId,
+        openai_assistant_id: openaiAssistantId,
+      };
 
       const res = await fetch("/api/ai-chat/create-conversation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(conversationPayload),
       });
 
       const resp = await res.json();
-      console.log("conversation create resp =>", resp);
+      console.log("[Conversation] Created:", resp);
 
       if (resp?.success) {
         set(
@@ -647,8 +670,13 @@ export const useGlobalChatStore = create((set: any) => ({
     msg: string,
     conversationIdOverride?: string
   ): Promise<void> => {
+    // Generate fallback title from message
+    const fallbackTitle = msg && msg.trim().length > 0
+      ? `Chat: ${msg.split(' ').slice(0, 5).join(' ')}${msg.length > 30 ? '...' : ''}`
+      : "New Chat";
+
     try {
-      console.log("generateConversationTitle msg:", msg);
+      console.log("[Title Gen] Generating title for:", msg);
       const requestData = {
         userPrompt: msg,
       };
@@ -662,41 +690,56 @@ export const useGlobalChatStore = create((set: any) => ({
       });
 
       const resp = await res.json();
-      console.log("generateConversationTitle response:", resp);
+      console.log("[Title Gen] Response:", resp);
 
-      if (resp?.success) {
+      const storeState = useGlobalChatStore.getState() as any;
+      const selectedConversation = storeState.selectedConversation;
+      const conversationId = conversationIdOverride || selectedConversation?.id || selectedConversation?._id;
+
+      if (!conversationId) {
+        console.error("[Title Gen] No conversation ID found");
+        return; // Silent fail - title generation is non-critical
+      }
+
+      // Use AI-generated title if successful, otherwise use fallback
+      const titleToUse = resp?.success && resp?.data ? resp.data : fallbackTitle;
+      
+      if (!resp?.success) {
+        console.warn("[Title Gen] API failed, using fallback:", fallbackTitle);
+      }
+
+      // Update conversation with title (AI or fallback)
+      storeState.editConversationAPI(
+        {
+          chatName: titleToUse,
+          conversationId,
+        },
+        true // silent update
+      );
+
+    } catch (error: unknown) {
+      console.error("[Title Gen] Error:", error);
+      
+      // Try to update with fallback title on error
+      try {
         const storeState = useGlobalChatStore.getState() as any;
         const selectedConversation = storeState.selectedConversation;
-        // Support both id and _id formats (Supabase uses id, MongoDB uses _id)
         const conversationId = conversationIdOverride || selectedConversation?.id || selectedConversation?._id;
-        console.log("selectedConversation for edit:", selectedConversation);
-
+        
         if (conversationId) {
+          console.log("[Title Gen] Using fallback title after error:", fallbackTitle);
           storeState.editConversationAPI(
             {
-              chatName: resp.data,
+              chatName: fallbackTitle,
               conversationId,
             },
-            true
+            true // silent update
           );
-        } else {
-          console.error("No conversationId found for title update");
-          toastWarning("Title Generation Failed", "No conversation selected");
         }
-      } else {
-        console.error("generateConversationTitle failed:", resp);
-        toastWarning(
-          "Title Generation Failed",
-          resp?.error || "Failed to generate title"
-        );
+      } catch (fallbackError) {
+        console.error("[Title Gen] Fallback update failed:", fallbackError);
+        // Silent fail - title generation is non-critical
       }
-    } catch (error: unknown) {
-      console.error("generateConversationTitle error:", error);
-      const err = error as any;
-      toastWarning(
-        "Title Generation Failed ",
-        err?.response?.data?.message || err?.message || "Unknown error"
-      );
     }
   },
 }));
