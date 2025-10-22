@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCompliancePrompt } from '@/lib/compliance-prompt';
 import { createClient } from '@/lib/supabase/server';
 import { createPortkeyClient, getAvailableModels } from '@/lib/portkey/client';
+import { extractTextFromDocument } from '@/lib/parsers/document-parser';
 
-// AI analysis with Portkey ONLY - no Gemini parsing
+// AI analysis with Portkey ONLY - uses robust pdf-parse + mammoth parsers
 async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<any> {
   try {
     // Get available models (Portkey only, skip Gemini)
@@ -14,9 +15,14 @@ async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<a
       throw new Error('No Portkey models available. Please configure PORTKEY_API_KEY.');
     }
 
-    // Read file as text for sending to AI
-    const fileText = await file.text();
-    console.log(`Read ${fileText.length} characters from ${file.name}`);
+    // Extract text using robust parser (pdf-parse for PDF, mammoth for DOCX)
+    console.log(`Extracting text from ${file.name} (${file.type})...`);
+    const fileText = await extractTextFromDocument(file);
+    console.log(`✅ Extracted ${fileText.length} characters from ${file.name}`);
+
+    if (!fileText || fileText.trim().length === 0) {
+      throw new Error('Could not extract text from document. The file may be scanned, corrupted, or empty.');
+    }
 
     const prompt = getCompliancePrompt(selectedStandards, 'ANALYZE_UPLOADED_FILE');
     const fullPrompt = `${prompt}\n\nDocument Content:\n${fileText.substring(0, 50000)}`;
