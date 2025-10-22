@@ -2,14 +2,47 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
-## 📄 Documentation Rule
+## 📄 File Organization Rules
 
+**CRITICAL: Follow these rules strictly for all file creation**
+
+### Documentation Files (.md)
 **IMPORTANT:** All `.md` documentation files (except `README.md` and `WARP.md` in root) must be placed in the `docs/` directory.
 
 - ✅ `docs/guides/FEATURE_NAME.md`
 - ✅ `docs/architecture/SYSTEM_NAME.md`
 - ✅ `docs/reports/AUDIT_NAME.md`
+- ✅ `docs/MIGRATION_SUCCESS.md`
 - ❌ `FEATURE_DOC.md` (root level)
+- ❌ `AUDIT_REPORT.md` (root level)
+
+### Test Files (.js, .ts, .sh)
+**IMPORTANT:** All test scripts, test utilities, and verification scripts must be placed in the `tests/` directory.
+
+- ✅ `tests/test-chat-setup.js`
+- ✅ `tests/verify-database.ts`
+- ✅ `tests/test-title-gen.sh`
+- ✅ `tests/integration/chat-flow.test.js`
+- ❌ `test-something.js` (root level)
+- ❌ `verify-*.sh` (root level)
+
+### Temporary/Migration Files
+**IMPORTANT:** Never commit temporary SQL scripts, shell scripts for one-time use, or migration helpers to root.
+
+- ✅ `supabase/migrations/YYYYMMDD_migration_name.sql`
+- ✅ `tests/helpers/run-migration.sh`
+- ❌ `RUN_THIS_IN_SUPABASE.sql` (root level)
+- ❌ `quick-fix.sh` (root level)
+- ❌ `temp-*.js` (root level)
+
+### Root Directory - Only Allowed Files
+The root directory should ONLY contain:
+- `README.md` - Project overview
+- `WARP.md` - This file (Warp AI guidance)
+- `.env.example` - Environment variable template
+- `.gitignore`, `.eslintrc.json`, `tsconfig.json` - Config files
+- `package.json`, `package-lock.json` - Dependencies
+- `next.config.ts`, `tailwind.config.ts` - Framework configs
 
 ## Project Overview
 
