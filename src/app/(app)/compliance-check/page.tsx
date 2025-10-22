@@ -676,8 +676,8 @@ export default function ComplianceCheckPage() {
     setResults([]);
 
     try {
-      if (!uploadedFile.name.endsWith('.pdf') && !uploadedFile.name.endsWith('.doc') && !uploadedFile.name.endsWith('.docx') && !uploadedFile.name.endsWith('.txt')) {
-        throw new Error('Unsupported file format. Please upload PDF, DOC, DOCX, or TXT files.');
+      if (!uploadedFile.name.endsWith('.pdf') && !uploadedFile.name.endsWith('.docx')) {
+        throw new Error('Unsupported file format. Please upload PDF or DOCX files.');
       }
 
       const formData = new FormData();
@@ -1130,7 +1130,7 @@ export default function ComplianceCheckPage() {
                       <Input
                         type="file"
                         onChange={handleFileUpload}
-                        accept=".pdf,.doc,.docx,.txt"
+                        accept=".pdf,.docx"
                         className="hidden"
                         id="file-upload"
                       />
@@ -1144,7 +1144,7 @@ export default function ComplianceCheckPage() {
                       </Button>
                     </div>
                     <p className="text-[#595959] dark:text-gray-400 font-body-12 font-body-12-medium text-center">
-                      Supported formats: PDF, DOC, DOCX, TXT
+                      Supported formats: PDF, DOCX
                     </p>
                   </div>
                 </div>
@@ -1181,7 +1181,7 @@ export default function ComplianceCheckPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-foreground dark:text-foreground font-semibold text-base">File Selected Successfully</h3>
+                        <h3 className="text-foreground dark:text-foreground font-semibold text-base">File uploaded successfully</h3>
                         <CheckCircle className="w-[18px] h-[18px] text-green-600 dark:text-green-400" strokeWidth={1.5} />
                       </div>
                       <p className="text-muted-foreground dark:text-muted-foreground text-xs font-medium">
@@ -1211,7 +1211,7 @@ export default function ComplianceCheckPage() {
                     Analysis Options
                   </span>
                   <span className="text-[12px] font-medium leading-[14.52px] text-muted-foreground dark:text-muted-foreground">
-                    Apply Rules  |  Use your custom company rules during analysis
+                    Apply rules to be used during the analysis
                   </span>
                 </div>
                 <Switch checked={applyRules} onCheckedChange={setApplyRules} className="flex-shrink-0" />
@@ -1257,7 +1257,7 @@ export default function ComplianceCheckPage() {
                     {uploadedFile ? (
                       <>
                         <Globe className="w-4 h-4 flex-shrink-0" strokeWidth={1.33} />
-                        <span className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground truncate max-w-[50vw]">
+                        <span className="text-[16px] font-normal leading-[19.36px] text-foreground dark:text-foreground truncate max-w-[50vw]">
                           {uploadedFile.name}
                         </span>
                         <div className="flex items-center gap-2.5 px-2.5 py-[5px] bg-accent dark:bg-accent rounded-[30px]">

@@ -998,13 +998,13 @@ export default function ContractReviewNew() {
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
                   {uploadedFile ? uploadedFile.name : 'Click to browse or drag and drop'}
                 </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Supported formats: PDF, DOC, DOCX</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Supported formats: PDF, DOCX</p>
               </div>
 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx"
+                accept=".pdf,.docx"
                 onChange={handleFileUpload}
                 className="hidden"
               />
