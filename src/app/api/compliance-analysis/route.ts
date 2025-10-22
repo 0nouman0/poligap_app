@@ -304,16 +304,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const supportedTypes = ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const supportedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     const isSupported = supportedTypes.includes(file.type) ||
       file.name.endsWith('.pdf') ||
-      file.name.endsWith('.txt') ||
-      file.name.endsWith('.doc') ||
       file.name.endsWith('.docx');
 
     if (!isSupported) {
       return NextResponse.json({
-        error: `Unsupported file type: ${file.type}. Please upload PDF, DOC, DOCX, or TXT files.`
+        error: `Unsupported file type: ${file.type}. Please upload PDF or DOCX files.`
       }, { status: 400 });
     }
 

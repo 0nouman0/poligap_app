@@ -54,16 +54,13 @@ export class GeminiComplianceAnalyzer {
             const text = new TextDecoder().decode(arrayBuffer);
             // This is a basic extraction - for better PDF parsing, consider using pdf-parse
             resolve(text);
-          } else if (file.type.includes('text') || file.name.endsWith('.txt')) {
-            const text = e.target?.result as string;
-            resolve(text);
-          } else if (file.type.includes('document') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-            // For DOC/DOCX files, we'll treat them as text for now
+          } else if (file.type.includes('document') || file.name.endsWith('.docx')) {
+            // For DOCX files, we'll treat them as text for now
             // In production, you might want to use a proper document parser
             const text = e.target?.result as string;
             resolve(text);
           } else {
-            reject(new Error('Unsupported file type. Please upload PDF, DOC, DOCX, or TXT files.'));
+            reject(new Error('Unsupported file type. Please upload PDF or DOCX files.'));
           }
         } catch (error) {
           reject(error);

@@ -393,7 +393,7 @@ export default function HowToUsePage() {
           <div>
             <p className="font-medium text-foreground">Steps</p>
             <ol className="list-decimal pl-6 space-y-1">
-              <li>Upload files (PDF/DOC/DOCX/TXT).</li>
+              <li>Upload files (PDF/DOCX).</li>
               <li>Tag and organize by project or standard.</li>
               <li>Reference them in Chat or analyses.</li>
             </ol>

@@ -1847,14 +1847,14 @@ export default function ContractReviewPage() {
                           key={customTemplateInputKey}
                           ref={customTemplateInputRef}
                           type="file" 
-                          accept=".pdf,.doc,.docx,.txt" 
+                          accept=".pdf,.docx" 
                           onChange={handleCustomTemplateUpload}
                           className="hidden"
                         />
                       </label>
                       
                       <p className="text-xs font-medium text-[#595959] dark:text-gray-400">
-                        Accepted: .pdf, .doc, .docx, .txt
+                        Accepted: .pdf, .docx
                       </p>
 
                       {customTemplateFile && (
@@ -1940,14 +1940,14 @@ export default function ContractReviewPage() {
                         key={deviceInputKey} 
                         ref={deviceFileInputRef} 
                         type="file" 
-                        accept=".pdf,.doc,.docx,.txt" 
+                        accept=".pdf,.docx" 
                         onChange={handleFileUpload}
                         className="hidden"
                       />
                     </label>
                     
                     <p className="text-xs font-medium text-[#595959] dark:text-gray-400">
-                      Supported formats: PDF, DOC, DOCX, TXT
+                      Supported formats: PDF, DOCX
                     </p>
                     
                     {uploadedFile && uploadSource === "device" && (
