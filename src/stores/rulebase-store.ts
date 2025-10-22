@@ -63,7 +63,6 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
     if (!force) {
       const cached = cacheManager.get<Rule[]>(cacheKey, { prefix: 'rulebase' });
       if (cached) {
-        console.log('✅ Using cached rules from cache manager');
         set({ rules: cached, isLoading: false, error: null, lastFetched: Date.now() });
         return;
       }
@@ -72,7 +71,6 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔄 Fetching rules from API...');
       const response = await fetch('/api/rulebase');
       
       if (!response.ok) {
@@ -94,7 +92,6 @@ export const useRulebaseStore = create<RulebaseState>((set, get) => ({
           error: null,
           lastFetched: Date.now()
         });
-        console.log(`✅ Cached ${data.rules.length} rules`);
       } else {
         throw new Error('Invalid response format');
       }

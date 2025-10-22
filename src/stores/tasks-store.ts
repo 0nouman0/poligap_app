@@ -60,12 +60,11 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     
     // Use cache if valid and not forcing refresh
     if (!force && isCacheValid() && tasks.length > 0) {
-      console.log('✅ Using cached tasks');
+      // Using cached tasks - no log needed in production
       return;
     }
 
     set({ isLoading: true, error: null });
-    console.log('🔄 Fetching fresh tasks from API for userId:', userId);
 
     try {
       const params = new URLSearchParams();
@@ -103,7 +102,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
           lastFetched: Date.now(),
           error: null
         });
-        console.log('✅ Cached', uniqueTasks.length, 'tasks');
       } else {
         throw new Error('Invalid response format');
       }
@@ -118,7 +116,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     set((state) => ({
       tasks: [task, ...state.tasks]
     }));
-    console.log('➕ Task added to store:', task._id || task.id);
   },
 
   updateTask: (taskId: string, updates: Partial<Task>) => {
@@ -127,19 +124,16 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         (task._id === taskId || task.id === taskId) ? { ...task, ...updates } : task
       )
     }));
-    console.log('✏️ Task updated in store:', taskId);
   },
 
   deleteTask: (taskId: string) => {
     set((state) => ({
       tasks: state.tasks.filter((task) => task._id !== taskId && task.id !== taskId)
     }));
-    console.log('🗑️ Task deleted from store:', taskId);
   },
 
   clearTasks: () => {
     set({ tasks: [], lastFetched: null, error: null });
-    console.log('🧹 Tasks cleared from store');
   },
 
   // Filter methods

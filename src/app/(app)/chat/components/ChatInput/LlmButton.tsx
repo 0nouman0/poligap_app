@@ -32,30 +32,26 @@ export const LlmButton = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                suffixIcon={
-                  <ChevronDown
-                    className="text-muted-foreground dark:text-muted-foreground"
-                    style={{
-                      marginRight: "-4px",
-                      marginLeft: "auto",
-                      width: "16px",
-                      height: "16px",
-                      opacity: 0.5,
-                    }}
-                  />
-                }
                 variant="outline"
                 size="sm"
                 disabled={disabled}
                 className="w-full h-6 px-2 bg-card dark:bg-card border border-border dark:border-border rounded-[3px] text-xs font-medium text-muted-foreground dark:text-muted-foreground hover:bg-accent dark:hover:bg-accent"
               >
                 <div
-                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}
                 >
                   {value?.modelIcon && (
                     <Icon type={value.modelIcon} size="xs" />
                   )}
-                  {value?.shortName ?? "Select Model"}
+                  <span style={{ flex: 1 }}>{value?.shortName ?? "Select Model"}</span>
+                  <ChevronDown
+                    className="text-muted-foreground dark:text-muted-foreground"
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      opacity: 0.5,
+                    }}
+                  />
                 </div>
               </Button>
             </DropdownMenuTrigger>

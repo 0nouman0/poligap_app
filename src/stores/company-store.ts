@@ -68,8 +68,7 @@ export const useCompanyStore = create<CompanyStore>()(
               user_facing_error: customMessage,
             };
           }
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
+        } catch {
           return {
             error_code: "network_error",
             user_facing_error: "Something went wrong",

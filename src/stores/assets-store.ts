@@ -61,12 +61,10 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
     
     // Use cache if valid and not forcing refresh
     if (!force && isCacheValid() && assets.length > 0) {
-      console.log('✅ Using cached assets');
       return;
     }
 
     set({ isLoading: true, error: null });
-    console.log('🔄 Fetching fresh assets from API');
 
     try {
       const params = new URLSearchParams();
@@ -96,7 +94,6 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
           lastFetched: Date.now(),
           error: null
         });
-        console.log('✅ Cached', data.assets.length, 'assets');
       } else {
         throw new Error('Invalid response format');
       }
@@ -118,7 +115,6 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
         allTags: Array.from(newTags)
       };
     });
-    console.log('➕ Asset added to store:', asset._id);
   },
 
   updateAsset: (assetId: string, updates: Partial<Asset>) => {
@@ -139,21 +135,18 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       
       return { assets: updatedAssets };
     });
-    console.log('✏️ Asset updated in store:', assetId);
   },
 
   deleteAsset: (assetId: string) => {
     set((state) => ({
       assets: state.assets.filter((asset) => asset._id !== assetId)
     }));
-    console.log('🗑️ Asset deleted from store:', assetId);
   },
 
   deleteMultipleAssets: (assetIds: string[]) => {
     set((state) => ({
       assets: state.assets.filter((asset) => !assetIds.includes(asset._id))
     }));
-    console.log('🗑️ Multiple assets deleted from store:', assetIds.length);
   },
 
   updateAssetTags: (assetId: string, tags: string[]) => {
@@ -171,12 +164,10 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
         allTags: Array.from(newTags)
       };
     });
-    console.log('🏷️ Asset tags updated in store:', assetId);
   },
 
   clearAssets: () => {
     set({ assets: [], allTags: [], lastFetched: null, error: null });
-    console.log('🧹 Assets cleared from store');
   },
 
   // Filter methods

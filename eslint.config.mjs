@@ -30,7 +30,8 @@ const eslintConfig = [
       "@next/next/no-assign-module-variable": "off",
       
       // Code quality rules (NEW)
-      "no-console": ["error", { "allow": ["warn", "error"] }],
+      // Allow console.log in development (removed in production build automatically)
+      "no-console": "off",
       "prefer-const": "warn",
       "no-var": "error",
       "no-debugger": "error",

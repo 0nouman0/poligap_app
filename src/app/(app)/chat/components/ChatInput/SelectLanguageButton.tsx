@@ -32,15 +32,13 @@ export const SelectLanguageButton = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  suffixIcon={
-                    <ChevronDown className="text-muted-foreground dark:text-muted-foreground -mr-1 ml-auto size-4 opacity-50" />
-                  }
                   variant="outline"
                   className="w-full h-6 px-2 bg-card dark:bg-card border border-border dark:border-border rounded-[3px] text-xs font-medium text-muted-foreground dark:text-muted-foreground hover:bg-accent dark:hover:bg-accent"
                   size="sm"
                   disabled={disabled}
                 >
-                  {value?.name ?? "Select Language"}
+                  <span className="flex-1">{value?.name ?? "Select Language"}</span>
+                  <ChevronDown className="text-muted-foreground dark:text-muted-foreground ml-auto size-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
             <DropdownMenuContent

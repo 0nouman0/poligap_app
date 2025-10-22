@@ -329,11 +329,11 @@ export default function Component() {
               {["company_admin", "super_admin"].includes(currentUserRole || "") && (
                 <Button
                   onClick={() => setIsInviteModalOpen(true)}
-                  variant="primary"
+                  variant="default"
                   size="sm"
-                  prefixIcon={<UserPlus className="h-4 w-4" />}
                   className="bg-base-purple hover:bg-base-purple-hover text-white border-transparent"
                 >
+                  <UserPlus className="h-4 w-4 mr-2" />
                   Invite User
                 </Button>
               )}

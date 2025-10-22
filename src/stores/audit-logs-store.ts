@@ -67,7 +67,6 @@ export const useAuditLogsStore = create<AuditLogsState>((set, get) => ({
     if (!force) {
       const cached = cacheManager.get<AuditLog[]>(cacheKey, { prefix: 'audit' });
       if (cached) {
-        console.log('✅ Using cached audit logs from cache manager');
         set({ logs: cached, isLoading: false, error: null, lastFetched: Date.now() });
         return;
       }
@@ -76,7 +75,6 @@ export const useAuditLogsStore = create<AuditLogsState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔄 Fetching audit logs from API...');
       const response = await fetch(`/api/audit-logs?userId=${encodeURIComponent(userId)}`);
       
       if (!response.ok) {
@@ -99,7 +97,6 @@ export const useAuditLogsStore = create<AuditLogsState>((set, get) => ({
           error: null,
           lastFetched: Date.now()
         });
-        console.log(`✅ Cached ${data.logs.length} audit logs`);
       } else {
         throw new Error('Invalid response format');
       }

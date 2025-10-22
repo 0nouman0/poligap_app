@@ -14,7 +14,6 @@ interface SsoLoginError {
 }
 
 interface LocationData {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -28,8 +27,7 @@ interface AuthState {
 }
 
 const useAuthenticationStore = create<AuthState>(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  (set, get) => ({
+  (set) => ({
     ssoLoginData: {
       email: "",
     },
@@ -71,7 +69,6 @@ const useAuthenticationStore = create<AuthState>(
             },
           });
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         return set({
           ssoLoginError: {
