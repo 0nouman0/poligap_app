@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterList } from "@mui/icons-material";
+import { formatGlobalDate } from "@/utils/date.util";
 
 export type MemberIntegration = {
   imageUrl: string;
@@ -138,14 +139,7 @@ export default function Component() {
           break;
         case "Created On":
           if (member.createdAt) {
-            const dateStr = new Date(member.createdAt).toLocaleDateString(
-              undefined,
-              {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              }
-            );
+            const dateStr = formatGlobalDate(member.createdAt);
             values.add(dateStr);
           }
           break;
@@ -180,12 +174,8 @@ export default function Component() {
           break;
         case "Created On":
           const createdOnStr = person.createdAt
-            ? new Date(person.createdAt).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            : "";
+            ? formatGlobalDate(person.createdAt)
+            : "N/A";
           matchesFilter = createdOnStr === selectedFilterValue;
           break;
         default:
@@ -617,12 +607,7 @@ export default function Component() {
                       <TableCell className="px-3 py-1 hidden lg:table-cell">
                         <span className="text-gray-900 dark:text-gray-100">
                           {member.createdAt
-                            ? new Date(member.createdAt)
-                                .toLocaleDateString(undefined, {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })
+                            ? formatGlobalDate(member.createdAt)
                                 .replace(/(\w+)\s+(\d+)/, "$1, $2")
                             : "-"}
                         </span>

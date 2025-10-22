@@ -4,6 +4,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Shield, FileText, CheckCircle, AlertTriangle, Download, Copy, Settings, Database, Info, BookOpen, RotateCcw, ChevronDown, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatGlobalDate } from "@/utils/date.util";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { useUserStore } from "@/stores/user-store";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -126,7 +128,7 @@ type GenInputs = {
   region: string;
   orgType: string;
   frameworks: string[];
-  applyRuleBase: boolean;
+  applyRules: boolean;
   customRules: string;
   kbNotes: string;
 };
@@ -142,6 +144,12 @@ export default function PolicyGeneratorPage() {
   
   // Get user data from store
   const { userData } = useUserStore();
+  const { trackPolicyGeneration, trackPageVisit } = useActivityTracker();
+
+  // Track page visit
+  useEffect(() => {
+    trackPageVisit('policy-generator');
+  }, [trackPageVisit]);
 
   // Helper to get userId with fallback
   const getUserId = (): string | null => {
@@ -175,7 +183,7 @@ export default function PolicyGeneratorPage() {
     region: "",
     orgType: "",
     frameworks: [],
-    applyRuleBase: false,
+    applyRules: false,
     customRules: "",
     kbNotes: "",
   });
@@ -347,7 +355,7 @@ export default function PolicyGeneratorPage() {
                 Policy Generator
               </h1>
               <p className="text-xs md:text-[12px] text-[#6A707C] leading-tight mt-1 md:mt-[5px]">
-                Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.
+                Generate organization-ready policies with your knowledge base, custom rules, and optional Rules.
               </p>
             </div>
           </div>
@@ -492,21 +500,21 @@ export default function PolicyGeneratorPage() {
                 </div>
               </div>
 
-              {/* Apply RuleBase */}
+              {/* Apply Rules */}
               <div className="flex items-center gap-[10px] mb-4 md:mb-[25px]">
                 <input 
                   type="checkbox" 
-                  id="applyRuleBase"
-                  checked={inputs.applyRuleBase} 
-                  onChange={(e)=>setInputs({...inputs, applyRuleBase:e.target.checked})}
+                  id="applyRules"
+                  checked={inputs.applyRules} 
+                  onChange={(e)=>setInputs({...inputs, applyRules:e.target.checked})}
                   className="w-5 h-5 border-2 border-black rounded cursor-pointer accent-[#3B43D6]"
                 />
                 <div>
-                  <label htmlFor="applyRuleBase" className="text-[14px] font-semibold text-[#2D2F34] cursor-pointer">
-                    Apply RuleBase during generation
+                  <label htmlFor="applyRules" className="text-[14px] font-semibold text-[#2D2F34] cursor-pointer">
+                    Apply Rules during generation
                   </label>
                   <p className="text-[11px] text-[#6A707C] mt-[3px]">
-                    RuleBase guides clause selection and phrasing to your compliance profile.
+                    Rules guide clause selection and phrasing to your compliance profile.
                   </p>
                 </div>
               </div>
@@ -629,8 +637,8 @@ export default function PolicyGeneratorPage() {
                     <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</div>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">RuleBase</div>
-                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.applyRuleBase ? 'Enabled' : 'Disabled'}</div>
+                    <div className="text-xs md:text-[14px] font-semibold text-[#2D2F34]">Rules</div>
+                    <div className="text-[11px] md:text-[12px] text-[#6A707C] mt-1 md:mt-[8px] break-words">{inputs.applyRules ? 'Enabled' : 'Disabled'}</div>
                   </div>
                 </div>
 
@@ -658,13 +666,13 @@ export default function PolicyGeneratorPage() {
                 {/* Knowledge Notes */}
                 <div className="text-sm md:text-[14px] font-semibold text-[#2D2F34]">Knowledge Notes</div>
                 <div className="text-[11px] md:text-[12px] text-[#6A707C]">
-                  {inputs.kbNotes || 'Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.'}
+                  {inputs.kbNotes || 'Generate organization-ready policies with your knowledge base, custom rules, and optional Rules.'}
                 </div>
 
                 {/* Custom Rules */}
                 <div className="text-sm md:text-[14px] font-semibold text-[#2D2F34]">Custom Rules</div>
                 <div className="text-[11px] md:text-[12px] text-[#6A707C]">
-                  {inputs.customRules || 'Generate organization-ready policies with your knowledge base, custom rules, and optional RuleBase.'}
+                  {inputs.customRules || 'Generate organization-ready policies with your knowledge base, custom rules, and optional Rules.'}
                 </div>
               </div>
 

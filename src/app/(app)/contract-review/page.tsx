@@ -18,6 +18,8 @@ import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { deleteCacheKey, CACHE_KEYS } from '@/lib/cache';
 import { useContractReviewStore } from "@/store/contractReview";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatGlobalDate } from "@/utils/date.util";
+import { useActivityTracker } from "@/hooks/use-activity-tracker";
 
 // Helper to escape HTML when rendering plain text into a printable document
 function escapeHtml(unsafe: string) {
@@ -700,10 +702,16 @@ const templatePreviewSections: TemplatePreviewSection[] = [
   }
 ];
 
-export default function ContractReview() {
+export default function ContractReviewPage() {
   const { userData } = useUserStore();
-  const { logs: allAuditLogs, isLoading: logsLoading, addLog, fetchLogs } = useAuditLogsStore();
+  const { addLog } = useAuditLogsStore();
   const crStore = useContractReviewStore();
+  const { trackContractReview, trackPageVisit } = useActivityTracker();
+
+  // Track page visit
+  useEffect(() => {
+    trackPageVisit('contract-review');
+  }, [trackPageVisit]);
 
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -714,7 +722,7 @@ export default function ContractReview() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"template" | "custom">("template");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [applyRuleBase, setApplyRuleBase] = useState(false);
+  const [applyRules, setApplyRules] = useState(false);
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filteredTemplates = useMemo(() => {
@@ -975,7 +983,7 @@ export default function ContractReview() {
             mediumIssues: document.gaps?.filter(g => g.severity === 'medium').length || 0,
             lowIssues: document.gaps?.filter(g => g.severity === 'low').length || 0,
             analysisDate: new Date().toISOString(),
-            applyRuleBase: applyRuleBase,
+            applyRules: applyRules,
           }
         };
 
@@ -1201,7 +1209,7 @@ export default function ContractReview() {
     setCustomTemplateFile(null);
     setExtractedDocument(null);
     setFinalInstructions('');
-    setApplyRuleBase(true);
+    setApplyRules(true);
     setSearchTerm('');
     setActiveTab('template');
     
@@ -1268,7 +1276,7 @@ export default function ContractReview() {
   };
 
   const formatDateShort = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return formatGlobalDate(date);
   };
 
   const nextStep = () => {
@@ -1997,7 +2005,7 @@ export default function ContractReview() {
                       Use your custom company rules during analysis
                     </p>
                   </div>
-                  <Switch checked={applyRuleBase} onCheckedChange={setApplyRuleBase} />
+                  <Switch checked={applyRules} onCheckedChange={setApplyRules} />
                 </div>
               </div>
             </div>

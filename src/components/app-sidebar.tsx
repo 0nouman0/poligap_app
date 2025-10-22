@@ -97,7 +97,7 @@ const navigationItems = [
     page: "/ai-agents" as PageType,
   },
   {
-    title: "RuleBase",
+    title: "Rules",
     icon: NotebookPen,
     page: "/rulebase" as PageType,
   },

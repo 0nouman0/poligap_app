@@ -58,7 +58,7 @@ import { useIntegrationStore } from "@/stores/integration-store";
 import { getSourceIcon } from "@/utils/search.util";
 import { getIntegrationDisplayName } from "@/utils/integration.util";
 import FlagModal from "@/components/search/flag-modal";
-import { formatDate } from "@/utils/date.util";
+import { formatDate, formatGlobalDate } from "@/utils/date.util";
 
 // --- Helper functions (getItemIcon, getFilterIcon) remain the same ---
 const getItemIcon = (type: SearchItem["type"], sizeClass = "w-5 h-5") => {
@@ -688,7 +688,7 @@ const SearchResultsContent: React.FC<{
                 {item.updated_at && (
                   <>
                     • Updated{" "}
-                    {formatDate(item.updated_at, {
+                    {formatGlobalDate(item.updated_at, {
                       showTime: true,
                     })}
                   </>

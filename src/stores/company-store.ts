@@ -79,6 +79,24 @@ export const useCompanyStore = create<CompanyStore>()(
     }),
     {
       name: "company-store", // unique name for localStorage
+      version: 1, // version number for state migrations
+      migrate: (persistedState: any, version: number) => {
+        // Handle state migrations when schema changes
+        if (version === 0) {
+          // Migration from version 0 to 1
+          // If there are any schema changes, handle them here
+          return {
+            companies: persistedState?.companies || [],
+            selectedCompany: persistedState?.selectedCompany || null,
+          };
+        }
+        return persistedState;
+      },
+      // Only persist the data we need, not functions
+      partialize: (state) => ({
+        companies: state.companies,
+        selectedCompany: state.selectedCompany,
+      }),
     }
   )
 );

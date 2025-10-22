@@ -38,7 +38,7 @@ import Link from "next/link";
 import { useUserStore } from "@/stores/user-store";
 import { APP_DISPLAY } from "@/utils/knowledge.util";
 import { getSourceIcon } from "@/utils/search.util";
-import { formatDate } from "@/utils/date.util";
+import { formatDate, formatGlobalDate } from "@/utils/date.util";
 import { Skeleton } from "@/components/ui/skeleton";
 import GoogleDriveExplorer from "../../components/explorer/GoogleDriveExplorer";
 import DropboxExplorer from "../../components/explorer/DropboxExplorer";
@@ -445,7 +445,7 @@ export default function KnowledgeAppConnectView() {
                                 </div>
                                 <div className="text-[11px] text-muted-foreground">
                                   Last Synced:{" "}
-                                  {formatDate(file.updated_at, {
+                                  {formatGlobalDate(file.updated_at, {
                                     showTime: true,
                                   })}
                                 </div>
