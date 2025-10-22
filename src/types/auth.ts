@@ -1,20 +1,13 @@
-import type { DefaultSession } from "next-auth"
+/**
+ * Authentication Types
+ * 
+ * Note: This project uses Supabase Auth, not Next-Auth.
+ * Next-Auth types have been removed.
+ */
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string
-      role: string
-    } & DefaultSession["user"]
-  }
-
-  interface User {
-    role: string
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    role: string
-  }
-}
+// Add custom auth types here if needed
+export type AuthUser = {
+  id: string;
+  email: string;
+  role?: string;
+};

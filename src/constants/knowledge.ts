@@ -66,7 +66,7 @@ export const filterCategories: FilterCategory[] = [
   },
 ];
 
-// Add a name-to-slug mapping for integrations to connect to pipedream
+// Integration name to slug mapping for API identification
 export const integrationNameToSlug: Record<IntegrationName, string> = {
   [INTEGRATIONS.JIRA]: "jira",
   [INTEGRATIONS.SLACK]: "slack",

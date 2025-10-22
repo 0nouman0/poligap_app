@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Basic Elasticsearch proxy for server-side search.
-// Env vars:
-// - ELASTICSEARCH_URL (e.g. https://your-es:9200/index-name/_search)
-//   or compose from:
-// - ELASTICSEARCH_BASE_URL (e.g. https://your-es:9200)
-// - ELASTICSEARCH_INDEX (e.g. my-index)
-// - ELASTICSEARCH_API_KEY (optional, for ApiKey auth on Elastic Cloud)
-// - ELASTICSEARCH_BASIC_AUTH (optional, for Basic auth header "user:pass" base64)
-// - ELASTICSEARCH_KNN (optional flag to enable vector search path)
+/**
+ * Elasticsearch Search API Route
+ * 
+ * ⚠️ CURRENTLY NOT CONFIGURED - Requires Elasticsearch backend
+ * 
+ * This endpoint proxies search requests to Elasticsearch.
+ * To enable, configure these environment variables:
+ * 
+ * Option 1 (Simple):
+ * - ELASTICSEARCH_URL: Full URL with index (e.g., https://your-es:9200/index-name/_search)
+ * 
+ * Option 2 (Composed):
+ * - ELASTICSEARCH_BASE_URL: Base URL (e.g., https://your-es:9200)
+ * - ELASTICSEARCH_INDEX: Index name (e.g., my-index)
+ * 
+ * Authentication (choose one):
+ * - ELASTICSEARCH_API_KEY: For Elastic Cloud ApiKey auth
+ * - ELASTICSEARCH_BASIC_AUTH: For Basic auth (format: "user:pass")
+ */
 
 export async function POST(req: NextRequest) {
   try {

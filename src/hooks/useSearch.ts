@@ -1,10 +1,8 @@
 "use client";
-import { DJANGO_API_ROUTES } from "@/constants/endpoints";
 import { useQuery } from "@tanstack/react-query";
 import { useUserStore } from "@/stores/user-store";
 import { useIntegrationStore } from "@/stores/integration-store";
 import { useMemo } from "react";
-// import { useState, useEffect } from "react";
 
 export type SearchResult = {
   id: string;
@@ -39,8 +37,8 @@ const fetchSearch = async (
   account_ids: string[],
   apps: string[]
 ) => {
-  const provider = process.env.NEXT_PUBLIC_SEARCH_PROVIDER;
-  const endpoint = provider === "elastic" ? "/api/search" : DJANGO_API_ROUTES.SEARCH;
+  // Only Elasticsearch endpoint is supported (Django backend not configured)
+  const endpoint = "/api/search";
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {

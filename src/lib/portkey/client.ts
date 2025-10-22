@@ -1,30 +1,51 @@
 import Portkey from 'portkey-ai';
 
 /**
- * Create a Portkey client instance with Google Generative AI (Gemini) provider
- * Portkey provides unified API access, caching, fallbacks, and analytics
+ * Portkey Virtual Keys for multi-modal AI support
+ * These keys enable routing to different AI providers through Portkey
  */
-export function createPortkeyClient() {
+export const PORTKEY_VIRTUAL_KEYS = {
+  OPENAI: "temp-openai-pro-f51bf0",
+  AWS: "aws-prod-2095a3",
+  GROQ: "groq-prod-cfefa4",
+  OPENROUTER: "openrouter-prod-555c0a"
+};
+
+/**
+ * Create a Portkey client instance with multi-provider support
+ * Portkey provides unified API access, caching, fallbacks, and analytics
+ * @param provider - Which virtual key to use (openai, aws, groq, openrouter)
+ */
+export function createPortkeyClient(provider: 'openai' | 'aws' | 'groq' | 'openrouter' | 'gemini' = 'openai') {
   const apiKey = process.env.PORTKEY_API_KEY;
-  const geminiApiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    console.warn('⚠️ PORTKEY_API_KEY not found, falling back to direct Gemini');
-    return null;
-  }
-
-  if (!geminiApiKey) {
-    console.error('❌ GEMINI_API_KEY not found in environment variables');
+    console.warn('⚠️ PORTKEY_API_KEY not found, AI features may not work');
     return null;
   }
 
   try {
+    // Select virtual key based on provider
+    let virtualKey: string | undefined;
+    
+    if (provider === 'gemini') {
+      virtualKey = process.env.GEMINI_API_KEY;
+    } else {
+      const keyMap = {
+        openai: PORTKEY_VIRTUAL_KEYS.OPENAI,
+        aws: PORTKEY_VIRTUAL_KEYS.AWS,
+        groq: PORTKEY_VIRTUAL_KEYS.GROQ,
+        openrouter: PORTKEY_VIRTUAL_KEYS.OPENROUTER
+      };
+      virtualKey = keyMap[provider];
+    }
+
     const portkey = new Portkey({
       apiKey: apiKey,
-      virtualKey: geminiApiKey, // Use Gemini API key as virtual key
+      virtualKey: virtualKey,
     });
 
-    console.log('✅ Portkey client initialized successfully');
+    console.log(`✅ Portkey client initialized with ${provider} provider`);
     return portkey;
   } catch (error) {
     console.error('❌ Failed to initialize Portkey client:', error);
