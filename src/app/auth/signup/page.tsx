@@ -89,7 +89,7 @@ export default function SignUpPage() {
     }
   };
 
-  const krooloLogoSrc = "/assets/poligap-logo.png";
+  const krooloLogoSrc = "/assets/Poligap_wide_erased.png";
 
   return (
     <div className="min-h-screen flex bg-white text-gray-900">
@@ -97,7 +97,7 @@ export default function SignUpPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center">
-              <Image src={krooloLogoSrc} alt="PoliGap AI Logo" width={500} height={500} priority className="object-contain" style={{ width: 'auto', height: 'auto', maxWidth: '450px' }} />
+              <Image src={krooloLogoSrc} alt="Logo" width={480} height={120} priority className="object-contain" style={{ width: '260px', height: 'auto' }} />
             </div>
           </div>
           <div className="space-y-6">

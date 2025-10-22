@@ -182,7 +182,7 @@ export const Header = memo(function Header() {
 
   // Memoized values for performance
   const headerImageSrc = useMemo(() => 
-    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/poligap-logo.png",
+    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/Poligap_wide_erased.png",
     []
   );
   
@@ -207,7 +207,7 @@ export const Header = memo(function Header() {
 
   return (
     <header className="bg-[#FAFAFB] dark:bg-background shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] sticky top-0 z-50 mx-[17px] mt-[15px] rounded-[10px]">
-      <div className="w-full flex items-center justify-between h-14 px-3 sm:px-4 md:px-6 lg:px-8">
+      <div className="w-full flex items-center justify-between h-16 md:h-[72px] px-3 sm:px-4 md:px-6 lg:px-8">
         <ConfirmDialog
           open={confirmSignOutOpen}
           title="Sign out?"
@@ -222,7 +222,7 @@ export const Header = memo(function Header() {
           <img
             src={headerImageSrc}
             alt="Poligap"
-            className="h-9 sm:h-10 md:h-11 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto"
+            className="h-16 md:h-[68px] max-h-full w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto transform origin-left scale-[1.72] md:scale-[1.72]"
             onClick={handleLogoClick}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}

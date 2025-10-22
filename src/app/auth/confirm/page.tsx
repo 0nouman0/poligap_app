@@ -77,7 +77,7 @@ export default function ConfirmEmailPage() {
     verifyEmail();
   }, [router, supabase]);
 
-  const logoSrc = "/assets/poligap-logo.png";
+  const logoSrc = "/assets/Poligap_wide_erased.png";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
@@ -86,9 +86,9 @@ export default function ConfirmEmailPage() {
           <div className="flex justify-center">
             <Image 
               src={logoSrc} 
-              alt="Poligap AI" 
-              width={180} 
-              height={180} 
+              alt="Logo" 
+              width={320} 
+              height={120} 
               className="object-contain" 
             />
           </div>

@@ -120,7 +120,7 @@ export default function SsoLogin() {
     [SsoLoginApi, ssoLoginData.email]
   );
 
-  const krooloLogoSrc = "/assets/poligap-logo.png";
+  const krooloLogoSrc = "/assets/Poligap_wide_erased.png";
 
   return (
     <>
@@ -139,7 +139,7 @@ export default function SsoLogin() {
             {/* Logo and Header */}
             <div className="text-center space-y-6">
               <div className="flex items-center justify-center">
-                <Image src={krooloLogoSrc} alt="Poligap AI" width={150} height={32} />
+                <Image src={krooloLogoSrc} alt="Logo" width={260} height={80} className="object-contain" />
               </div>
 
               <div className="space-y-2">

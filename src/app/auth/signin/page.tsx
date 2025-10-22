@@ -302,7 +302,7 @@ export default function SignInPage() {
     }
   };
 
-  const krooloLogoSrc = "/assets/poligap-logo.png";
+  const krooloLogoSrc = "/assets/Poligap_wide_erased.png";
 
   return (
     <div className="min-h-screen flex bg-white text-gray-900">
@@ -315,12 +315,12 @@ export default function SignInPage() {
                 <div className="flex items-center justify-center">
                   <Image
                     src={krooloLogoSrc}
-                    alt="PoliGap AI Logo"
-                    width={320}
-                    height={64}
+                    alt="Logo"
+                    width={400}
+                    height={120}
                     priority
                     className="object-contain"
-                    style={{ width: '180px', height: 'auto' }}
+                    style={{ width: '220px', height: 'auto' }}
                   />
                 </div>
               </div>
