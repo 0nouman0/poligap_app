@@ -722,6 +722,8 @@ export default function ContractReviewPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"template" | "custom">("template");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStep, setAnalysisStep] = useState("");
   const [applyRules, setApplyRules] = useState(false);
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -869,8 +871,18 @@ export default function ContractReviewPage() {
     };
 
     setIsAnalyzing(true);
+    setAnalysisProgress(0);
+    setAnalysisStep("Initializing analysis...");
+
+    // Helper function to simulate progress updates
+    const updateProgress = (progress: number, step: string) => {
+      setAnalysisProgress(progress);
+      setAnalysisStep(step);
+    };
+
     try {
       // Extract text from uploaded file
+      updateProgress(10, "Extracting text from document...");
       let extractedText = '';
       
       extractedText = await extractFileText(uploadedFile);
@@ -878,6 +890,7 @@ export default function ContractReviewPage() {
         throw new Error('Could not extract text from the uploaded file. Please try a different PDF or contact support.');
       }
 
+      updateProgress(30, "Preparing analysis template...");
       // Build template clauses for analysis
       const clauses = selectedTemplate?.requiredSections?.map(s => ({
         title: s.title,
@@ -887,6 +900,7 @@ export default function ContractReviewPage() {
         guidelines: []
       })) || [];
 
+      updateProgress(50, `AI is reviewing ${uploadedFile.name} for potential issues and improvements...`);
       // Call Gemini API for analysis
       const response = await fetch('/api/contract-analyze', {
         method: 'POST',
@@ -904,8 +918,10 @@ export default function ContractReviewPage() {
         throw new Error(errorData?.error || 'Analysis failed');
       }
 
+      updateProgress(70, "Processing analysis results...");
       const analysisData = await response.json();
       
+      updateProgress(90, "Finalizing contract review...");
       // Create document with real analysis results
       const document: ExtractedDocument = {
         id: `doc-${Date.now()}`,
@@ -1070,6 +1086,11 @@ export default function ContractReviewPage() {
         }
       }
 
+      updateProgress(100, "Analysis complete!");
+      
+      // Track the contract review activity
+      trackContractReview(uploadedFile.name, selectedTemplate?.name || 'Custom Template', document.overallScore);
+      
       toastSuccess('Analysis Complete', 'Your contract has been analyzed successfully');
     } catch (error) {
       console.error('Document extraction and analysis failed:', error);
@@ -1113,6 +1134,8 @@ export default function ContractReviewPage() {
       }
     } finally {
       setIsAnalyzing(false);
+      setAnalysisProgress(0);
+      setAnalysisStep("");
     }
   };
 
@@ -2059,13 +2082,41 @@ export default function ContractReviewPage() {
         {currentStep === 4 && (
           <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-thin items-end pr-4">
             {/* Reviewer notes textarea before analysis */}
-            {!extractedDocument && (
+            {!extractedDocument && !isAnalyzing && (
               <Textarea
                 placeholder="Any final instructions for contract review..."
                 value={finalInstructions}
                 onChange={(e) => setFinalInstructions(e.target.value)}
                 className="min-h-[120px] w-full max-w-[1648px]"
               />
+            )}
+
+            {/* Progress Loader - Exact Match to Image */}
+            {isAnalyzing && (
+              <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1648px] min-h-[400px]">
+                <div className="text-center space-y-8 max-w-2xl">
+                  <h2 className="text-3xl font-semibold text-[#202020] dark:text-gray-100">
+                    Analyzing Contract
+                  </h2>
+                  <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
+                    {analysisStep || `AI is reviewing ${uploadedFile?.name || 'Detailed architecture assessment.pdf'} (application/pdf) for potential issues and improvements...`}
+                  </p>
+                  
+                  <div className="w-full space-y-2">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+                      <div 
+                        className="bg-[#3B43D6] h-1 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${analysisProgress}%` }}
+                      />
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-medium text-[#595959] dark:text-gray-400">
+                        {analysisProgress}% Complete
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Canvas after analysis */}
@@ -2086,23 +2137,24 @@ export default function ContractReviewPage() {
                   Previous
                 </button>
                 
-                {!extractedDocument && (
+                {!extractedDocument && !isAnalyzing && (
                   <button
                     onClick={handleDocumentExtraction}
-                    disabled={!uploadedFile || isAnalyzing || !selectedTemplate}
+                    disabled={!uploadedFile || !selectedTemplate}
                     className="min-w-[220px] h-11 flex items-center gap-2 px-4 bg-[#3B43D6] text-white rounded-xl text-sm font-semibold hover:bg-[#2F36B0] disabled:opacity-50 disabled:cursor-not-allowed justify-center"
                   >
-                    {isAnalyzing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        <span className="whitespace-nowrap text-sm">Extract & Analyze with AI</span>
-                      </>
-                    )}
+                    <FileText className="h-4 w-4" />
+                    <span className="whitespace-nowrap text-sm">Extract & Analyze with AI</span>
+                  </button>
+                )}
+
+                {isAnalyzing && (
+                  <button
+                    disabled
+                    className="min-w-[120px] h-11 flex items-center gap-2 px-6 bg-[#8B93FF] text-white rounded-full text-sm font-medium cursor-not-allowed justify-center"
+                  >
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <span className="whitespace-nowrap text-sm">Analyzing...</span>
                   </button>
                 )}
                 
