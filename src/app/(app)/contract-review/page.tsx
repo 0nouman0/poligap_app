@@ -740,6 +740,9 @@ export default function ContractReviewPage() {
   const [customTemplateInputKey, setCustomTemplateInputKey] = useState(0);
   const [customTemplateFile, setCustomTemplateFile] = useState<File | null>(null);
 
+  // Get audit logs from store
+  const { logs: allAuditLogs, isLoading: logsLoading, fetchLogs } = useAuditLogsStore();
+
   // Fetch audit logs on mount
   useEffect(() => {
     if (userData?.userId) {
@@ -1038,7 +1041,7 @@ export default function ContractReviewPage() {
         if (userData?.userId) {
           fetchLogs(userData.userId, true).catch(() => {});
           // Invalidate recent-activity cache so home page will refresh
-          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
+          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY(userData.userId)); } catch(e) { /* ignore */ }
         }
       } catch (logError) {
         console.error('Failed to save audit log:', logError);

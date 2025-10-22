@@ -648,11 +648,9 @@ export default function ComplianceCheckPage() {
         }
         
         // Clear cache for fresh data
-        deleteCacheKey(CACHE_KEYS.AUDIT_LOGS);
-        
-        // Refresh audit logs from store
         const userId = getUserId();
         if (userId) {
+          deleteCacheKey(CACHE_KEYS.AUDIT_LOGS(userId));
           await fetchAuditLogsFromStore(userId, true);
         }
       }
@@ -909,7 +907,10 @@ export default function ComplianceCheckPage() {
         }
         console.debug('Task created');
         // Invalidate recent activity cache so new task shows up on home
-        try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY()); } catch(e) { /* ignore */ }
+        const userId = getUserId();
+        if (userId) {
+          try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY(userId)); } catch(e) { /* ignore */ }
+        }
       }
     } catch (err) {
       console.error('Error creating task', err);
