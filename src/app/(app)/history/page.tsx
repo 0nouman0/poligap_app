@@ -1,8 +1,14 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { History as HistoryIcon, ChevronLeft, Calendar, FileText, Shield } from "lucide-react";
+import { History as HistoryIcon, Calendar, FileText, Shield, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,7 +73,9 @@ export default function HistoryPage() {
   const { userData } = useUserStore();
   const { logs, isLoading: loading, fetchLogs } = useAuditLogsStore();
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  const [methodFilter, setMethodFilter] = useState<'all' | 'policy-analysis' | 'contract-review' | 'policy-generator'>('all');
+  const [methodFilter, setMethodFilter] = useState<'all' | 'compliance-check' | 'policy-analysis' | 'contract-review' | 'policy-generator' | 'others'>(
+    'all'
+  );
   const [statusFilter, setStatusFilter] = useState<'all' | 'compliant' | 'partial' | 'non-compliant'>('all');
   const { trackPageVisit, trackHistoryView } = useActivityTracker();
 
@@ -102,8 +110,50 @@ export default function HistoryPage() {
   };
 
   const filteredLogs = logs
-    .filter(log => methodFilter === 'all' ? true : log.analysisMethod === methodFilter)
-    .filter(log => statusFilter === 'all' ? true : log.status === statusFilter);
+    .filter((log) => {
+      if (methodFilter === 'all') return true;
+      if (methodFilter === 'compliance-check') {
+        return !log.analysisMethod || log.analysisMethod === 'policy-analysis';
+      }
+      if (methodFilter === 'others') {
+        return (
+          !!log.analysisMethod &&
+          !['contract-review', 'policy-generator', 'policy-analysis'].includes(log.analysisMethod)
+        );
+      }
+      return log.analysisMethod === methodFilter;
+    })
+    .filter((log) => (statusFilter === 'all' ? true : log.status === statusFilter));
+
+  const methodLabel = useMemo(() => {
+    switch (methodFilter) {
+      case 'all':
+        return 'All Methods';
+      case 'compliance-check':
+        return 'Compliance Checks';
+      case 'contract-review':
+        return 'Contract Reviews';
+      case 'policy-generator':
+        return 'Policy Generations';
+      case 'policy-analysis':
+        return 'Compliance Checks';
+      default:
+        return 'Other Sources';
+    }
+  }, [methodFilter]);
+
+  const statusLabel = useMemo(() => {
+    switch (statusFilter) {
+      case 'all':
+        return 'All Status';
+      case 'compliant':
+        return 'Completed';
+      case 'partial':
+        return 'Partial/Pending';
+      case 'non-compliant':
+        return 'Failed';
+    }
+  }, [statusFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -122,26 +172,40 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {/* Filter Buttons */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant={methodFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setMethodFilter('all')}
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              All Methods
-            </Button>
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('all')}
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              All Status
-            </Button>
-            <Button
-              onClick={handleRefresh}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
+          {/* Filters */}
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                  {methodLabel}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[220px]">
+                <DropdownMenuItem onClick={() => setMethodFilter('all')}>All Methods</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMethodFilter('compliance-check')}>Compliance Checks</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMethodFilter('contract-review')}>Contract Reviews</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMethodFilter('policy-generator')}>Policy Generations</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMethodFilter('others')}>Other Sources</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                  {statusLabel}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[200px]">
+                <DropdownMenuItem onClick={() => setStatusFilter('all')}>All Status</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('compliant')}>Completed</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('partial')}>Partial / Pending</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('non-compliant')}>Failed</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button onClick={handleRefresh} className="bg-blue-600 hover:bg-blue-700 text-white">
               Refresh
             </Button>
           </div>
@@ -149,15 +213,15 @@ export default function HistoryPage() {
 
         {/* Content Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="space-y-4">
+              <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 aspect-[16/10]">
+                <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-4 w-4 rounded" />
                     <Skeleton className="h-4 w-32" />
                   </div>
-                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-3/4" />
                   <div className="flex items-center gap-2">
                     <Skeleton className="h-3 w-3" />
                     <Skeleton className="h-3 w-24" />
@@ -168,9 +232,9 @@ export default function HistoryPage() {
                       <Skeleton className="h-6 w-16" />
                       <Skeleton className="h-6 w-16" />
                     </div>
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
-                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-8 w-full" />
                 </div>
               </div>
             ))}
@@ -183,11 +247,11 @@ export default function HistoryPage() {
             <p className="text-gray-600">No audit logs found. Run a compliance analysis to see results here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
             {filteredLogs.map((log) => (
               <div
                 key={log._id}
-                className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-white rounded-lg border border-gray-200 p-4 aspect-[16/10] hover:shadow-lg transition-shadow cursor-pointer flex flex-col"
                 onClick={() => {
                   setSelectedLog(log);
                   // Track history view activity
@@ -197,7 +261,7 @@ export default function HistoryPage() {
                 }}
               >
                 {/* Analysis Type Header */}
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-3 text-sm">
                   {getAnalysisTypeIcon(log.analysisMethod)}
                   <span className="text-sm font-medium text-gray-700">
                     {getAnalysisTypeName(log.analysisMethod)}
@@ -205,20 +269,20 @@ export default function HistoryPage() {
                 </div>
 
                 {/* File Name */}
-                <h3 className="font-semibold text-gray-900 mb-2 truncate" title={log.fileName}>
+                <h3 className="font-semibold text-gray-900 mb-1 truncate" title={log.fileName}>
                   {log.fileName}
                 </h3>
 
                 {/* Date */}
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
                   <Calendar className="h-3 w-3" />
                   <span>{formatGlobalDate(log.analysisDate)} {new Date(log.analysisDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
 
                 {/* Compliance Score */}
-                <div className="mb-4">
-                  <div className="text-sm text-gray-600 mb-1">Compliance Score</div>
-                  <div className="flex items-center gap-2">
+                <div className="mb-3">
+                  <div className="text-xs text-gray-600 mb-1">Compliance Score</div>
+                  <div className="flex items-center gap-2 text-xs">
                     <Badge className={getStatusColor(log.status)}>
                       {log.score}% {log.status}
                     </Badge>
@@ -226,19 +290,19 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Standards */}
-                <div className="mb-4">
-                  <div className="text-sm text-gray-600 mb-2">Standards</div>
-                  <div className="flex flex-wrap gap-1">
+                <div className="mb-3">
+                  <div className="text-xs text-gray-600 mb-2">Standards</div>
+                  <div className="flex flex-wrap gap-1 text-[10px]">
                     {log.standards.slice(0, 2).map((standard) => (
                       <span
                         key={standard}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full"
                       >
                         {standard.toUpperCase()}
                       </span>
                     ))}
                     {log.standards.length > 2 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">
                         +{log.standards.length - 2} more
                       </span>
                     )}
@@ -246,13 +310,13 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Issues Count */}
-                <div className="mb-4">
-                  <span className="text-sm text-gray-600">Issues: {log.gapsCount}</span>
+                <div className="mb-3">
+                  <span className="text-xs text-gray-600">Issues: {log.gapsCount}</span>
                 </div>
 
                 {/* Open Button */}
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="mt-auto w-full h-8 bg-blue-600 hover:bg-blue-700 text-white text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedLog(log);
