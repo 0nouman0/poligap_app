@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService, extractNodes, extractNode } from "@/lib/graphql-service"
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const { searchParams } = new URL(request.url)
     const company_id = searchParams.get("company_id")
@@ -28,14 +17,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if user is admin
-    const { data: membership } = await supabase
-      .from("user_companies")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("company_id", company_id)
-      .eq("status", "active")
-      .single()
+    // Check if user is admin using GraphQL
+    const accessResponse: any = await gqlService.query('checkUserAccess', {
+      userId: user.id,
+      companyId: company_id
+    });
+    const membership = extractNode(accessResponse.user_companiesCollection);
 
     if (!membership || !["company_admin", "super_admin"].includes(membership.role)) {
       return NextResponse.json(
@@ -44,34 +31,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Build query
-    let query = supabase
-      .from("invitations")
-      .select(`
-        *,
-        inviter:invited_by (
-          id,
-          name,
-          email,
-          profile_image
-        )
-      `)
-      .eq("company_id", company_id)
-      .order("created_at", { ascending: false })
-
-    if (status) {
-      query = query.eq("status", status)
-    }
-
-    const { data: invitations, error } = await query
-
-    if (error) {
-      console.error("Error fetching invitations:", error)
-      return NextResponse.json(
-        { error: "Failed to fetch invitations" },
-        { status: 500 }
-      )
-    }
+    // Fetch invitations using GraphQL
+    const response: any = await gqlService.query('getCompanyInvitations', {
+      companyId: company_id,
+      status: status || undefined
+    });
+    
+    const invitations = extractNodes(response.invitationsCollection);
 
     return NextResponse.json({
       success: true,

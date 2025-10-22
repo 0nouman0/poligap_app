@@ -1,35 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { GraphQLService, extractNodes } from '@/lib/graphql-service';
 
 export async function GET() {
   try {
-    console.log('� GET /api/rulebase - Starting request');
+    console.log('📖 GET /api/rulebase - Starting request');
     
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const gqlService = new GraphQLService();
+    const user = await gqlService.init();
 
-    if (authError || !user) {
-      return NextResponse.json({ 
-        error: 'Unauthorized',
-        rules: [] 
-      }, { status: 401 });
-    }
-
-    // Use Supabase Postgrest API to fetch rules (only active ones)
-    const { data: rules, error } = await supabase
-      .from('rulebase')
-      .select('*')
-      .eq('user_id', user.id)
-      .neq('active', false) // Only fetch active rules
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('❌ Supabase error:', error);
-      return NextResponse.json({ 
-        error: 'Failed to fetch rules',
-        rules: [] 
-      }, { status: 500 });
-    }
+    // Fetch rules using GraphQL
+    const response: any = await gqlService.query('getRules', { userId: user.id });
+    const rules = extractNodes(response.rulebaseCollection);
     
     console.log(`✅ Found ${rules?.length || 0} rules`);
     
@@ -59,44 +40,32 @@ export async function POST(req: Request) {
   try {
     console.log('🚀 POST /api/rulebase - Starting request');
     
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gqlService = new GraphQLService();
+    const user = await gqlService.init();
 
     const body = await req.json();
     console.log('POST body:', body);
     
-    const { name, description = '', tags = [], sourceType = 'text', active = true } = body || {};
+    const { name, description = '', tags = [], sourceType = 'text', fileName, fileContent } = body || {};
     
     if (!name || typeof name !== 'string') {
       console.log('❌ POST error: Invalid name');
       return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
     }
 
-    // Use Supabase Postgrest API to insert rule
-    const { data: savedRule, error } = await supabase
-      .from('rulebase')
-      .insert({
-        name,
-        description,
-        tags: Array.isArray(tags) ? tags : [],
-        source_type: sourceType,
-        user_id: user.id,
-        active
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Supabase insert error:', error);
-      return NextResponse.json({ 
-        error: 'Failed to create rule',
-        details: error.message 
-      }, { status: 500 });
-    }
+    // Create rule using GraphQL
+    const response: any = await gqlService.query('createRule', {
+      name,
+      description,
+      tags: Array.isArray(tags) ? tags : [],
+      source_type: sourceType,
+      file_name: fileName || null,
+      file_content: fileContent || null,
+      user_id: user.id,
+      company_id: null
+    });
+    
+    const savedRule = response.insertIntorulebaseCollection.records[0];
     console.log('✅ Rule created:', savedRule.id);
     
     // Transform for frontend
@@ -124,12 +93,8 @@ export async function PATCH(req: Request) {
   try {
     console.log('🚀 PATCH /api/rulebase - Starting request');
     
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
     const body = await req.json();
     console.log('PATCH body:', body);
@@ -141,29 +106,16 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    // Prepare update object (only include fields that are provided)
-    const updateData: any = {};
-    if (typeof name === 'string') updateData.name = name;
-    if (typeof description === 'string') updateData.description = description;
-    if (Array.isArray(tags)) updateData.tags = tags;
-    if (typeof active === 'boolean') updateData.active = active;
+    // Prepare GraphQL variables (only include fields that are provided)
+    const variables: any = { id };
+    if (typeof name === 'string') variables.name = name;
+    if (typeof description === 'string') variables.description = description;
+    if (Array.isArray(tags)) variables.tags = tags;
+    if (typeof active === 'boolean') variables.active = active;
 
-    // Use Supabase Postgrest API to update rule
-    const { data: updatedRule, error } = await supabase
-      .from('rulebase')
-      .update(updateData)
-      .eq('id', id)
-      .eq('user_id', user.id) // Ensure user can only update their own rules
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Supabase update error:', error);
-      return NextResponse.json({ 
-        error: 'Failed to update rule',
-        details: error.message 
-      }, { status: 500 });
-    }
+    // Update rule using GraphQL
+    const response: any = await gqlService.query('updateRule', variables);
+    const updatedRule = response.updaterulebaseCollection.records[0];
     
     if (!updatedRule) {
       console.log('❌ PATCH error: Rule not found for id:', id);
@@ -196,12 +148,8 @@ export async function DELETE(req: Request) {
   try {
     console.log('🚀 DELETE /api/rulebase - Starting request');
     
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
     const body = await req.json().catch(() => ({}));
     console.log('DELETE body:', body);
@@ -213,22 +161,9 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    // Hard delete: actually remove from database
-    const { data: deletedRule, error } = await supabase
-      .from('rulebase')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id) // Ensure user can only delete their own rules
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Supabase delete error:', error);
-      return NextResponse.json({ 
-        error: 'Failed to delete rule',
-        details: error.message 
-      }, { status: 500 });
-    }
+    // Soft delete using GraphQL (sets active = false)
+    const response: any = await gqlService.query('deleteRule', { id });
+    const deletedRule = response.updaterulebaseCollection.records[0];
     
     if (!deletedRule) {
       console.log('❌ DELETE error: Rule not found for id:', id);

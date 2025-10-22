@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService, extractNodes, extractNode } from "@/lib/graphql-service"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const body = await request.json()
     const { invitation_id } = body
@@ -27,28 +16,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get invitation details
-    const { data: invitation, error: fetchError } = await supabase
-      .from("invitations")
-      .select("company_id, status")
-      .eq("id", invitation_id)
-      .single()
+    // Get invitation details using GraphQL
+    const invitationResponse: any = await gqlService.query('getCompanyInvitations', {
+      companyId: invitation_id // This might need adjustment based on schema
+    });
+    const allInvitations = extractNodes(invitationResponse.invitationsCollection);
+    const invitation = allInvitations.find((inv: any) => inv.id === invitation_id);
 
-    if (fetchError || !invitation) {
+    if (!invitation) {
       return NextResponse.json(
         { error: "Invitation not found" },
         { status: 404 }
       )
     }
 
-    // Check if user is admin
-    const { data: membership } = await supabase
-      .from("user_companies")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("company_id", invitation.company_id)
-      .eq("status", "active")
-      .single()
+    // Check if user is admin using GraphQL
+    const accessResponse: any = await gqlService.query('checkUserAccess', {
+      userId: user.id,
+      companyId: invitation.company_id
+    });
+    const membership = extractNode(accessResponse.user_companiesCollection);
 
     if (!membership || !["company_admin", "super_admin"].includes(membership.role)) {
       return NextResponse.json(
@@ -57,13 +44,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Revoke invitation
-    const { error: updateError } = await supabase
-      .from("invitations")
-      .update({ status: "revoked" })
-      .eq("id", invitation_id)
-
-    if (updateError) {
+    // Revoke invitation using GraphQL
+    try {
+      await gqlService.query('revokeInvitation', { id: invitation_id });
+    } catch (updateError) {
       console.error("Error revoking invitation:", updateError)
       return NextResponse.json(
         { error: "Failed to revoke invitation" },

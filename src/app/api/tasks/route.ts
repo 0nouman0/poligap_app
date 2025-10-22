@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { GraphQLService, extractNodes } from '@/lib/graphql-service';
 
 // GET /api/tasks - Fetch all tasks for a user
 export async function GET(request: NextRequest) {
@@ -14,21 +14,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Supabase query error:', error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch tasks' },
-        { status: 500 }
-      );
-    }
+    // Fetch tasks using GraphQL
+    const response: any = await gqlService.query('getTasks', { userId });
+    const data = extractNodes(response.tasksCollection);
 
     // Transform to frontend format
     const tasks = data.map(task => ({
@@ -82,32 +73,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({
-        title,
-        description,
-        status,
-        priority,
-        due_date: dueDate,
-        assignee,
-        category,
-        source,
-        source_ref: sourceRef || {},
-        user_id: userId
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase insert error:', error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to create task' },
-        { status: 500 }
-      );
-    }
+    // Create task using GraphQL
+    const response: any = await gqlService.query('createTask', {
+      title,
+      description,
+      status,
+      priority,
+      due_date: dueDate,
+      assignee,
+      category,
+      source,
+      source_ref: sourceRef || {},
+      user_id: userId
+    });
+    
+    const data = response.insertIntotasksCollection.records[0];
 
     // Transform response to match expected format
     const task = {
@@ -159,31 +142,21 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
-    if (status !== undefined) updateData.status = status;
-    if (priority !== undefined) updateData.priority = priority;
-    if (dueDate !== undefined) updateData.due_date = dueDate;
-    if (assignee !== undefined) updateData.assignee = assignee;
-    if (category !== undefined) updateData.category = category;
+    const variables: any = { id };
+    if (title !== undefined) variables.title = title;
+    if (description !== undefined) variables.description = description;
+    if (status !== undefined) variables.status = status;
+    if (priority !== undefined) variables.priority = priority;
+    if (dueDate !== undefined) variables.due_date = dueDate;
+    if (assignee !== undefined) variables.assignee = assignee;
+    if (category !== undefined) variables.category = category;
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase update error:', error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to update task' },
-        { status: 500 }
-      );
-    }
+    // Update task using GraphQL
+    const response: any = await gqlService.query('updateTask', variables);
+    const data = response.updatetasksCollection.records[0];
 
     // Transform response
     const task = {
@@ -226,31 +199,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (updates.title !== undefined) updateData.title = updates.title;
-    if (updates.description !== undefined) updateData.description = updates.description;
-    if (updates.status !== undefined) updateData.status = updates.status;
-    if (updates.priority !== undefined) updateData.priority = updates.priority;
-    if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate;
-    if (updates.assignee !== undefined) updateData.assignee = updates.assignee;
-    if (updates.category !== undefined) updateData.category = updates.category;
+    const variables: any = { id };
+    if (updates.title !== undefined) variables.title = updates.title;
+    if (updates.description !== undefined) variables.description = updates.description;
+    if (updates.status !== undefined) variables.status = updates.status;
+    if (updates.priority !== undefined) variables.priority = updates.priority;
+    if (updates.dueDate !== undefined) variables.due_date = updates.dueDate;
+    if (updates.assignee !== undefined) variables.assignee = updates.assignee;
+    if (updates.category !== undefined) variables.category = updates.category;
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase update error:', error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to update task' },
-        { status: 500 }
-      );
-    }
+    // Update task using GraphQL
+    const response: any = await gqlService.query('updateTask', variables);
+    const data = response.updatetasksCollection.records[0];
 
     // Transform response
     const task = {
@@ -293,20 +256,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const gqlService = new GraphQLService();
+    await gqlService.init();
 
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Supabase delete error:', error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to delete task' },
-        { status: 500 }
-      );
-    }
+    // Delete task using GraphQL
+    await gqlService.query('deleteTask', { id });
 
     return NextResponse.json({ success: true, message: 'Task deleted successfully' });
   } catch (error) {

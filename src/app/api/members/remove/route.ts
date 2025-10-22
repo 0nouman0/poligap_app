@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService, extractNodes } from "@/lib/graphql-service"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const body = await request.json()
     const { company_id, member_user_id } = body
@@ -27,14 +16,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if requester is admin
-    const { data: requestorMembership } = await supabase
-      .from("user_companies")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("company_id", company_id)
-      .eq("status", "active")
-      .single()
+    // Check if requester is admin using GraphQL
+    const accessResponse: any = await gqlService.query('checkUserAccess', {
+      userId: user.id,
+      companyId: company_id
+    });
+    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0];
 
     if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role)) {
       return NextResponse.json(
@@ -43,13 +30,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get member details before removal
-    const { data: memberToRemove } = await supabase
-      .from("user_companies")
-      .select("role, is_primary")
-      .eq("user_id", member_user_id)
-      .eq("company_id", company_id)
-      .single()
+    // Get member details before removal using GraphQL
+    const memberResponse: any = await gqlService.query('checkUserAccess', {
+      userId: member_user_id,
+      companyId: company_id
+    });
+    const memberToRemove = extractNodes(memberResponse.user_companiesCollection)[0];
 
     if (!memberToRemove) {
       return NextResponse.json(
@@ -60,12 +46,12 @@ export async function POST(request: NextRequest) {
 
     // Prevent removing last admin
     if (["company_admin", "super_admin"].includes(memberToRemove.role)) {
-      const { data: admins } = await supabase
-        .from("user_companies")
-        .select("user_id")
-        .eq("company_id", company_id)
-        .in("role", ["company_admin", "super_admin"])
-        .eq("status", "active")
+      const allMembersResponse: any = await gqlService.query('getCompanyMembers', {
+        companyId: company_id,
+        status: "active"
+      });
+      const allMembers = extractNodes(allMembersResponse.user_companiesCollection);
+      const admins = allMembers.filter((m: any) => ["company_admin", "super_admin"].includes(m.role));
 
       if (admins && admins.length === 1) {
         return NextResponse.json(
@@ -75,14 +61,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update status to removed instead of deleting
-    const { error: updateError } = await supabase
-      .from("user_companies")
-      .update({ status: "removed" })
-      .eq("user_id", member_user_id)
-      .eq("company_id", company_id)
-
-    if (updateError) {
+    // Remove member using GraphQL mutation
+    try {
+      await gqlService.query('removeMember', {
+        userId: member_user_id,
+        companyId: company_id
+      });
+    } catch (updateError) {
       console.error("Error removing member:", updateError)
       return NextResponse.json(
         { error: "Failed to remove member" },
@@ -93,24 +78,20 @@ export async function POST(request: NextRequest) {
     // If this was the user's primary company, update their profile
     if (memberToRemove.is_primary) {
       // Find another company for this user
-      const { data: otherCompanies } = await supabase
-        .from("user_companies")
-        .select("company_id")
-        .eq("user_id", member_user_id)
-        .eq("status", "active")
-        .limit(1)
-        .single()
+      const userCompaniesResponse: any = await gqlService.query('getUserCompanies', {
+        userId: member_user_id
+      });
+      const otherCompanies = extractNodes(userCompaniesResponse.user_companiesCollection);
+      const otherCompany = otherCompanies.find((c: any) => c.company_id !== company_id);
 
-      await supabase
-        .from("profiles")
-        .update({
-          company_id: otherCompanies?.company_id || null,
-        })
-        .eq("id", member_user_id)
+      await gqlService.query('updateProfile', {
+        id: member_user_id,
+        company_name: otherCompany?.company?.name || null
+      });
     }
 
-    // Log the action
-    await supabase.from("audit_logs").insert({
+    // Log the action using GraphQL
+    await gqlService.query('createAuditLog', {
       user_id: user.id,
       company_id,
       action: "remove_member",
@@ -119,7 +100,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         removed_user_id: member_user_id,
       },
-    })
+    });
 
     return NextResponse.json({
       success: true,

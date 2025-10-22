@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService } from "@/lib/graphql-service"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const body = await request.json()
     const { token } = body
@@ -27,33 +16,44 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use the database function to accept invitation
-    const { data, error } = await supabase.rpc("accept_invitation", {
-      invitation_token: token,
-      user_id: user.id,
-    })
-
-    if (error) {
+    // Accept invitation using GraphQL mutations
+    try {
+      // Update invitation status
+      const invitationResponse: any = await gqlService.query('acceptInvitation', {
+        token,
+        userId: user.id
+      });
+      
+      const invitation = invitationResponse.updateinvitationsCollection.records[0];
+      
+      if (!invitation) {
+        return NextResponse.json(
+          { error: "Invalid or expired invitation" },
+          { status: 400 }
+        );
+      }
+      
+      // Add user to company
+      await gqlService.query('addUserToCompany', {
+        user_id: user.id,
+        company_id: invitation.company_id,
+        role: invitation.role,
+        is_primary: false
+      });
+      
+      return NextResponse.json({
+        success: true,
+        company_id: invitation.company_id,
+        role: invitation.role,
+        message: "Successfully joined the company",
+      });
+    } catch (error) {
       console.error("Error accepting invitation:", error)
       return NextResponse.json(
         { error: "Failed to accept invitation" },
         { status: 500 }
       )
     }
-
-    if (!data.success) {
-      return NextResponse.json(
-        { error: data.error || "Failed to accept invitation" },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json({
-      success: true,
-      company_id: data.company_id,
-      role: data.role,
-      message: "Successfully joined the company",
-    })
   } catch (error) {
     console.error("Accept invitation error:", error)
     return NextResponse.json(

@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService, extractNodes } from "@/lib/graphql-service"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const body = await request.json()
     const { company_id, member_user_id, new_role } = body
@@ -36,14 +25,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if requester is admin
-    const { data: requestorMembership } = await supabase
-      .from("user_companies")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("company_id", company_id)
-      .eq("status", "active")
-      .single()
+    // Check if requester is admin using GraphQL
+    const accessResponse: any = await gqlService.query('checkUserAccess', {
+      userId: user.id,
+      companyId: company_id
+    });
+    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0];
 
     if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role)) {
       return NextResponse.json(
@@ -54,12 +41,12 @@ export async function POST(request: NextRequest) {
 
     // Prevent self-demotion if last admin
     if (user.id === member_user_id && !["company_admin", "super_admin"].includes(new_role)) {
-      const { data: admins } = await supabase
-        .from("user_companies")
-        .select("user_id")
-        .eq("company_id", company_id)
-        .in("role", ["company_admin", "super_admin"])
-        .eq("status", "active")
+      const allMembersResponse: any = await gqlService.query('getCompanyMembers', {
+        companyId: company_id,
+        status: "active"
+      });
+      const allMembers = extractNodes(allMembersResponse.user_companiesCollection);
+      const admins = allMembers.filter((m: any) => ["company_admin", "super_admin"].includes(m.role));
 
       if (admins && admins.length === 1) {
         return NextResponse.json(
@@ -69,14 +56,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update member role
-    const { error: updateError } = await supabase
-      .from("user_companies")
-      .update({ role: new_role })
-      .eq("user_id", member_user_id)
-      .eq("company_id", company_id)
-
-    if (updateError) {
+    // Update member role using GraphQL
+    try {
+      await gqlService.query('updateMemberRole', {
+        userId: member_user_id,
+        companyId: company_id,
+        role: new_role
+      });
+    } catch (updateError) {
       console.error("Error updating member role:", updateError)
       return NextResponse.json(
         { error: "Failed to update member role" },
@@ -84,8 +71,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Log the action
-    await supabase.from("audit_logs").insert({
+    // Log the action using GraphQL
+    await gqlService.query('createAuditLog', {
       user_id: user.id,
       company_id,
       action: "update_member_role",
@@ -95,7 +82,7 @@ export async function POST(request: NextRequest) {
         new_role,
         target_user_id: member_user_id,
       },
-    })
+    });
 
     return NextResponse.json({
       success: true,

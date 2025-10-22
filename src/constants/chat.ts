@@ -1,24 +1,52 @@
+// AI Models supported via Portkey routing
+// These models are routed through different providers (OpenAI, Groq, AWS Bedrock, OpenRouter)
 export const LlmsList = [
+  // OpenAI Models
   {
-    modelName: "Gemini 2.0 Flash",
-    modelId: "gemini-2.0-flash-exp",
-    shortName: "Gemini 2.0 Flash",
-    modelIcon: "/assets/icons/model-icons/gemini.svg",
-    provider: "google",
+    modelName: "GPT-4o",
+    modelId: "gpt-4o",
+    shortName: "GPT-4o",
+    modelIcon: "/assets/icons/model-icons/openai.svg",
+    provider: "openai",
   },
   {
-    modelName: "Gemini 1.5 Pro",
-    modelId: "gemini-1.5-pro",
-    shortName: "Gemini 1.5 Pro",
-    modelIcon: "/assets/icons/model-icons/gemini.svg",
-    provider: "google",
+    modelName: "GPT-4o Mini",
+    modelId: "gpt-4o-mini",
+    shortName: "GPT-4o Mini",
+    modelIcon: "/assets/icons/model-icons/openai.svg",
+    provider: "openai",
   },
+  // Groq Models (Fast inference)
   {
-    modelName: "Gemini 1.5 Flash",
-    modelId: "gemini-1.5-flash",
-    shortName: "Gemini 1.5 Flash",
-    modelIcon: "/assets/icons/model-icons/gemini.svg",
-    provider: "google",
+    modelName: "Llama 3.3 70B",
+    modelId: "llama-3.3-70b-versatile",
+    shortName: "Llama 3.3",
+    modelIcon: "/assets/icons/model-icons/groq.svg",
+    provider: "groq",
+  },
+  // AWS Bedrock Models
+  {
+    modelName: "Claude 3.5 Sonnet",
+    modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    shortName: "Claude 3.5",
+    modelIcon: "/assets/icons/model-icons/claude.svg",
+    provider: "aws",
+  },
+  // OpenRouter Models
+  {
+    modelName: "Claude 3.5 Sonnet (OR)",
+    modelId: "anthropic/claude-3.5-sonnet",
+    shortName: "Claude 3.5 OR",
+    modelIcon: "/assets/icons/model-icons/claude.svg",
+    provider: "openrouter",
+  },
+  // Auto-routing option (let Portkey decide)
+  {
+    modelName: "Auto (Portkey)",
+    modelId: "auto",
+    shortName: "Auto",
+    modelIcon: "/assets/icons/model-icons/portkey.svg",
+    provider: "auto",
   },
 ];
 

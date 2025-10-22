@@ -14,6 +14,8 @@ const chatRequestSchema = z.object({
   session_id: z.string().optional(),
   max_tokens: z.number().int().min(1).max(8000).default(4000),
   temperature: z.number().min(0).max(2).default(0.7),
+  model: z.string().optional(), // Selected model from frontend
+  provider: z.string().optional(), // Provider hint
 });
 
 export async function POST(request: NextRequest) {
@@ -81,6 +83,8 @@ export async function POST(request: NextRequest) {
       session_id,
       max_tokens,
       temperature,
+      model,
+      provider,
     } = validationResult.data;
 
     // Get conversation history if session_id is provided
@@ -108,14 +112,33 @@ export async function POST(request: NextRequest) {
     messages.push({ role: "user", content: user_query });
 
     console.log('🔄 Using Portkey unified AI client for chat streaming');
+    console.log('📝 Model selection:', { model, provider });
 
     // Get AI client and create streaming completion
     const aiClient = getAIClient();
     
+    // Determine task type based on model/provider or use intelligent auto-routing
+    let taskType: "chat" | "agent" | "analysis" | "generation" = "chat";
+    let strategy: "cost-optimized" | "performance" | "balanced" = "balanced";
+    
+    // Map model selection to optimal routing
+    if (model === "auto" || !model) {
+      // Let Portkey decide based on task type
+      taskType = "chat";
+      strategy = "balanced";
+      console.log('✨ Using auto-routing (Portkey intelligent selection)');
+    } else if (model.includes("gpt-4o-mini") || model.includes("llama")) {
+      // Fast models
+      strategy = "cost-optimized";
+    } else if (model.includes("gpt-4o") || model.includes("claude")) {
+      // Premium models
+      strategy = "performance";
+    }
+    
     try {
       const portkeyStream = await aiClient.createStreamingCompletion(messages, {
-        taskType: "chat",
-        strategy: "balanced", // Use balanced strategy for chat
+        taskType,
+        strategy,
         temperature,
         maxTokens: max_tokens,
       });

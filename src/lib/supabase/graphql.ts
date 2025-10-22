@@ -809,4 +809,212 @@ export const queries = {
       }
     }
   `,
+
+  // Member management mutations
+  removeMember: `
+    mutation RemoveMember($userId: UUID!, $companyId: UUID!) {
+      updateuser_companiesCollection(
+        filter: { user_id: { eq: $userId }, company_id: { eq: $companyId } }
+        set: { status: "inactive", updated_at: "now()" }
+      ) {
+        records {
+          user_id
+          company_id
+          status
+          updated_at
+        }
+      }
+    }
+  `,
+
+  updateMemberRole: `
+    mutation UpdateMemberRole($userId: UUID!, $companyId: UUID!, $role: String!) {
+      updateuser_companiesCollection(
+        filter: { user_id: { eq: $userId }, company_id: { eq: $companyId } }
+        set: { role: $role, updated_at: "now()" }
+      ) {
+        records {
+          user_id
+          company_id
+          role
+          updated_at
+        }
+      }
+    }
+  `,
+
+  // Invitation management mutations
+  createInvitation: `
+    mutation CreateInvitation(
+      $email: String!
+      $role: String!
+      $company_id: UUID!
+      $invited_by: UUID!
+      $token: String!
+      $expires_at: String!
+    ) {
+      insertIntoinvitationsCollection(
+        objects: [{
+          email: $email
+          role: $role
+          company_id: $company_id
+          invited_by: $invited_by
+          token: $token
+          expires_at: $expires_at
+          status: "pending"
+          sent_at: "now()"
+        }]
+      ) {
+        records {
+          id
+          email
+          role
+          token
+          expires_at
+          status
+          created_at
+        }
+      }
+    }
+  `,
+
+  acceptInvitation: `
+    mutation AcceptInvitation($token: String!, $userId: UUID!) {
+      updateinvitationsCollection(
+        filter: { token: { eq: $token } }
+        set: { status: "accepted", accepted_at: "now()" }
+      ) {
+        records {
+          id
+          token
+          status
+          accepted_at
+          email
+          role
+          company_id
+        }
+      }
+    }
+  `,
+
+  revokeInvitation: `
+    mutation RevokeInvitation($id: UUID!) {
+      updateinvitationsCollection(
+        filter: { id: { eq: $id } }
+        set: { status: "revoked", updated_at: "now()" }
+      ) {
+        records {
+          id
+          status
+          updated_at
+        }
+      }
+    }
+  `,
+
+  resendInvitation: `
+    mutation ResendInvitation($id: UUID!, $newToken: String!, $newExpiresAt: String!) {
+      updateinvitationsCollection(
+        filter: { id: { eq: $id } }
+        set: { 
+          token: $newToken
+          expires_at: $newExpiresAt
+          sent_at: "now()"
+          status: "pending"
+        }
+      ) {
+        records {
+          id
+          token
+          expires_at
+          sent_at
+          status
+        }
+      }
+    }
+  `,
+
+  // Task update and delete mutations
+  updateTask: `
+    mutation UpdateTask(
+      $id: UUID!
+      $title: String
+      $description: String
+      $status: String
+      $priority: String
+      $due_date: String
+      $assignee: String
+      $category: String
+    ) {
+      updatetasksCollection(
+        filter: { id: { eq: $id } }
+        set: {
+          title: $title
+          description: $description
+          status: $status
+          priority: $priority
+          due_date: $due_date
+          assignee: $assignee
+          category: $category
+          updated_at: "now()"
+        }
+      ) {
+        records {
+          id
+          title
+          description
+          status
+          priority
+          due_date
+          assignee
+          category
+          source
+          source_ref
+          user_id
+          created_at
+          updated_at
+        }
+      }
+    }
+  `,
+
+  deleteTask: `
+    mutation DeleteTask($id: UUID!) {
+      deletetasksCollection(filter: { id: { eq: $id } }) {
+        records {
+          id
+        }
+      }
+    }
+  `,
+
+  // Add user to company (for invitation acceptance)
+  addUserToCompany: `
+    mutation AddUserToCompany(
+      $user_id: UUID!
+      $company_id: UUID!
+      $role: String!
+      $is_primary: Boolean
+    ) {
+      insertIntouser_companiesCollection(
+        objects: [{
+          user_id: $user_id
+          company_id: $company_id
+          role: $role
+          is_primary: $is_primary
+          status: "active"
+          joined_at: "now()"
+        }]
+      ) {
+        records {
+          user_id
+          company_id
+          role
+          is_primary
+          status
+          joined_at
+        }
+      }
+    }
+  `,
 }

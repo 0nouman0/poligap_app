@@ -12,102 +12,48 @@ interface ModelSpecificationTooltipProps {
 }
 
 
+// Tooltip details for models available via Portkey
 export const AI_MODEL_DETAILS_LIST: ModelDetail[] = [
-  {
-    model: "Anthropic Claude 3.5 Sonnet",
-    bestAt: "Reasoning, analysis, long documents",
-    strengths: "Safe, coherent, deep reasoning, large context window",
-    weaknesses: "Slower and costlier than smaller models",
-  },
-  {
-    model: "Anthropic Claude 3.5 Haiku",
-    bestAt: "Fast responses, light tasks",
-    strengths: "Very fast, efficient, solid for summaries and chat",
-    weaknesses: "Weaker on complex reasoning or technical content",
-  },
-  {
-    model: "Anthropic Claude 3.7",
-    bestAt: "Advanced reasoning, complex analysis, research",
-    strengths: "Enhanced reasoning capabilities, improved context understanding, robust safety",
-    weaknesses: "Higher cost, may be slower for simple tasks",
-  },
+  // OpenAI Models
   {
     model: "GPT-4o",
-    bestAt: "General purpose, coding, math, multimodal",
-    strengths: "High accuracy, creative writing, vision + audio support (when enabled)",
-    weaknesses: "Expensive and slower under heavy load",
+    bestAt: "General purpose, coding, math, complex reasoning",
+    strengths: "High accuracy, creative writing, strong instruction following, multimodal support",
+    weaknesses: "Higher cost, may be slower under heavy load",
   },
   {
-    model: "GPT-4o-mini",
-    bestAt: "Real-time tasks, chatbots",
-    strengths: "Lightweight, fast, cost-effective",
-    weaknesses: "Limited reasoning, not ideal for technical content",
+    model: "GPT-4o Mini",
+    bestAt: "Fast responses, real-time tasks, chatbots",
+    strengths: "Lightweight, fast inference, cost-effective, good for general tasks",
+    weaknesses: "Limited reasoning compared to GPT-4o, not ideal for complex analysis",
   },
+  // Groq Models
   {
-    model: "GPT-4.1",
-    bestAt: "Enhanced general purpose, improved reasoning",
-    strengths: "Better accuracy than GPT-4o, improved instruction following, multimodal",
-    weaknesses: "Higher latency and cost compared to smaller models",
+    model: "Llama 3.3 70B",
+    bestAt: "Fast inference, custom apps, general chat",
+    strengths: "Very fast inference via Groq, open-source, cost-effective, versatile",
+    weaknesses: "May require more specific prompting, less polished than commercial models",
   },
+  // AWS Bedrock Models
   {
-    model: "GPT-4.1-nano",
-    bestAt: "Ultra-fast responses, embedded applications",
-    strengths: "Extremely lightweight, very fast inference, cost-effective",
-    weaknesses: "Limited capabilities, not suitable for complex tasks",
+    model: "Claude 3.5 Sonnet",
+    bestAt: "Reasoning, analysis, long documents, enterprise workloads",
+    strengths: "Safe, coherent, deep reasoning, large context window, excellent instruction following",
+    weaknesses: "Higher cost, may be slower than smaller models",
   },
+  // OpenRouter Models
   {
-    model: "GPT-4.1-mini",
-    bestAt: "Balanced speed and capability, chatbots",
-    strengths: "Good balance of speed and intelligence, affordable",
-    weaknesses: "Reduced reasoning compared to full models",
+    model: "Claude 3.5 Sonnet (OR)",
+    bestAt: "Reasoning, analysis, diverse model access",
+    strengths: "Access via OpenRouter for broader model selection, strong reasoning",
+    weaknesses: "Depends on OpenRouter availability, may have variable latency",
   },
+  // Auto-routing
   {
-    model: "Deepseek R1",
-    bestAt: "Code generation, math-heavy tasks",
-    strengths: "Great at coding, solid open-source option",
-    weaknesses: "Conversationally weaker, not tuned for natural language nuance",
-  },
-  {
-    model: "Deepseek V3",
-    bestAt: "Code generation, mathematical reasoning",
-    strengths: "Strong coding abilities, good at logic and math, open-source",
-    weaknesses: "Less polished for conversational use, limited multimodal support",
-  },
-  {
-    model: "Gemini 2.0",
-    bestAt: "Research, multimodal applications",
-    strengths: "Excellent factual grounding, image + text support, Google integration",
-    weaknesses: "Can be dry or robotic, less flexible in tone",
-  },
-  {
-    model: "Gemini 2.5 Flash",
-    bestAt: "Fast inference, light AI tasks, real-time use",
-    strengths: "Extremely fast, low-latency, cost-efficient",
-    weaknesses: "Not ideal for complex tasks or deep reasoning",
-  },
-  {
-    model: "Gemini 2.5 Pro",
-    bestAt: "Enterprise AI, advanced multimodal tasks",
-    strengths: "High accuracy, longer context, better reasoning and vision capabilities",
-    weaknesses: "Higher latency, more compute-heavy than Flash version",
-  },
-  {
-    model: "Llama 3.3",
-    bestAt: "Custom apps, research",
-    strengths: "Open-source, tunable, efficient",
-    weaknesses: "Varies by tuning, may lack safety and polish compared to closed models",
-  },
-  {
-    model: "Llama 4 maverick",
-    bestAt: "Experimental capabilities, research applications",
-    strengths: "Latest Meta architecture, open-source, efficient inference",
-    weaknesses: "Experimental nature, may lack stability and safety tuning",
-  },
-  {
-    model: "Claude Sonnet 4",
-    bestAt: "Reasoning, analysis, long documents",
-    strengths: "Safe, coherent, deep reasoning, large context window",
-    weaknesses: "Slower and costlier than smaller models",
+    model: "Auto (Portkey)",
+    bestAt: "Intelligent routing based on task type",
+    strengths: "Automatic provider selection, cost optimization, failover handling, best balance",
+    weaknesses: "Less control over specific model selection",
   },
 ];
 

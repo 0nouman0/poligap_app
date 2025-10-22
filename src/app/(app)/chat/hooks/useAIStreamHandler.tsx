@@ -233,14 +233,21 @@ const useAIChatStreamHandler = ({
       
       const session_id = isPublic ? publicUserId : selectedConversation._id;
 
-      // Let Portkey handle model routing - don't force any specific model
-      // The AI client will select the best provider based on task type
+      // Pass selected model and provider to backend for Portkey routing
       const requestData: any = {
         user_query: "",
         session_id,
         max_tokens: 4000,
         temperature: 0.7,
+        model: selectedLlmModel?.modelId || "auto", // Pass selected model or auto
+        provider: selectedLlmModel?.provider || "auto", // Pass provider hint
       };
+      
+      console.log('📤 Sending to API with model:', {
+        modelId: requestData.model,
+        provider: requestData.provider,
+        modelName: selectedLlmModel?.modelName || "Auto (Portkey)"
+      });
 
       if (typeof input === "string") {
         requestData.user_query = input;

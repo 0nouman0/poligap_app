@@ -39,7 +39,7 @@ const AgentChat = () => {
   const setMessages = useGlobalChatStore((state) => state.setMessages);
 
   const [inputMessage, setInputMessage] = useState<string>("");
-  const [selectedModel, setSelectedModel] = useState<string>("gpt-4.1-mini");
+  const [selectedModel, setSelectedModel] = useState<string>("auto"); // Auto-routing via Portkey
   const [selectedLanguage, setSelectedLanguage] =
     useState<SelectedLanguageType>({ code: "en", name: "English" });
 

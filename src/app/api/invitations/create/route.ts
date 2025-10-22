@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService, extractNode, extractNodes } from "@/lib/graphql-service"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const body = await request.json()
     const { email, role = "member", company_id } = body
@@ -48,16 +36,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user is admin of the company
-    const { data: membership, error: membershipError } = await supabase
-      .from("user_companies")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("company_id", company_id)
-      .eq("status", "active")
-      .single()
+    // Check if user is admin of the company using GraphQL
+    const accessResponse: any = await gqlService.query('checkUserAccess', {
+      userId: user.id,
+      companyId: company_id
+    });
+    const membership = extractNode(accessResponse.user_companiesCollection);
 
-    if (membershipError || !membership) {
+    if (!membership) {
       return NextResponse.json(
         { error: "You are not a member of this company" },
         { status: 403 }
@@ -71,36 +57,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user already exists in this company
-    const { data: existingUser } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .single()
+    // Check if user already exists in this company using GraphQL
+    // Note: We need to check by email, which might require a different query
+    // For now, we'll use the company members query and filter
+    const membersResponse: any = await gqlService.query('getCompanyMembers', {
+      companyId: company_id,
+      status: "active"
+    });
+    const existingMembers = extractNodes(membersResponse.user_companiesCollection);
+    const existingMember = existingMembers.find((m: any) => m.user?.email === email);
 
-    if (existingUser) {
-      // Check if already a member
-      const { data: existingMembership } = await supabase
-        .from("user_companies")
-        .select("id")
-        .eq("user_id", existingUser.id)
-        .eq("company_id", company_id)
-        .single()
-
-      if (existingMembership) {
-        return NextResponse.json(
-          { error: "User is already a member of this company" },
-          { status: 400 }
-        )
-      }
+    if (existingMember) {
+      return NextResponse.json(
+        { error: "User is already a member of this company" },
+        { status: 400 }
+      )
     }
 
-    // Get company details for email
-    const { data: company } = await supabase
-      .from("companies")
-      .select("name")
-      .eq("id", company_id)
-      .single()
+    // Get company details for email using GraphQL
+    const companyResponse: any = await gqlService.query('getCompanyDetails', {
+      companyId: company_id
+    });
+    const company = extractNode(companyResponse.companiesCollection);
 
     // Send invitation email using Supabase Auth
     // Create admin client with service role key

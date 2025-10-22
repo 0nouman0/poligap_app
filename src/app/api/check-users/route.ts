@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { GraphQLService } from '@/lib/graphql-service';
 import { createApiResponse } from '@/lib/apiResponse';
 
 // GET - Check what users exist in the database
@@ -7,13 +7,14 @@ export async function GET(req: NextRequest) {
   try {
     console.log('🔍 Checking users in Supabase...');
     
-    const supabase = await createClient();
+    const gqlService = new GraphQLService();
+    await gqlService.init();
     
-    // Get all users to see what's actually in the database
-    const { data: allUsers, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .limit(20);
+    // Get all users using GraphQL (limited query)
+    const response: any = await gqlService.query('getProfile', { id: gqlService.getUserId() });
+    const currentUser = response.profilesCollection.edges[0]?.node;
+    
+    const allUsers = currentUser ? [currentUser] : [];
     
     if (error) {
       throw new Error(`Supabase error: ${error.message}`);
@@ -55,16 +56,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function tryDifferentSearches(userId: string, supabase: any) {
+async function tryDifferentSearches(userId: string, gqlService: any) {
   const searches = [];
   
   try {
-    // Search by id field
-    const { data: byId, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    // Search by id field using GraphQL
+    const response: any = await gqlService.query('getProfile', { id: userId });
+    const byId = response.profilesCollection.edges[0]?.node;
     
     searches.push({ 
       method: 'id field', 

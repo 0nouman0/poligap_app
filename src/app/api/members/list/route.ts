@@ -1,25 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { GraphQLService, extractNodes } from "@/lib/graphql-service"
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const gqlService = new GraphQLService()
+    const user = await gqlService.init()
 
     const { searchParams } = new URL(request.url)
     const company_id = searchParams.get("company_id")
-    const role = searchParams.get("role")
     const status = searchParams.get("status") || "active"
 
     if (!company_id) {
@@ -29,14 +17,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if user is member of company
-    const { data: membership } = await supabase
-      .from("user_companies")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("company_id", company_id)
-      .eq("status", "active")
-      .single()
+    // Check if user is member of company using GraphQL
+    const accessResponse: any = await gqlService.query('checkUserAccess', {
+      userId: user.id,
+      companyId: company_id
+    });
+    const membership = extractNodes(accessResponse.user_companiesCollection)[0];
 
     if (!membership) {
       return NextResponse.json(
@@ -45,38 +31,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Build query
-    let query = supabase
-      .from("user_companies")
-      .select(`
-        *,
-        user:profiles (
-          id,
-          name,
-          email,
-          profile_image,
-          designation,
-          status,
-          last_active_at
-        )
-      `)
-      .eq("company_id", company_id)
-      .eq("status", status)
-      .order("is_primary", { ascending: false })
-      .order("joined_at", { ascending: false })
+    // Fetch company members using GraphQL
+    const response: any = await gqlService.query('getCompanyMembers', {
+      companyId: company_id,
+      status
+    });
+    
+    let members = extractNodes(response.user_companiesCollection);
 
+    // Note: GraphQL query doesn't support role filtering yet
+    // We'll filter client-side for now
+    const role = searchParams.get("role");
     if (role) {
-      query = query.eq("role", role)
-    }
-
-    const { data: members, error } = await query
-
-    if (error) {
-      console.error("Error fetching members:", error)
-      return NextResponse.json(
-        { error: "Failed to fetch members" },
-        { status: 500 }
-      )
+      members = members.filter((m: any) => m.role === role);
     }
 
     return NextResponse.json({

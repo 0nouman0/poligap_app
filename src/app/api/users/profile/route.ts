@@ -1,38 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { GraphQLService, extractNode } from '@/lib/graphql-service';
 
 // GET - Fetch user profile
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error('Auth error in profile route:', authError);
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const gqlService = new GraphQLService();
+    const user = await gqlService.init();
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId') || user.id;
     console.log('Fetching profile for userId:', userId);
 
-    // Fetch profile directly from Supabase
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('Supabase query error:', profileError);
-      return NextResponse.json(
-        { success: false, error: `Database error: ${profileError.message}`, details: profileError },
-        { status: 500 }
-      );
-    }
+    // Fetch profile using GraphQL
+    const response: any = await gqlService.query('getProfile', { id: userId });
+    const profile = extractNode(response.profilesCollection);
 
     if (!profile) {
       return NextResponse.json(
@@ -96,67 +77,43 @@ export async function GET(req: NextRequest) {
 // PUT - Update user profile
 export async function PUT(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const gqlService = new GraphQLService();
+    const user = await gqlService.init();
 
     const body = await req.json();
     const { userId, ...updates } = body;
 
     const targetUserId = userId || user.id;
 
-    // Prepare updates (map camelCase to snake_case)
-    const profileUpdates: any = {
-      updated_at: new Date().toISOString(),
+    // Prepare GraphQL variables (map camelCase to snake_case)
+    const variables: any = {
+      id: targetUserId,
     };
     
     // Basic fields
-    if (updates.name !== undefined) profileUpdates.name = updates.name;
-    if (updates.mobile !== undefined) profileUpdates.mobile = updates.mobile;
-    if (updates.dob !== undefined) profileUpdates.dob = updates.dob;
-    if (updates.country !== undefined) profileUpdates.country = updates.country;
-    if (updates.designation !== undefined) profileUpdates.designation = updates.designation;
-    if (updates.about !== undefined) profileUpdates.about = updates.about;
+    if (updates.name !== undefined) variables.name = updates.name;
+    if (updates.mobile !== undefined) variables.mobile = updates.mobile;
+    if (updates.dob !== undefined) variables.dob = updates.dob;
+    if (updates.country !== undefined) variables.country = updates.country;
+    if (updates.designation !== undefined) variables.designation = updates.designation;
+    if (updates.about !== undefined) variables.about = updates.about;
     
     // Image fields
     if (updates.profileImage !== undefined || updates.profile_image !== undefined) {
-      profileUpdates.profile_image = updates.profileImage || updates.profile_image;
+      variables.profile_image = updates.profileImage || updates.profile_image;
     }
     if (updates.banner !== undefined) {
-      profileUpdates.banner = updates.banner;
+      variables.banner = updates.banner;
     }
     
-    // Company and status fields
+    // Company field
     if (updates.companyName !== undefined || updates.company_name !== undefined) {
-      profileUpdates.company_name = updates.companyName || updates.company_name;
+      variables.company_name = updates.companyName || updates.company_name;
     }
-    if (updates.status !== undefined) profileUpdates.status = updates.status;
-    if (updates.role !== undefined) profileUpdates.role = updates.role;
-    
-    // Note: Email is managed by Supabase Auth and should not be updated here
-    // If email update is needed, use Supabase Auth updateUser() method
 
-    // Update profile directly in Supabase
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from('profiles')
-      .update(profileUpdates)
-      .eq('id', targetUserId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Profile update error:', updateError);
-      return NextResponse.json(
-        { success: false, error: `Update failed: ${updateError.message}`, details: updateError },
-        { status: 500 }
-      );
-    }
+    // Update profile using GraphQL
+    const response: any = await gqlService.query('updateProfile', variables);
+    const updatedProfile = response.updateprofilesCollection.records[0];
 
     if (!updatedProfile) {
       return NextResponse.json(
