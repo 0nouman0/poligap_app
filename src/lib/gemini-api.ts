@@ -33,12 +33,21 @@ export class GeminiComplianceAnalyzer {
   private genAI: any;
   private model: any;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, modelName: string = "gemini-2.0-flash-exp") {
     if (!GoogleGenerativeAI) {
       throw new Error('Google Generative AI not available');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    this.model = this.genAI.getGenerativeModel({ 
+      model: modelName,
+      generationConfig: {
+        temperature: 0.1,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json"
+      }
+    });
   }
 
   async extractTextFromFile(file: File): Promise<string> {
