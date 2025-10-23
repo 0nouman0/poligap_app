@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
               response_format: { type: "json_object" }
             });
 
-            analysisText = response.choices[0]?.message?.content || "";
+            const responseContent = response.choices[0]?.message?.content || "";
+            analysisText = typeof responseContent === 'string' ? responseContent : JSON.stringify(responseContent);
             modelUsed = modelConfig.model;
             providerUsed = modelConfig.provider;
             
@@ -156,17 +157,17 @@ export async function POST(req: NextRequest) {
           
         } catch (error: any) {
           lastError = error;
-          console.log(`❌ Model ${modelName} failed:`, error.message);
+          console.log(`❌ Model ${modelConfig.provider}/${modelConfig.model} failed:`, error.message);
           
           // Check if it's a quota/rate limit error
           if (error.message?.includes('quota') || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
-            console.log(`⏳ Quota exceeded for ${modelName}, trying next model...`);
+            console.log(`⏳ Quota exceeded for ${modelConfig.provider}/${modelConfig.model}, trying next model...`);
             continue; // Try next model immediately
           }
           
           // Check if it's a service unavailable error
           if (error.message?.includes('503') || error.message?.includes('overloaded')) {
-            console.log(`🔄 Service overloaded for ${modelName}, trying next model...`);
+            console.log(`🔄 Service overloaded for ${modelConfig.provider}/${modelConfig.model}, trying next model...`);
             continue; // Try next model immediately
           }
           

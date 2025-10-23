@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { Skeleton } from "@/components/ui/skeleton";

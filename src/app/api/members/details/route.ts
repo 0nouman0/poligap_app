@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { GraphQLService, extractNode } from "@/lib/graphql-service"
+import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const requestorMembership = extractNode(accessResponse.user_companiesCollection);
+    const requestorMembership = extractNode(accessResponse.user_companiesCollection) as { role?: string } | null;
 
     if (!requestorMembership) {
       return NextResponse.json(
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       userId: member_user_id,
       companyId: company_id
     });
-    const memberDetails = extractNode(memberResponse.user_companiesCollection);
+    const memberDetails = extractNode(memberResponse.user_companiesCollection) as any;
 
     if (!memberDetails) {
       return NextResponse.json(
@@ -58,7 +59,8 @@ export async function GET(request: NextRequest) {
 
     // Get member's activity stats (only if admin)
     let activityStats = null
-    if (["company_admin", "super_admin"].includes(requestorMembership.role)) {
+    if (["company_admin", "super_admin"].includes(requestorMembership?.role || '')) {
+      const supabase = await createClient();
       const { data: stats } = await supabase.rpc("get_member_activity_stats", {
         p_user_id: member_user_id,
         p_company_id: company_id,

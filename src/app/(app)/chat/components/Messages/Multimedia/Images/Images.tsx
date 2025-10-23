@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import Image from 'next/image'
 
 import type {ImageData} from './../../../../types/agent';
 import { cn } from './../../../../utils/utils'
@@ -11,11 +12,12 @@ const Images = ({ images }: { images: ImageData[] }) => (
     )}
   >
     {images.map((image) => (
-      <div key={image.url} className="group relative">
-        <img
+      <div key={image.url} className="group relative aspect-square">
+        <Image
           src={image.url}
           alt={image.revised_prompt || 'AI generated image'}
-          className="w-full rounded-lg"
+          fill
+          className="rounded-lg object-cover"
           onError={(e) => {
             const parent = e.currentTarget.parentElement
             if (parent) {

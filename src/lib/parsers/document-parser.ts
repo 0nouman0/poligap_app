@@ -8,8 +8,14 @@
  * Handles 95%+ of real-world documents with fallback strategies
  */
 
-import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
+
+// Dynamic import for pdf-parse to avoid build-time issues
+async function getPdfParser() {
+  // @ts-ignore - pdf-parse doesn't have official types
+  const pdf = await import('pdf-parse');
+  return pdf.default || pdf;
+}
 
 /**
  * Extract text from PDF, DOCX, or plain text files
@@ -71,6 +77,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
+    const pdf = await getPdfParser();
     const data = await pdf(buffer);
     
     if (!data.text || data.text.trim().length === 0) {
@@ -153,6 +160,7 @@ export async function getDocumentMetadata(file: File): Promise<{
     try {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+      const pdf = await getPdfParser();
       const data = await pdf(buffer);
       
       return {

@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { createPortkeyClient, getAvailableModels } from '@/lib/portkey/client';
 import { extractTextFromDocument } from '@/lib/parsers/document-parser';
 
+// Force dynamic rendering to avoid build-time errors with pdf-parse
+export const dynamic = 'force-dynamic';
+
 // AI analysis with Portkey ONLY - uses robust pdf-parse + mammoth parsers
 async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<any> {
   try {
@@ -60,7 +63,7 @@ async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<a
 
         // Parse JSON response
         try {
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          const jsonMatch = textStr.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const analysisResult = JSON.parse(jsonMatch[0]);
             return analysisResult;
@@ -69,7 +72,7 @@ async function analyzeWithAI(file: File, selectedStandards: string[]): Promise<a
           }
         } catch (parseError) {
           console.warn(`Failed to parse JSON response from ${modelConfig.provider}:`, parseError);
-          return createStructuredResponseFromText(responseText);
+          return createStructuredResponseFromText(textStr);
         }
         
       } catch (err) {

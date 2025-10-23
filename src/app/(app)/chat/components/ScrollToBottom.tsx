@@ -27,8 +27,7 @@ const ScrollToBottom: React.FC = () => {
           ? context.scrollToBottom
           : () => {};
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // Handle error gracefully - component will just not show the scroll button
   }
 

@@ -15,7 +15,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     // This is a simplified approach - for production use pdf-parse or similar
     const uint8Array = new Uint8Array(arrayBuffer);
     const decoder = new TextDecoder('utf-8', { fatal: false });
-    let text = decoder.decode(uint8Array);
+    const text = decoder.decode(uint8Array);
     
     // Basic PDF text extraction (very limited)
     // Look for text between parentheses which often contains readable content in PDFs

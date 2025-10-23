@@ -101,7 +101,7 @@ Return a clear, sectioned document with headings (1., 1.1 etc.), a short preambl
             max_tokens: 4096
           });
           const text = response.choices[0]?.message?.content;
-          if (text) return toMarkdownSafe(text);
+          if (text) return toMarkdownSafe(typeof text === 'string' ? text : JSON.stringify(text));
         }
       } else {
         // Direct Gemini API

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const membership = extractNode(accessResponse.user_companiesCollection);
+    const membership = extractNode(accessResponse.user_companiesCollection) as { role?: string } | null;
 
     if (!membership) {
       return NextResponse.json(
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!["company_admin", "super_admin"].includes(membership.role)) {
+    if (!["company_admin", "super_admin"].includes(membership.role || '')) {
       return NextResponse.json(
         { error: "Only admins can invite users" },
         { status: 403 }
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const companyResponse: any = await gqlService.query('getCompanyDetails', {
       companyId: company_id
     });
-    const company = extractNode(companyResponse.companiesCollection);
+    const company = extractNode(companyResponse.companiesCollection) as { name?: string } | null;
 
     // Send invitation email using Supabase Auth
     // Create admin client with service role key

@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0];
+    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0] as { role?: string } | undefined;
 
-    if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role)) {
+    if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role || '')) {
       return NextResponse.json(
         { error: "Only admins can update member roles" },
         { status: 403 }

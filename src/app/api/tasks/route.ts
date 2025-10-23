@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const data = extractNodes(response.tasksCollection);
 
     // Transform to frontend format
-    const tasks = data.map(task => ({
+    const tasks = data.map((task: any) => ({
       _id: task.id,
       id: task.id,
       title: task.title,

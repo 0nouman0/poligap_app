@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createPortkeyClient, getBestAvailableModel } from '@/lib/portkey/client';
 
-async function summarizeWithAI(prompt: string) {
+async function summarizeWithAI(prompt: string): Promise<string> {
   // Try Portkey first with best available model
   const bestModel = getBestAvailableModel();
   
@@ -19,7 +19,8 @@ async function summarizeWithAI(prompt: string) {
           max_tokens: 4096,
           response_format: { type: 'json_object' }
         });
-        return response.choices[0]?.message?.content || '';
+        const content = response.choices[0]?.message?.content || '';
+        return typeof content === 'string' ? content : JSON.stringify(content);
       }
     } catch (e) {
       console.error('Portkey analysis failed:', e);
@@ -35,7 +36,8 @@ async function summarizeWithAI(prompt: string) {
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
   });
   const j = await r.json();
-  return j?.candidates?.[0]?.content?.parts?.[0]?.text as string;
+  const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+  return typeof text === 'string' ? text : '';
 }
 
 async function summarizeWithKrooloAI(prompt: string) {
