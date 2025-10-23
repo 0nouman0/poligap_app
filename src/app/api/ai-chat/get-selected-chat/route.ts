@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Get the conversation details
     const { data: conversation, error: convError } = await supabase
-      .from('agent_conversations')
+      .from('conversations')
       .select('*')
       .eq('id', conversationId)
       .eq('user_id', user.id)

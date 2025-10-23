@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useActivityStore, ActivityItem } from '@/stores/activity-store';
 import { formatGlobalDate } from '@/utils/date.util';
 import { 
@@ -87,7 +87,36 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   compact = false 
 }) => {
   const { getRecentActivities, clearActivities } = useActivityStore();
-  const activities = getRecentActivities(limit);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    // Only run on client side after hydration
+    setActivities(getRecentActivities(limit));
+    setIsHydrated(true);
+  }, [getRecentActivities, limit]);
+
+  // Show loading state during hydration to prevent mismatch
+  if (!isHydrated) {
+    return (
+      <Card>
+        {showHeader && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+        )}
+        <CardContent className={compact ? "p-4" : ""}>
+          <div className="text-center py-8">
+            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Loading recent activity...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (activities.length === 0) {
     return (
