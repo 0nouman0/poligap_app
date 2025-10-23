@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
-import { CheckSquare, Plus, Filter, Check, RotateCcw, Trash2, Shield, FileText, Info, ChevronDown, MoreHorizontal, X } from "lucide-react";
+import { CheckSquare, Plus, Filter, CheckCircle2, Undo2, Trash2, Shield, FileText, Eye, ChevronDown, MoreHorizontal, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUserStore } from "@/stores/user-store";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useTasksStore, type Task } from "@/stores/tasks-store";
@@ -548,12 +549,7 @@ export default function MyTasksPage() {
                             </span>
                           </div>
                           
-                          {/* Task Title */}
-                          <h3 className="text-foreground dark:text-foreground text-base font-semibold leading-tight select-text">
-                            {task.title}
-                          </h3>
-                          
-                          {/* Task Description */}
+                          {/* Task Body Only (no header/title to avoid repetition) */}
                           <div className="text-muted-foreground dark:text-muted-foreground text-xs leading-relaxed select-text" style={{ lineHeight: '1.5em' }}>
                             <p>{displayDescription}</p>
                             {shouldTruncate && (
@@ -569,6 +565,7 @@ export default function MyTasksPage() {
                       </div>
                       
                       {/* Right Side: Actions */}
+                      <TooltipProvider>
                       <div className="flex items-center gap-[11px]">
                         {/* Category Badge */}
                         <span className="bg-accent dark:bg-accent text-foreground dark:text-foreground text-xs font-medium rounded-[35px] px-2.5 py-1 whitespace-nowrap">
@@ -576,41 +573,70 @@ export default function MyTasksPage() {
                         </span>
                         
                         {/* Action Buttons */}
-                        <button
-                          onClick={() => { setInfoTask(task); setInfoOpen(true); }}
-                          className="text-foreground dark:text-foreground hover:text-primary dark:hover:text-primary transition-colors p-1"
-                          title="Task info"
-                        >
-                          <Info className="h-6 w-6" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => { setInfoTask(task); setInfoOpen(true); }}
+                              className="text-foreground dark:text-foreground hover:text-primary dark:hover:text-primary transition-colors p-1"
+                              aria-label="View details"
+                            >
+                              <Eye className="h-6 w-6" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span>View details</span>
+                          </TooltipContent>
+                        </Tooltip>
                         
                         {task.status !== 'completed' ? (
-                          <button
-                            onClick={() => updateTask(task, { status: 'completed' })}
-                            className="text-foreground dark:text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors p-1"
-                            title="Mark as complete"
-                          >
-                            <Check className="h-6 w-6" />
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => updateTask(task, { status: 'completed' })}
+                                className="text-foreground dark:text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors p-1"
+                                aria-label="Mark as complete"
+                              >
+                                <CheckCircle2 className="h-6 w-6" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span>Mark as complete</span>
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
-                          <button
-                            onClick={() => updateTask(task, { status: 'pending' })}
-                            className="text-foreground dark:text-foreground hover:text-amber-600 dark:hover:text-amber-400 transition-colors p-1"
-                            title="Mark as pending"
-                          >
-                            <RotateCcw className="h-6 w-6" />
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => updateTask(task, { status: 'pending' })}
+                                className="text-foreground dark:text-foreground hover:text-amber-600 dark:hover:text-amber-400 transition-colors p-1"
+                                aria-label="Mark as pending"
+                              >
+                                <Undo2 className="h-6 w-6" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span>Mark as pending</span>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                         
-                        <button
-                          onClick={() => requestDeleteTask(task)}
-                          className="text-[#FF3465] dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors p-1"
-                          title="Delete task"
-                        >
-                          <Trash2 className="h-6 w-6" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => requestDeleteTask(task)}
+                              className="text-[#FF3465] dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors p-1"
+                              aria-label="Delete task"
+                            >
+                              <Trash2 className="h-6 w-6" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span>Delete task</span>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
-                    </div>
+                      </TooltipProvider>
+                      </div>
                   );
                 })}
             </div>
