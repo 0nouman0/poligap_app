@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   File, 
   Image, 
@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAssets } from "@/hooks/useAssets";
 
 interface Asset {
   _id: string;
@@ -56,77 +57,52 @@ export function AssetPicker({
   title = "Select Assets",
   description = "Choose from your uploaded assets"
 }: AssetPickerProps) {
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const { assets, loading, fetchAssets } = useAssets();
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<Asset[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const [loading, setLoading] = useState(false);
 
-  // Fetch assets when dialog opens
+  // Fetch assets when dialog opens and when filters change (server-side filtering)
   useEffect(() => {
-    if (isOpen) {
-      fetchAssets();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    const category = selectedCategory === 'all' ? undefined : selectedCategory;
+    const search = searchTerm.trim() || undefined;
+    fetchAssets({ category, search }).catch(() => {});
+  }, [isOpen, selectedCategory, searchTerm, fetchAssets]);
 
-  // Filter assets based on search, category, and allowed types
+  // Client-side filter by allowed MIME types only
   useEffect(() => {
     let filtered = assets;
-
-    // Filter by allowed types
     if (allowedTypes && allowedTypes.length > 0) {
-      filtered = filtered.filter(asset => {
-        return allowedTypes.some(type => {
+      filtered = filtered.filter(asset =>
+        allowedTypes.some(type => {
           if (type.endsWith('/*')) {
             const baseType = type.replace('/*', '');
             return asset.mimetype.startsWith(baseType);
           }
           return asset.mimetype === type;
-        });
-      });
-    }
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(asset =>
-        asset.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        })
       );
     }
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(asset => asset.category === selectedCategory);
-    }
-
     setFilteredAssets(filtered);
-  }, [assets, searchTerm, selectedCategory, allowedTypes]);
+  }, [assets, allowedTypes]);
 
-  const fetchAssets = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/assets');
-      if (response.ok) {
-        const data = await response.json();
-        setAssets(data.assets || []);
-      }
-    } catch (error) {
-      console.error('Error fetching assets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Note: fetching handled by useAssets via useEffect above
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <Image className="h-4 w-4" />;
-    if (mimeType.startsWith('video/')) return <Video className="h-4 w-4" />;
-    if (mimeType.startsWith('audio/')) return <Music className="h-4 w-4" />;
-    if (mimeType.includes('pdf') || mimeType.includes('document')) return <FileText className="h-4 w-4" />;
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-4 w-4" />;
-    return <File className="h-4 w-4" />;
+    const icon = mimeType.startsWith('image/') ? <Image className="h-4 w-4" />
+      : mimeType.startsWith('video/') ? <Video className="h-4 w-4" />
+      : mimeType.startsWith('audio/') ? <Music className="h-4 w-4" />
+      : (mimeType.includes('pdf') || mimeType.includes('msword') || mimeType.includes('officedocument')) ? <FileText className="h-4 w-4" />
+      : (mimeType.includes('zip') || mimeType.includes('rar')) ? <Archive className="h-4 w-4" />
+      : <File className="h-4 w-4" />;
+    return (
+      <div className="h-7 w-7 rounded-md bg-muted text-muted-foreground flex items-center justify-center">
+        {icon}
+      </div>
+    );
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -243,7 +219,7 @@ export function AssetPicker({
                   >
                     {viewMode === 'grid' ? (
                       <CardContent className="p-3">
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             {getFileIcon(asset.mimetype)}
                               {multiple && (
@@ -298,7 +274,7 @@ export function AssetPicker({
                         </div>
                       </CardContent>
                     ) : (
-                      <div className="flex items-start gap-3 p-2">
+                      <div className="flex items-center gap-3 p-2">
                         {multiple && (
                           <Checkbox
                             checked={!!isSelected}

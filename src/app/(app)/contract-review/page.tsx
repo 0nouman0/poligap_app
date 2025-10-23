@@ -721,21 +721,94 @@ export default function ContractReviewPage() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"template" | "custom">("template");
+  // Quick breadcrumb filters (by template type)
+  const quickFilterDefs = useMemo(() => ([
+    { key: "service", label: "Service" },
+    { key: "legal", label: "Legal" },
+    { key: "technology", label: "Technology" },
+    { key: "commercial", label: "Commercial" },
+    { key: "business", label: "Business" },
+  ]), []);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const toggleFilter = useCallback((key: string) => {
+    setActiveFilters((prev) => (
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    ));
+  }, []);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState("");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [applyRules, setApplyRules] = useState(false);
 
+  // Brief one‑liners for common required sections
+  const sectionBriefs: Record<string, string> = useMemo(() => ({
+    "Parties Involved": "Identifies who is legally bound by the agreement and their roles.",
+    "Parties": "Identifies who is legally bound by the agreement and their roles.",
+    "Definitions": "Explains key terms used throughout the contract to avoid ambiguity.",
+    "Scope of Services": "Specifies the exact services/deliverables, timelines, and responsibilities.",
+    "Fees & Payment": "Outlines price, invoicing schedule, taxes, and late‑payment rules.",
+    "Payment Terms": "Defines pricing, invoicing intervals, accepted methods, and consequences of delay.",
+    "Term & Termination": "Duration of the contract and valid reasons/process to end it early.",
+    "Termination Conditions": "When and how either party can end the contract, with notice periods.",
+    "Confidentiality Clause": "Protects sensitive information; defines permitted use and disclosure.",
+    "Limitation of Liability": "Caps exposure to damages and excludes certain types of losses.",
+    "Dispute Resolution": "Sets the forum and process for resolving disputes (e.g., arbitration).",
+    "Data & Privacy": "Specifies data handling, security controls, and privacy obligations.",
+  }), []);
+
+  // Source links by template type (globally recognized references)
+  const sourceLinksByType: Record<string, { name: string; url: string }[]> = useMemo(() => ({
+    service: [
+      { name: "ABA Model Engagement Terms", url: "https://www.americanbar.org/" },
+      { name: "WorldCC Contracting Principles", url: "https://www.worldcc.com/" },
+    ],
+    legal: [
+      { name: "UNCITRAL Contract Principles", url: "https://uncitral.un.org/" },
+      { name: "IBA Guidelines", url: "https://www.ibanet.org/" },
+    ],
+    technology: [
+      { name: "ISO/IEC 27001 Guidance", url: "https://www.iso.org/" },
+      { name: "NIST Privacy Framework", url: "https://www.nist.gov/" },
+    ],
+    commercial: [
+      { name: "ICC Incoterms & Trade Guidance", url: "https://iccwbo.org/" },
+      { name: "ABA Model M&A Provisions", url: "https://www.americanbar.org/" },
+    ],
+    business: [
+      { name: "Delaware Corporate Law Resources", url: "https://courts.delaware.gov/" },
+      { name: "OECD Corporate Governance", url: "https://www.oecd.org/" },
+    ],
+    healthcare: [
+      { name: "HHS HIPAA Guidance", url: "https://www.hhs.gov/hipaa/" },
+    ],
+    "real-estate": [
+      { name: "RICS Professional Standards", url: "https://www.rics.org/" },
+    ],
+    hr: [
+      { name: "ILO Employment Standards", url: "https://www.ilo.org/" },
+    ],
+  }), []);
+
+  const selectedTypeSources = useMemo(() => {
+    const t = (selectedTemplate?.type || '').toLowerCase();
+    return sourceLinksByType[t] || [];
+  }, [selectedTemplate?.type, sourceLinksByType]);
+
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filteredTemplates = useMemo(() => {
     const term = deferredSearchTerm.trim().toLowerCase();
-    if (!term) return knowledgeBaseTemplates;
-    return knowledgeBaseTemplates.filter((t) =>
+    const base = knowledgeBaseTemplates.filter((t) => {
+      // Apply quick filters by type if any selected
+      if (activeFilters.length > 0 && !activeFilters.includes(t.type)) return false;
+      return true;
+    });
+    if (!term) return base;
+    return base.filter((t) =>
       t.name.toLowerCase().includes(term) ||
       t.description?.toLowerCase().includes(term)
     );
-  }, [deferredSearchTerm]);
+  }, [deferredSearchTerm, activeFilters]);
   const [finalInstructions, setFinalInstructions] = useState<string>("");
   const deviceFileInputRef = useRef<HTMLInputElement | null>(null);
   const [deviceInputKey, setDeviceInputKey] = useState(0);
@@ -1398,8 +1471,8 @@ export default function ContractReviewPage() {
         {currentStep === 1 && (
           <div className="flex-1 flex flex-col space-y-3 overflow-hidden">
             {/* Top Navigation Bar */}
-            <div className="flex items-center justify-between">
-              <div className="relative w-[280px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="relative w-[280px] flex-shrink-0">
                 <Input
                   placeholder="Search Template..."
                   value={searchTerm}
@@ -1411,6 +1484,28 @@ export default function ContractReviewPage() {
                   <path d="M10.5 10.5L8.5 8.5" stroke="#8D8D8D" strokeWidth="1.0625" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
+              {/* Quick breadcrumb filters */}
+              <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 justify-start md:justify-center md:-ml-[15%]">
+                  {quickFilterDefs.map((f) => {
+                    const active = activeFilters.includes(f.key);
+                    return (
+                      <button
+                        key={f.key}
+                        onClick={() => toggleFilter(f.key)}
+                        className={`whitespace-nowrap px-3 py-1.5 rounded-none text-xs border transition-colors ${
+                          active
+                            ? 'bg-[#e7e9ff] border-[#3B43D6] text-[#2D2F34]'
+                            : 'bg-white dark:bg-gray-800 border-[#DEE3ED] dark:border-gray-600 text-[#6A707C] hover:bg-gray-50'
+                        }`}
+                        title={`Filter by ${f.label}`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Main Content Grid */}
@@ -1418,10 +1513,13 @@ export default function ContractReviewPage() {
               {/* Left Side - Templates Grid */}
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-hidden flex flex-col">
                 <div className="mb-3">
-                  <h3 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-1.5">Contract Templates</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-[#2D2F34] dark:text-gray-100 mb-1.5">Contract Templates</h3>
+                  </div>
                   <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-[14px]">
                     Select a baseline template that has been reviewed and approved by legal experts. Your uploaded contract will be compared against this template to identify gaps and weaknesses.
                   </p>
+                  <div className="text-[11px] text-[#6A707C] dark:text-gray-400 mt-1">{filteredTemplates.length} templates available</div>
                 </div>
                 
                 {/* Template Cards Grid */}
@@ -1759,19 +1857,26 @@ export default function ContractReviewPage() {
                   <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-3">Required Sections:</h4>
                   <div className="space-y-2.5">
                     {selectedTemplate.requiredSections.map((section, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-[#47AF47] flex-shrink-0" />
-                        <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 flex-1 leading-tight">
-                          {section.title}
-                        </span>
-                        <span className={"rounded-full px-2 py-0.5 text-[9px] font-medium whitespace-nowrap " + (
-                          section.priority === 'critical' ? 'bg-[#EDDBDB] text-[#BA0003]' :
-                          section.priority === 'high' ? 'bg-[#FFE7E0] text-[#E55400]' :
-                          section.priority === 'medium' ? 'bg-[#FFF8CB] text-[#BF6D0A]' :
-                          'bg-[#E8E9FF] text-[#6E72FF]'
-                        )}>
-                          {section.priority.charAt(0).toUpperCase() + section.priority.slice(1)}
-                        </span>
+                      <div key={index} className="flex gap-2">
+                        <CheckCircle className="h-4 w-4 text-[#47AF47] mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-[#2D2F34] dark:text-gray-300 leading-tight">
+                              {section.title}
+                            </span>
+                            <span className={"rounded-full px-2 py-0.5 text-[9px] font-medium whitespace-nowrap " + (
+                              section.priority === 'critical' ? 'bg-[#EDDBDB] text-[#BA0003]' :
+                              section.priority === 'high' ? 'bg-[#FFE7E0] text-[#E55400]' :
+                              section.priority === 'medium' ? 'bg-[#FFF8CB] text-[#BF6D0A]' :
+                              'bg-[#E8E9FF] text-[#6E72FF]'
+                            )}>
+                              {section.priority.charAt(0).toUpperCase() + section.priority.slice(1)}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-[#6A707C] dark:text-gray-400 leading-snug mt-0.5">
+                            {sectionBriefs[section.title] || 'Key clause required for legal completeness and clarity.'}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1787,42 +1892,73 @@ export default function ContractReviewPage() {
                   This is a preview of the template structure. The actual contract will be uploaded in the next step.
                 </p>
 
-                {/* Preview Sections */}
+                {/* Preview Sections (detailed yet simple) */}
                 <div className="space-y-5">
-                  {templatePreviewSections.map((section, index) => (
+                  {[{
+                    title: 'Parties',
+                    content: 'Names the legal entities and their roles (e.g., “Service Provider” and “Client”), including registered addresses and authorized signatories to ensure enforceability.'
+                  }, {
+                    title: 'Scope of Services',
+                    content: 'Clearly describes deliverables, service levels, milestones, and exclusions. References any annexes/Statements of Work and defines change‑control for out‑of‑scope items.'
+                  }, {
+                    title: 'Payment Terms',
+                    content: 'Sets pricing model (fixed/Time & Materials), billing frequency, due dates, late‑fee policy, taxes/withholding, and approved payment methods.'
+                  }, {
+                    title: 'Confidentiality',
+                    content: 'Obligates both parties to protect non‑public information, restrict use to contract purposes, and return or destroy data upon termination, with permitted disclosures (e.g., legal or audit).'
+                  }, {
+                    title: 'Term & Termination',
+                    content: 'Defines contract duration, renewal, and termination for cause/convenience, including cure periods, notice requirements, and post‑termination obligations (handover, data return).'
+                  }].map((section, index) => (
                     <div key={index}>
-                      <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-1.5">
-                        {section.title}
-                      </h4>
-                      <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-relaxed">
-                        {section.content}
-                      </p>
+                      <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-1.5">{section.title}</h4>
+                      <p className="text-xs text-[#6A707C] dark:text-gray-400 leading-relaxed">{section.content}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* References */}
+                <div className="mt-6 pt-4 border-t border-[#EEE] dark:border-gray-700">
+                  <h4 className="text-sm font-semibold text-[#2D2F34] dark:text-gray-100 mb-2">References</h4>
+                  {selectedTypeSources.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-1">
+                      {selectedTypeSources.map((s, i) => (
+                        <li key={i} className="text-xs">
+                          <a href={s.url} target="_blank" rel="noreferrer" className="text-[#3B43D6] hover:underline">{s.name}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-[#6A707C] dark:text-gray-400">No references available for this template type.</p>
+                  )}
                 </div>
               </div>
 
               {/* Right Column - Sources (240px) */}
               <div className="w-[240px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-y-auto scrollbar-thin">
-                <h3 className="text-base font-semibold text-[#2D2F34] dark:text-gray-100 mb-5 leading-tight">
-                  Sources
-                </h3>
-
-                {/* Empty State - SVG from Figma */}
-                <div className="flex flex-col items-center justify-center py-10">
-                  <svg width="140" height="64" viewBox="0 0 168 77" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M83.9999 76.5C130.392 76.5 167.5 59.5538 167.5 38.5C167.5 17.4462 130.392 0.5 83.9999 0.5C37.6078 0.5 0.5 17.4462 0.5 38.5C0.5 59.5538 37.6078 76.5 83.9999 76.5Z" fill="#F5F5F5" stroke="#E0E0E0"/>
-                    <rect x="34" y="20" width="100" height="37" rx="4" fill="white" stroke="#E0E0E0"/>
-                    <circle cx="84" cy="38.5" r="8" fill="#F0F0F0"/>
-                    <line x1="60" y1="32" x2="75" y2="32" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                    <line x1="60" y1="38" x2="70" y2="38" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                    <line x1="93" y1="32" x2="108" y2="32" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                    <line x1="93" y1="38" x2="103" y2="38" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-5 text-center">
-                    No sources available
-                  </p>
-                </div>
+                <h3 className="text-base font-semibold text-[#2D2F34] dark:text-gray-100 mb-3 leading-tight">Sources</h3>
+                {selectedTypeSources.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedTypeSources.map((s, i) => (
+                      <li key={i} className="text-xs">
+                        <a href={s.url} target="_blank" rel="noreferrer" className="text-[#3B43D6] hover:underline">{s.name}</a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <svg width="140" height="64" viewBox="0 0 168 77" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M83.9999 76.5C130.392 76.5 167.5 59.5538 167.5 38.5C167.5 17.4462 130.392 0.5 83.9999 0.5C37.6078 0.5 0.5 17.4462 0.5 38.5C0.5 59.5538 37.6078 76.5 83.9999 76.5Z" fill="#F5F5F5" stroke="#E0E0E0"/>
+                      <rect x="34" y="20" width="100" height="37" rx="4" fill="white" stroke="#E0E0E0"/>
+                      <circle cx="84" cy="38.5" r="8" fill="#F0F0F0"/>
+                      <line x1="60" y1="32" x2="75" y2="32" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
+                      <line x1="60" y1="38" x2="70" y2="38" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
+                      <line x1="93" y1="32" x2="108" y2="32" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
+                      <line x1="93" y1="38" x2="103" y2="38" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-5 text-center">No sources available</p>
+                  </div>
+                )}
               </div>
             </div>
             ) : (
