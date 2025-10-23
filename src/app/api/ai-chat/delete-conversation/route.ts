@@ -45,7 +45,7 @@ export async function DELETE(request: NextRequest) {
 
     // Then delete the conversation itself
     const { error: conversationError } = await supabase
-      .from('agent_conversations')
+      .from('conversations')
       .delete()
       .eq('id', conversationId)
       .eq('user_id', user.id); // Ensure user owns the conversation

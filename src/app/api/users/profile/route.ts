@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch profile using GraphQL
     const profileResponse: any = await gqlService.query('getProfile', { id: userId });
-    const profile = extractNode(profileResponse.profilesCollection);
+    const profile: any = extractNode(profileResponse.profilesCollection);
 
     if (!profile) {
       return NextResponse.json(

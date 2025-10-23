@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0];
+    const requestorMembership: any = extractNodes(accessResponse.user_companiesCollection)[0];
 
     if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role)) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       userId: member_user_id,
       companyId: company_id
     });
-    const memberToRemove = extractNodes(memberResponse.user_companiesCollection)[0];
+    const memberToRemove: any = extractNodes(memberResponse.user_companiesCollection)[0];
 
     if (!memberToRemove) {
       return NextResponse.json(
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         userId: member_user_id
       });
       const otherCompanies = extractNodes(userCompaniesResponse.user_companiesCollection);
-      const otherCompany = otherCompanies.find((c: any) => c.company_id !== company_id);
+      const otherCompany: any = otherCompanies.find((c: any) => c.company_id !== company_id);
 
       await gqlService.query('updateProfile', {
         id: member_user_id,
