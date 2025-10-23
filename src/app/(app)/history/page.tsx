@@ -13,7 +13,7 @@ import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatGlobalDate } from "@/utils/date.util";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useActivityTracker } from "@/hooks/use-activity-tracker";
 
 type ComplianceStatus = 'compliant' | 'non-compliant' | 'partial';
