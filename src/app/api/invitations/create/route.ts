@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!["company_admin", "super_admin"].includes(membership.role)) {
+    if (!["company_admin", "super_admin"].includes((membership as any)?.role)) {
       return NextResponse.json(
         { error: "Only admins can invite users" },
         { status: 403 }
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         redirectTo: confirmUrl,
         data: {
           company_id: company_id,
-          company_name: company?.name || "the team",
+          company_name: (company as any)?.name || "the team",
           role: role,
           email_verified: true,
         },
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Invitation sent to ${email}. They will receive an email to join ${company?.name || 'your team'}.`,
+      message: `Invitation sent to ${email}. They will receive an email to join ${(company as any)?.name || 'your team'}.`,
     })
   } catch (error) {
     console.error("Invitation creation error:", error)

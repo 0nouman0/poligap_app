@@ -19,7 +19,8 @@ async function summarizeWithAI(prompt: string) {
           max_tokens: 4096,
           response_format: { type: 'json_object' }
         });
-        return response.choices[0]?.message?.content || '';
+        const content = response.choices[0]?.message?.content;
+        return Array.isArray(content) ? content.join('') : (content || '');
       }
     } catch (e) {
       console.error('Portkey analysis failed:', e);

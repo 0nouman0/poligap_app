@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     });
     const membership = extractNode(accessResponse.user_companiesCollection);
 
-    if (!membership || !["company_admin", "super_admin"].includes(membership.role)) {
+    if (!membership || !["company_admin", "super_admin"].includes((membership as any)?.role)) {
       return NextResponse.json(
         { error: "Only admins can view invitations" },
         { status: 403 }
