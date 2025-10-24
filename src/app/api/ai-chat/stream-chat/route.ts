@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getSupabaseAIClient } from "@/lib/ai-client-supabase";
 import { z } from "zod";
+import { determineQueryStrategy } from "@/lib/platform-context";
 
 // Rate limiting map (in-memory, reset on server restart)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -87,8 +88,22 @@ export async function POST(request: NextRequest) {
       provider,
     } = validationResult.data;
 
+    // Determine if query is platform-related and get appropriate context
+    const queryStrategy = determineQueryStrategy(user_query);
+    console.log('🎯 Query strategy:', {
+      isPlatformRelated: queryStrategy.isPlatformRelated,
+      useContext: queryStrategy.useContext,
+      suggestedModel: queryStrategy.suggestedModel
+    });
+
     // Get conversation history if session_id is provided
     const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];
+    
+    // Add system message with platform context if needed
+    messages.push({ 
+      role: "system", 
+      content: queryStrategy.systemMessage 
+    });
     
     if (session_id) {
       const { data: dbMessages } = await supabase

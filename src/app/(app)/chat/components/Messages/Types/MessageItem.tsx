@@ -100,14 +100,15 @@ const AgentMessage = ({
                 />
               )}
               <MarkdownRenderer>{message.content}</MarkdownRenderer>
-              {isStreaming !== message.id && (
+              {/* Action buttons removed as per user request */}
+              {/* {isStreaming !== message.id && (
                 <ActionTab
                   exportReactComponentAsPDF={exportReactComponentAsPDF}
                   handleCreateProject={handleCreateProject}
                   handleCreateDoc={handleCreateDoc}
                   message={message}
                 />
-              )}
+              )} */}
             </div>
           );
         } else if (message.response_audio) {
