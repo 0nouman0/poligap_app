@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       companyId: invitation_id // This might need adjustment based on schema
     });
     const allInvitations = extractNodes(invitationResponse.invitationsCollection);
-    const invitation = allInvitations.find((inv: any) => inv.id === invitation_id);
+    const invitation: any = allInvitations.find((inv: any) => inv.id === invitation_id);
 
     if (!invitation) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       companyId: invitation.company_id
     });
-    const membership = extractNode(accessResponse.user_companiesCollection);
+    const membership: any = extractNode(accessResponse.user_companiesCollection);
 
     if (!membership || !["company_admin", "super_admin"].includes(membership.role)) {
       return NextResponse.json(

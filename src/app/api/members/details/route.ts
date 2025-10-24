@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { GraphQLService, extractNode } from "@/lib/graphql-service"
+import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   try {
     const gqlService = new GraphQLService()
     const user = await gqlService.init()
+    const supabase = await createClient()
 
     const { searchParams } = new URL(request.url)
     const company_id = searchParams.get("company_id")
@@ -22,7 +24,7 @@ export async function GET(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const requestorMembership = extractNode(accessResponse.user_companiesCollection);
+    const requestorMembership: any = extractNode(accessResponse.user_companiesCollection);
 
     if (!requestorMembership) {
       return NextResponse.json(
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
       userId: member_user_id,
       companyId: company_id
     });
-    const memberDetails = extractNode(memberResponse.user_companiesCollection);
+    const memberDetails: any = extractNode(memberResponse.user_companiesCollection);
 
     if (!memberDetails) {
       return NextResponse.json(

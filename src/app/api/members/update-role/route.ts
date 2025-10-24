@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0];
+    const requestorMembership: any = extractNodes(accessResponse.user_companiesCollection)[0];
 
     if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role)) {
       return NextResponse.json(
