@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 interface KrooloMainLoaderProps {
   message?: string;
@@ -19,9 +20,9 @@ const KrooloMainLoader = ({ message = "Loading Poligap…" }: KrooloMainLoaderPr
       }}
     >
       <div style={{ textAlign: "center" }}>
-        <img
+        <Image
           src="/assets/Poligap_wide_erased.png"
-          alt="Logo"
+          alt="Poligap Logo"
           width={340}
           height={120}
           style={{ display: "inline-block", marginBottom: 16, objectFit: 'contain' }}

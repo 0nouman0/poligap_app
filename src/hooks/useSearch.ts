@@ -82,8 +82,8 @@ export const useSearch = (query: string) => {
   const external_user_id = userData?.userId || "";
   // Get Google Drive account_id from the integration store
   const integrationStore = useIntegrationStore.getState();
-  let account_ids = [...integrationStore.connectedAccountIds];
-  let apps = [...integrationStore.connectedIntegrations.map((i) => i.name)];
+  const account_ids = [...integrationStore.connectedAccountIds];
+  const apps = [...integrationStore.connectedIntegrations.map((i) => i.name)];
 
   // Add internal knowledge management if enabled
   const isEnabled = integrationStore.isEnabled;
@@ -94,12 +94,14 @@ export const useSearch = (query: string) => {
   }
 
   const userEmail = userData?.email || "";
+  const accountIdsStr = JSON.stringify(account_ids);
   const stableAccounts = useMemo(
     () => account_ids,
-    [JSON.stringify(account_ids)]
+    [accountIdsStr]
   );
 
-  const stableApps = useMemo(() => apps, [JSON.stringify(apps)]);
+  const appsStr = JSON.stringify(apps);
+  const stableApps = useMemo(() => apps, [appsStr]);
 
   return useQuery({
     queryKey: [

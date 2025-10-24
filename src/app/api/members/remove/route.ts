@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       companyId: company_id
     });
-    const requestorMembership: any = extractNodes(accessResponse.user_companiesCollection)[0];
+    const requestorMembership = extractNodes(accessResponse.user_companiesCollection)[0] as { role?: string } | undefined;
 
-    if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role)) {
+    if (!requestorMembership || !["company_admin", "super_admin"].includes(requestorMembership.role || '')) {
       return NextResponse.json(
         { error: "Only admins can remove members" },
         { status: 403 }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       userId: member_user_id,
       companyId: company_id
     });
-    const memberToRemove: any = extractNodes(memberResponse.user_companiesCollection)[0];
+    const memberToRemove = extractNodes(memberResponse.user_companiesCollection)[0] as { role?: string; is_primary?: boolean; company?: any } | undefined;
 
     if (!memberToRemove) {
       return NextResponse.json(
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prevent removing last admin
-    if (["company_admin", "super_admin"].includes(memberToRemove.role)) {
+    if (["company_admin", "super_admin"].includes(memberToRemove.role || '')) {
       const allMembersResponse: any = await gqlService.query('getCompanyMembers', {
         companyId: company_id,
         status: "active"
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         userId: member_user_id
       });
       const otherCompanies = extractNodes(userCompaniesResponse.user_companiesCollection);
-      const otherCompany: any = otherCompanies.find((c: any) => c.company_id !== company_id);
+      const otherCompany = otherCompanies.find((c: any) => c.company_id !== company_id) as any;
 
       await gqlService.query('updateProfile', {
         id: member_user_id,

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import NextImage from "next/image";
 import { 
   File, 
-  Image, 
+  Image as ImageIcon, 
   FileText, 
   Video, 
   Music, 
@@ -92,7 +93,7 @@ export function AssetPicker({
   // Note: fetching handled by useAssets via useEffect above
 
   const getFileIcon = (mimeType: string) => {
-    const icon = mimeType.startsWith('image/') ? <Image className="h-4 w-4" />
+    const icon = mimeType.startsWith('image/') ? <ImageIcon className="h-4 w-4" />
       : mimeType.startsWith('video/') ? <Video className="h-4 w-4" />
       : mimeType.startsWith('audio/') ? <Music className="h-4 w-4" />
       : (mimeType.includes('pdf') || mimeType.includes('msword') || mimeType.includes('officedocument')) ? <FileText className="h-4 w-4" />
@@ -140,7 +141,7 @@ export function AssetPicker({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-[1100px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
@@ -225,7 +226,7 @@ export function AssetPicker({
                               {multiple && (
                                 <Checkbox
                                   checked={!!isSelected}
-                                  onChange={() => {}} // Handled by card click
+                                  onCheckedChange={() => {}}
                                 />
                               )}
                           </div>
@@ -237,11 +238,12 @@ export function AssetPicker({
                         </div>
                         
                         {asset.mimetype.startsWith('image/') && asset.thumbnailUrl && (
-                            <div className="w-full h-20 bg-muted rounded-md mb-2 overflow-hidden">
-                            <img 
+                            <div className="w-full h-20 bg-muted rounded-md mb-2 overflow-hidden relative">
+                            <NextImage 
                               src={asset.thumbnailUrl} 
                               alt={asset.originalName}
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
                             />
                           </div>
                         )}
@@ -278,7 +280,7 @@ export function AssetPicker({
                         {multiple && (
                           <Checkbox
                             checked={!!isSelected}
-                            onChange={() => {}} // Handled by card click
+                            onCheckedChange={() => {}}
                           />
                         )}
                         {getFileIcon(asset.mimetype)}

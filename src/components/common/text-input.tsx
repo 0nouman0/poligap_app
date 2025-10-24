@@ -26,7 +26,6 @@ export function TextInput({
   labelStyles,
   fromSprint,
   fromSprintCreate,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   className,
   disabled,
   error,

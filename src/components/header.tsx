@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
+import Image from "next/image";
 // import { ThemeToggle } from "@/components/theme-toggle"; // Hidden for now
 
 import { useAuthStore } from "@/stores/auth-store";
@@ -268,9 +269,11 @@ export const Header = memo(function Header() {
         />
         {/* Logo Section */}
         <div className="flex items-center flex-shrink-0 min-w-0">
-          <img
+          <Image
             src={headerImageSrc}
             alt="Poligap"
+            width={180}
+            height={44}
             className="h-9 sm:h-10 md:h-11 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto"
             onClick={handleLogoClick}
             draggable={false}

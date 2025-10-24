@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // import krooloHttpClient from "../services/httpClient";
 // import { toastWarning } from "../components/toast";
 import { produce } from "immer";
@@ -366,7 +365,7 @@ export const useGlobalChatStore = create((set: any) => ({
 
       // Step 1: Create OpenAI thread first (for Assistant API conversations)
       let openaiThreadId = null;
-      let openaiAssistantId = null;
+      const openaiAssistantId = null;
       
       try {
         console.log("[Conversation] Creating OpenAI thread...");

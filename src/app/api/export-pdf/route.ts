@@ -18,13 +18,13 @@ function escapeLatex(text: string) {
 }
 
 function mdToLatex(md: string): string {
-  let lines = md.replace(/\r\n?/g, "\n").split("\n");
+  const lines = md.replace(/\r\n?/g, "\n").split("\n");
   const out: string[] = [];
   let inItemize = false;
   let inEnumerate = false;
   let inCode = false;
-  for (let raw of lines) {
-    let line = raw;
+  for (const raw of lines) {
+    const line = raw;
     // code fences
     if (/^```/.test(line)) {
       if (!inCode) {
