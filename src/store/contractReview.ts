@@ -170,6 +170,7 @@ export interface ContractReviewState {
   exportRevisedDocument: () => string;
   saveChanges: () => void;
   resetState: () => void;
+  generateMockSuggestions: () => void;
 }
 
 const defaultTemplates: ContractTemplate[] = [
@@ -629,19 +630,38 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
 
   saveChanges: () => {
     const state = get();
-    if (!state.hasUnsavedChanges) return;
-
-    // Create a new version with current changes
-    const acceptedSuggestions = state.suggestions.filter(s => s.status === 'accepted');
-    const description = acceptedSuggestions.length > 0 
-      ? `Saved changes: ${acceptedSuggestions.length} suggestions applied`
-      : 'Saved document changes';
-
-    get().createVersion(description);
     
-    set({
-      hasUnsavedChanges: false
-    });
+    // Only save if there are actual unsaved changes
+    if (!state.hasUnsavedChanges) {
+      console.log('No changes to save');
+      return;
+    }
+
+    // Check if there are any actual changes (accepted or rejected suggestions)
+    const acceptedSuggestions = state.suggestions.filter(s => s.status === 'accepted');
+    const rejectedSuggestions = state.suggestions.filter(s => s.status === 'rejected');
+    const totalChanges = acceptedSuggestions.length + rejectedSuggestions.length;
+    
+    // Only create a version if there are actual changes
+    if (totalChanges > 0) {
+      const description = acceptedSuggestions.length > 0 
+        ? `Saved changes: ${acceptedSuggestions.length} suggestions applied`
+        : `Saved changes: ${rejectedSuggestions.length} suggestions rejected`;
+
+      get().createVersion(description);
+      
+      set({
+        hasUnsavedChanges: false
+      });
+      
+      console.log(`Version created: ${description}`);
+    } else {
+      // Just mark as saved without creating a version
+      set({
+        hasUnsavedChanges: false
+      });
+      console.log('Changes saved without creating new version (no actual modifications)');
+    }
   },
   
   resetState: () => set({
@@ -663,5 +683,140 @@ export const useContractReviewStore = create<ContractReviewState>((set, get) => 
     versions: [],
     currentVersion: 0,
     hasUnsavedChanges: false
-  })
+  }),
+
+  generateMockSuggestions: () => {
+    const state = get();
+    if (!state.currentText) return;
+
+    const text = state.currentText;
+    const textLength = text.length;
+    
+    // Generate comprehensive suggestions across the document
+    const mockSuggestions: AISuggestion[] = [
+      // Beginning of document suggestions
+      {
+        id: 'suggestion_1',
+        type: 'addition',
+        severity: 'high',
+        category: 'legal_compliance',
+        confidence: 0.9,
+        originalText: '',
+        suggestedText: 'CONFIDENTIALITY NOTICE: This document contains confidential and proprietary information. ',
+        startIndex: 0,
+        endIndex: 0,
+        reasoning: 'Adding confidentiality notice at the beginning protects sensitive information',
+        legalImplications: 'Without proper confidentiality notice, sensitive information may not be legally protected',
+        riskLevel: 'high',
+        section: 'Document Header',
+        timestamp: new Date(),
+        status: 'pending',
+        clauseType: 'Confidentiality'
+      },
+      {
+        id: 'suggestion_2',
+        type: 'modification',
+        severity: 'medium',
+        category: 'clarity',
+        confidence: 0.85,
+        originalText: text.substring(Math.floor(textLength * 0.1), Math.floor(textLength * 0.1) + 50),
+        suggestedText: text.substring(Math.floor(textLength * 0.1), Math.floor(textLength * 0.1) + 50).replace(/shall/g, 'will'),
+        startIndex: Math.floor(textLength * 0.1),
+        endIndex: Math.floor(textLength * 0.1) + 50,
+        reasoning: 'Replace "shall" with "will" for clearer, more modern language',
+        legalImplications: 'Modern contract language improves enforceability and reduces ambiguity',
+        riskLevel: 'low',
+        section: 'Terms and Conditions',
+        timestamp: new Date(),
+        status: 'pending',
+        clauseType: 'Language Clarity'
+      },
+      // Middle of document suggestions
+      {
+        id: 'suggestion_3',
+        type: 'addition',
+        severity: 'critical',
+        category: 'risk_mitigation',
+        confidence: 0.95,
+        originalText: '',
+        suggestedText: ' The parties agree to binding arbitration for any disputes arising under this agreement.',
+        startIndex: Math.floor(textLength * 0.4),
+        endIndex: Math.floor(textLength * 0.4),
+        reasoning: 'Add dispute resolution clause to avoid costly litigation',
+        legalImplications: 'Without dispute resolution mechanism, conflicts may lead to expensive court proceedings',
+        riskLevel: 'critical',
+        section: 'Dispute Resolution',
+        timestamp: new Date(),
+        status: 'pending',
+        clauseType: 'Dispute Resolution'
+      },
+      {
+        id: 'suggestion_4',
+        type: 'deletion',
+        severity: 'medium',
+        category: 'completeness',
+        confidence: 0.8,
+        originalText: text.substring(Math.floor(textLength * 0.5), Math.floor(textLength * 0.5) + 30),
+        suggestedText: '',
+        startIndex: Math.floor(textLength * 0.5),
+        endIndex: Math.floor(textLength * 0.5) + 30,
+        reasoning: 'Remove redundant language that duplicates earlier provisions',
+        legalImplications: 'Redundant clauses can create confusion and potential conflicts in interpretation',
+        riskLevel: 'medium',
+        section: 'Terms',
+        timestamp: new Date(),
+        status: 'pending',
+        clauseType: 'Redundancy'
+      },
+      // End of document suggestions
+      {
+        id: 'suggestion_5',
+        type: 'addition',
+        severity: 'high',
+        category: 'legal_compliance',
+        confidence: 0.9,
+        originalText: '',
+        suggestedText: ' This agreement shall be governed by the laws of [STATE/JURISDICTION] without regard to conflict of law principles.',
+        startIndex: Math.floor(textLength * 0.8),
+        endIndex: Math.floor(textLength * 0.8),
+        reasoning: 'Add governing law clause to establish legal jurisdiction',
+        legalImplications: 'Without governing law clause, disputes may face jurisdictional challenges',
+        riskLevel: 'high',
+        section: 'Governing Law',
+        timestamp: new Date(),
+        status: 'pending',
+        clauseType: 'Governing Law'
+      },
+      {
+        id: 'suggestion_6',
+        type: 'modification',
+        severity: 'medium',
+        category: 'formatting',
+        confidence: 0.75,
+        originalText: text.substring(Math.floor(textLength * 0.9), Math.min(textLength, Math.floor(textLength * 0.9) + 40)),
+        suggestedText: text.substring(Math.floor(textLength * 0.9), Math.min(textLength, Math.floor(textLength * 0.9) + 40)).toUpperCase(),
+        startIndex: Math.floor(textLength * 0.9),
+        endIndex: Math.min(textLength, Math.floor(textLength * 0.9) + 40),
+        reasoning: 'Capitalize signature section for emphasis and legal clarity',
+        legalImplications: 'Proper formatting of signature sections ensures legal validity',
+        riskLevel: 'low',
+        section: 'Signature Block',
+        timestamp: new Date(),
+        status: 'pending',
+        clauseType: 'Formatting'
+      }
+    ];
+
+    // Initialize patch states
+    const newPatchStates: Record<string, 'pending' | 'accepted' | 'rejected'> = {};
+    mockSuggestions.forEach(suggestion => {
+      newPatchStates[suggestion.id] = 'pending';
+    });
+
+    set({
+      suggestions: mockSuggestions,
+      patchStates: newPatchStates,
+      hasUnsavedChanges: true
+    });
+  }
 }));

@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { AssetPicker } from "@/components/AssetPicker";
 import { ContractCanvas } from "@/components/contract-review/ContractCanvas";
+import { VersionControlNavbar } from "@/components/contract-review/VersionControlNavbar";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { useUserStore } from "@/stores/user-store";
 import { useAuditLogsStore } from "@/stores/audit-logs-store";
@@ -2228,105 +2229,97 @@ export default function ContractReviewPage() {
           </div>
         )}
 
-        {/* Step 4: Canvas Review */}
+        {/* Step 4: Canvas Review - Vercel Style Layout */}
         {currentStep === 4 && (
-          <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-thin items-end pr-4">
-            {/* Reviewer notes textarea before analysis */}
-            {!extractedDocument && !isAnalyzing && (
-              <Textarea
-                placeholder="Any final instructions for contract review..."
-                value={finalInstructions}
-                onChange={(e) => setFinalInstructions(e.target.value)}
-                className="min-h-[120px] w-full max-w-[1648px]"
-              />
-            )}
+          <div className="flex-1 flex flex-col h-full">
+            {/* Version Control Navbar */}
+            {extractedDocument && <VersionControlNavbar />}
+            
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
+              {/* Reviewer notes textarea before analysis */}
+              {!extractedDocument && !isAnalyzing && (
+                <div className="w-full max-w-4xl">
+                  <Textarea
+                    placeholder="Any final instructions for contract review..."
+                    value={finalInstructions}
+                    onChange={(e) => setFinalInstructions(e.target.value)}
+                    className="min-h-[120px] w-full"
+                  />
+                </div>
+              )}
 
-            {/* Progress Loader - Exact Match to Image */}
-            {isAnalyzing && (
-              <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1648px] min-h-[400px]">
-                <div className="text-center space-y-8 max-w-2xl">
-                  <h2 className="text-3xl font-semibold text-[#202020] dark:text-gray-100">
-                    Analyzing Contract
-                  </h2>
-                  <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
-                    {analysisStep || `AI is reviewing ${uploadedFile?.name || 'Detailed architecture assessment.pdf'} (application/pdf) for potential issues and improvements...`}
-                  </p>
-                  
-                  <div className="w-full space-y-2">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
-                      <div 
-                        className="bg-[#3B43D6] h-1 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${analysisProgress}%` }}
-                      />
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-medium text-[#595959] dark:text-gray-400">
-                        {analysisProgress}% Complete
-                      </span>
+              {/* Progress Loader - Exact Match to Image */}
+              {isAnalyzing && (
+                <div className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl min-h-[400px]">
+                  <div className="text-center space-y-8">
+                    <h2 className="text-3xl font-semibold text-[#202020] dark:text-gray-100">
+                      Analyzing Contract
+                    </h2>
+                    <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
+                      {analysisStep || `AI is reviewing ${uploadedFile?.name || 'Detailed architecture assessment.pdf'} (application/pdf) for potential issues and improvements...`}
+                    </p>
+                    
+                    <div className="w-full space-y-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+                        <div 
+                          className="bg-[#3B43D6] h-1 rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${analysisProgress}%` }}
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-medium text-[#595959] dark:text-gray-400">
+                          {analysisProgress}% Complete
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Error Display */}
-            {analysisError && !isAnalyzing && !extractedDocument && (
-              <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1648px] min-h-[400px]">
-                <div className="text-center space-y-6 max-w-2xl">
-                  <div className="flex items-center justify-center w-16 h-16 mx-auto bg-red-100 rounded-full">
-                    <AlertTriangle className="w-8 h-8 text-red-600" />
-                  </div>
-                  <h2 className="text-2xl font-semibold text-[#202020] dark:text-gray-100">
-                    Analysis Failed
-                  </h2>
-                  <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
-                    {analysisError}
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <Button
-                      onClick={handleDocumentExtraction}
-                      className="bg-[#3B43D6] text-white hover:bg-[#2F36B0] px-6 py-3 rounded-xl"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Try Again
-                    </Button>
-                    <Button
-                      onClick={() => setAnalysisError(null)}
-                      variant="outline"
-                      className="px-6 py-3 rounded-xl"
-                    >
-                      Cancel
-                    </Button>
+              {/* Error Display */}
+              {analysisError && !isAnalyzing && !extractedDocument && (
+                <div className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl min-h-[400px]">
+                  <div className="text-center space-y-6">
+                    <div className="flex items-center justify-center w-16 h-16 mx-auto bg-red-100 rounded-full">
+                      <AlertTriangle className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-semibold text-[#202020] dark:text-gray-100">
+                      Analysis Failed
+                    </h2>
+                    <p className="text-base text-[#595959] dark:text-gray-400 leading-relaxed">
+                      {analysisError}
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                      <Button
+                        onClick={handleDocumentExtraction}
+                        className="bg-[#3B43D6] text-white hover:bg-[#2F36B0] px-6 py-3 rounded-xl"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Try Again
+                      </Button>
+                      <Button
+                        onClick={() => setAnalysisError(null)}
+                        variant="outline"
+                        className="px-6 py-3 rounded-xl"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Analysis Results with Suggestions */}
-            {extractedDocument && (
-              <div className="flex-1 overflow-y-auto scrollbar-thin w-full max-w-[1648px] space-y-6">
-
-
-                {/* Contract Canvas (Optional - for advanced editing) */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Interactive Contract Editor
-                    </CardTitle>
-                    <CardDescription>
-                      Click on highlighted areas to view and apply suggestions directly
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ContractCanvas />
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+              {/* Analysis Results - Centered Canvas */}
+              {extractedDocument && (
+                <div className="flex-1 w-full flex items-start justify-center py-6">
+                  <ContractCanvas />
+                </div>
+              )}
+            </div>
 
             {/* Bottom Right Navigation */}
-            <div className="w-full max-w-[1648px] flex justify-end">
+            <div className="w-full flex justify-end p-6">
               <div className="flex items-center gap-[15px]">
                 <button
                   onClick={prevStep}
