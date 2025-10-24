@@ -259,7 +259,7 @@ const ChatInput = ({
   const mentionChips = useMemo(() => parseMentions(inputMessage || ""), [inputMessage]);
 
   return (
-    <div className="font-inter mx-auto flex w-full max-w-6xl flex-col rounded-[16px] border border-border/50 dark:border-border/50 p-6 bg-gradient-to-br from-card/95 to-card dark:from-card/95 dark:to-card backdrop-blur-sm shadow-lg dark:shadow-2xl ring-1 ring-border/10 dark:ring-border/10">
+    <div className="font-inter mx-auto flex w-full max-w-6xl flex-col rounded-[10px] border border-border dark:border-border p-[18.67px] bg-card dark:bg-card shadow-sm dark:shadow-lg">
       <div className="flex">
         {isLoadingUploadFile && <MediaCardSkeleton />}
         {selectedMedia.length > 0 && (
@@ -298,9 +298,9 @@ const ChatInput = ({
         </div>
       )}
 
-      <div className="relative flex w-full bg-background/50 dark:bg-background/50 rounded-[12px] border border-border/30 dark:border-border/30 p-4 focus-within:border-primary/50 dark:focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 dark:focus-within:ring-primary/10 transition-all duration-200">
+      <div className="relative flex w-full">
         <textarea
-          placeholder="Ask anything... ✨"
+          placeholder="Ask Anything..."
           value={inputMessage || ""}
           onChange={(e) => {
             const val = e.target.value;
@@ -325,7 +325,7 @@ const ChatInput = ({
               return handleSubmit();
             }
           }}
-          className="max-h-32 min-h-[60px] flex-1 border-none bg-transparent px-0 text-base text-foreground dark:text-foreground outline-none placeholder:text-muted-foreground/70 dark:placeholder:text-muted-foreground/70 font-normal resize-none leading-relaxed"
+          className="max-h-24 min-h-16 flex-1 border-none bg-transparent px-0.5 text-sm text-foreground dark:text-foreground outline-none placeholder:text-muted-foreground dark:placeholder:text-muted-foreground font-medium resize-none"
           disabled={!agent_id || isStreamingResponse}
           ref={chatInputRef}
         />
@@ -356,8 +356,8 @@ const ChatInput = ({
           </div>
         )}
       </div>
-      <div className="mt-4 flex flex-row justify-between items-center">
-        <div className="flex gap-3 items-center">
+      <div className="mt-2 flex flex-row justify-between items-center">
+        <div className="flex gap-2 items-center">
           <LlmButton
             value={selectedLlmModel}
             disabled={isStreamingResponse}
@@ -395,18 +395,18 @@ const ChatInput = ({
                   (inputMessage || "").trim().length > 0 ? "default" : "outline"
                 }
                 className={cn(
-                  "h-11 w-11 p-2.5 rounded-[12px] transition-all duration-200 shadow-sm hover:shadow-md",
+                  "h-9 w-9 p-2 rounded-[3px] transition-colors",
                   "cursor-pointer disabled:cursor-not-allowed",
                   (inputMessage || "").trim().length > 0
-                    ? "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 dark:from-primary dark:to-primary/90 dark:hover:from-primary/90 dark:hover:to-primary/80 text-primary-foreground shadow-primary/20 hover:shadow-primary/30"
-                    : "bg-background/80 dark:bg-background/80 border border-border/50 dark:border-border/50 text-muted-foreground hover:bg-accent/50 dark:hover:bg-accent/50 hover:border-border dark:hover:border-border",
-                  "disabled:bg-muted/50 disabled:text-muted-foreground/50 disabled:border-border/30 disabled:shadow-none"
+                    ? "bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 text-primary-foreground"
+                    : "bg-card dark:bg-card border border-border dark:border-border text-muted-foreground hover:bg-accent dark:hover:bg-accent",
+                  "disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
                 )}
               >
                 <LucideSendHorizontal className="w-5 h-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent style={{ zIndex: 1600 }}>Send message</TooltipContent>
+            <TooltipContent style={{ zIndex: 1600 }}>Send</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>

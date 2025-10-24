@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Use Supabase Postgrest API to get conversations
     const { data, error } = await supabase
-      .from('conversations')
+      .from('agent_conversations')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       updatedAt: conversation.updated_at || conversation.created_at,
       userId: conversation.user_id,
       companyId: conversation.company_id,
-      status: conversation.status,
+      agentId: conversation.agent_id,
     }));
 
     return createApiResponse({

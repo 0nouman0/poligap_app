@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
-import { getSupabaseAIClient } from "@/lib/ai-client-supabase";
+import { getAIClient } from "@/lib/ai-client";
 import { z } from "zod";
 
 // Rate limiting map (in-memory, reset on server restart)
@@ -12,7 +12,7 @@ const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const chatRequestSchema = z.object({
   user_query: z.string().min(1, "Query cannot be empty").max(5000, "Query too long"),
   session_id: z.string().optional(),
-  max_tokens: z.number().int().min(1).max(16000).default(8000),
+  max_tokens: z.number().int().min(1).max(8000).default(4000),
   temperature: z.number().min(0).max(2).default(0.7),
   model: z.string().optional(), // Selected model from frontend
   provider: z.string().optional(), // Provider hint
@@ -111,11 +111,11 @@ export async function POST(request: NextRequest) {
     // Add current query
     messages.push({ role: "user", content: user_query });
 
-    console.log('🔄 Using Supabase-configured Portkey AI client for chat streaming');
+    console.log('🔄 Using Portkey unified AI client for chat streaming');
     console.log('📝 Model selection:', { model, provider });
 
-    // Get Supabase AI client and create streaming completion
-    const aiClient = getSupabaseAIClient();
+    // Get AI client and create streaming completion
+    const aiClient = getAIClient();
     
     // Determine task type based on model/provider or use intelligent auto-routing
     let taskType: "chat" | "agent" | "analysis" | "generation" = "chat";
@@ -146,72 +146,60 @@ export async function POST(request: NextRequest) {
       // Convert Portkey stream to SSE format expected by frontend
       const encoder = new TextEncoder();
       let fullContent = "";
-      let isComplete = false;
-      let finishReason = "";
       
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            // Handle Portkey stream as async iterable
-            for await (const chunk of portkeyStream as any) {
-              try {
-                // Extract content from the chunk
-                const content = chunk.choices?.[0]?.delta?.content || 
-                               chunk.choices?.[0]?.text || 
-                               chunk.content || 
-                               '';
-                
-                // Check for finish reason (token limit, stop, etc.)
-                const chunkFinishReason = chunk.choices?.[0]?.finish_reason || '';
-                if (chunkFinishReason) {
-                  finishReason = chunkFinishReason;
-                  isComplete = true;
-                }
-                
-                if (content) {
-                  fullContent += content;
+            const reader = (portkeyStream as any).getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+              const { done, value } = await reader.read();
+              
+              if (done) {
+                // Send completion signal
+                const completionData = `data: ${JSON.stringify({ 
+                  event: "RunCompleted",
+                  content: fullContent,
+                  created_at: Date.now()
+                })}\n\n`;
+                controller.enqueue(encoder.encode(completionData));
+                controller.close();
+                break;
+              }
+
+              // Parse SSE chunk
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
+              
+              for (const line of lines) {
+                try {
+                  const jsonStr = line.replace(/^data: /, '');
+                  const parsed = JSON.parse(jsonStr);
                   
-                  // Send in RunResponse format expected by frontend
-                  const data = `data: ${JSON.stringify({ 
-                    event: "RunResponseContent",
-                    content: fullContent,
-                    created_at: Date.now()
-                  })}\n\n`;
-                  controller.enqueue(encoder.encode(data));
+                  // Extract content from different possible formats
+                  const content = parsed.choices?.[0]?.delta?.content || 
+                                 parsed.choices?.[0]?.text || 
+                                 parsed.content || 
+                                 '';
+                  
+                  if (content) {
+                    fullContent += content;
+                    
+                    // Send in RunResponse format expected by frontend
+                    const data = `data: ${JSON.stringify({ 
+                      event: "RunResponseContent",
+                      content: fullContent,
+                      created_at: Date.now()
+                    })}\n\n`;
+                    controller.enqueue(encoder.encode(data));
+                  }
+                } catch (parseError) {
+                  // Skip invalid JSON chunks
+                  continue;
                 }
-              } catch (parseError) {
-                console.warn("Failed to parse stream chunk:", parseError);
-                continue;
               }
             }
-            
-            // Handle graceful truncation if response was cut off due to token limit
-            if (finishReason === "length") {
-              // Add a graceful truncation indicator
-              const truncationMessage = "\n\n---\n\n*Response was truncated due to length limits. Please ask me to continue if you need more information.*";
-              fullContent += truncationMessage;
-              
-              // Send the truncation message
-              const truncationData = `data: ${JSON.stringify({ 
-                event: "RunResponseContent",
-                content: fullContent,
-                created_at: Date.now(),
-                truncated: true
-              })}\n\n`;
-              controller.enqueue(encoder.encode(truncationData));
-            }
-            
-            // Send completion signal
-            const completionData = `data: ${JSON.stringify({ 
-              event: "RunCompleted",
-              content: fullContent,
-              created_at: Date.now(),
-              finish_reason: finishReason,
-              truncated: finishReason === "length"
-            })}\n\n`;
-            controller.enqueue(encoder.encode(completionData));
-            controller.close();
-            
           } catch (error) {
             console.error("Streaming error:", error);
             controller.error(error);

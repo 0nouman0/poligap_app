@@ -56,14 +56,14 @@ export const LlmButton = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="z-[1500] w-80 max-h-[300px] overflow-y-auto bg-popover/95 dark:bg-popover/95 backdrop-blur-sm border-border/50 dark:border-border/50 shadow-lg dark:shadow-2xl rounded-[12px] p-2"
+              className="z-[1500] max-h-[200px] overflow-y-auto bg-popover dark:bg-popover border-border dark:border-border"
             >
               {LlmsList.map((model) => {
                 const isSelected = value?.modelId === model.modelId;
                 return (
                   <DropdownMenuItem
                     key={model.modelId}
-                    className={`p-2 rounded-[6px] cursor-pointer transition-colors hover:bg-accent/50 dark:hover:bg-accent/50 ${isSelected ? 'bg-accent/70 dark:bg-accent/70' : ''}`}
+                    className={`text-xs ${isSelected ? 'bg-accent dark:bg-accent' : ''}`}
                     onSelect={() => {
                       console.log("model ==>", model);
                       onSelect(model);
@@ -80,20 +80,13 @@ export const LlmButton = ({
                               width: "100%",
                             }}
                           >
-                            <div className="flex-shrink-0">
-                              <Icon type={model.modelIcon} size="sm" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground dark:text-foreground truncate">
-                                {model.modelName}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground dark:text-muted-foreground capitalize leading-tight">
-                                {model.provider === 'auto' ? 'Intelligent Routing' : `${model.provider} • ${model.shortName}`}
-                              </p>
-                            </div>
+                            <Icon type={model.modelIcon} size="xs" />
+                            <p className="flex-1 text-xs text-foreground dark:text-foreground">
+                              {model.shortName}
+                            </p>
                             {isSelected && (
                               <Check
-                                className="w-4 h-4 text-primary dark:text-primary ml-auto flex-shrink-0"
+                                className="w-3.5 h-3.5 text-foreground dark:text-foreground ml-auto"
                               />
                             )}
                           </div>

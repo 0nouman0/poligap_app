@@ -155,19 +155,15 @@ class AIClient {
       try {
         console.log(`🔄 Attempting AI request with provider: ${providerKey}`);
         
-        const portkeyConfig = {
-          "virtual_key": providerKey
-        };
-
         const response = await this.portkey.chat.completions.create({
           model: this.getModelForProvider(providerKey, config),
           messages: messages as any,
           temperature: config.temperature ?? 0.7,
-          max_tokens: config.maxTokens ?? 8000,
+          max_tokens: config.maxTokens ?? 4000,
           stream: config.stream ?? false,
         }, {
           headers: {
-            "x-portkey-config": JSON.stringify(portkeyConfig),
+            "x-portkey-virtual-key": providerKey,
           }
         });
 
@@ -220,21 +216,16 @@ class AIClient {
 
     console.log(`🔄 Starting stream with provider: ${virtualKey}, model: ${model}`);
 
-    // Create Portkey config for the virtual key
-    const portkeyConfig = {
-      "virtual_key": virtualKey
-    };
-
     try {
       const stream = await this.portkey.chat.completions.create({
         model,
         messages: messages as any,
         temperature: config.temperature ?? 0.7,
-        max_tokens: config.maxTokens ?? 8000,
+        max_tokens: config.maxTokens ?? 4000,
         stream: true,
       }, {
         headers: {
-          "x-portkey-config": JSON.stringify(portkeyConfig),
+          "x-portkey-virtual-key": virtualKey,
         }
       });
 
@@ -247,19 +238,15 @@ class AIClient {
       if (virtualKey !== PORTKEY_VIRTUAL_KEYS.OPENAI) {
         console.log(`🔄 Failing over to OpenAI for streaming...`);
         
-        const fallbackConfig = {
-          "virtual_key": PORTKEY_VIRTUAL_KEYS.OPENAI
-        };
-        
         const fallbackStream = await this.portkey.chat.completions.create({
           model: "gpt-4o-mini",
           messages: messages as any,
           temperature: config.temperature ?? 0.7,
-          max_tokens: config.maxTokens ?? 8000,
+          max_tokens: config.maxTokens ?? 4000,
           stream: true,
         }, {
           headers: {
-            "x-portkey-config": JSON.stringify(fallbackConfig),
+            "x-portkey-virtual-key": PORTKEY_VIRTUAL_KEYS.OPENAI,
           }
         });
 

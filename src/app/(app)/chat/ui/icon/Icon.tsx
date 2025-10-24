@@ -13,18 +13,15 @@ const Icon: FC<IconProps> = ({
 }) => {
   const IconElement = ICONS[type]
 
-  // Provider icons should use their natural colors, not text colors
-  const isProviderIcon = ['openai_icon', 'groq_icon', 'claude_icon', 'portkey_icon', 'aws_icon', 'anthropic_icon', 'gemini_icon', 'meta_icon', 'deepseek_icon', 'gpt_icon'].includes(type);
-
   return (
     <IconElement
       className={cn(
-        !isProviderIcon && (color && !disabled ? `text-${color}` : 'text-primary'),
-        disabled && 'cursor-default opacity-50',
+        color && !disabled ? `text-${color}` : 'text-primary',
+        disabled && 'cursor-default text-muted/50',
         className,
         size === 'xxs' && 'size-3',
         size === 'xs' && 'size-4',
-        size === 'sm' && 'size-5',
+        size === 'sm' && 'size-6',
         size === 'md' && 'size-[42px]',
         size === 'lg' && 'size-7',
         size === 'dot' && 'size-[5.07px]',

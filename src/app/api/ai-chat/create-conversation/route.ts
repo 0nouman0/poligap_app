@@ -35,11 +35,14 @@ export async function POST(request: NextRequest) {
 
     // Use Supabase Postgrest API to create conversation
     const { data, error } = await supabase
-      .from('conversations')
+      .from('agent_conversations')
       .insert({
         chat_name: conversationName,
         user_id: user.id,
         company_id: validCompanyId,
+        openai_thread_id: openai_thread_id || null,
+        openai_assistant_id: openai_assistant_id || null,
+        assistant_metadata: assistant_metadata || null,
         status: 'active'
       })
       .select()
@@ -66,7 +69,9 @@ export async function POST(request: NextRequest) {
         updatedAt: data.updated_at || data.created_at,
         userId: data.user_id,
         companyId: data.company_id,
-        status: data.status,
+        openai_thread_id: data.openai_thread_id,
+        openai_assistant_id: data.openai_assistant_id,
+        assistant_metadata: data.assistant_metadata,
       },
     });
   } catch (error) {

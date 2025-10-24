@@ -2305,7 +2305,192 @@ export default function ContractReviewPage() {
             {/* Analysis Results with Suggestions */}
             {extractedDocument && (
               <div className="flex-1 overflow-y-auto scrollbar-thin w-full max-w-[1648px] space-y-6">
+                {/* Analysis Summary Card */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-2xl">Analysis Complete</CardTitle>
+                        <CardDescription className="mt-2">
+                          {uploadedFile?.name} • {selectedTemplate?.name}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-[#3B43D6]">
+                            {extractedDocument.overallScore}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">Overall Score</div>
+                        </div>
+                        <div className="text-center">
+                          <div className={`text-3xl font-bold ${
+                            extractedDocument.gaps.length > 5 ? 'text-red-600' :
+                            extractedDocument.gaps.length > 2 ? 'text-yellow-600' :
+                            'text-green-600'
+                          }`}>
+                            {extractedDocument.gaps.length}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Suggestions</div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">
+                          {extractedDocument.gaps.filter(g => g.severity === 'critical').length}
+                        </div>
+                        <div className="text-sm text-red-700 dark:text-red-400">Critical</div>
+                      </div>
+                      <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {extractedDocument.gaps.filter(g => g.severity === 'high').length}
+                        </div>
+                        <div className="text-sm text-orange-700 dark:text-orange-400">High</div>
+                      </div>
+                      <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {extractedDocument.gaps.filter(g => g.severity === 'medium').length}
+                        </div>
+                        <div className="text-sm text-yellow-700 dark:text-yellow-400">Medium</div>
+                      </div>
+                      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {extractedDocument.gaps.filter(g => g.severity === 'low').length}
+                        </div>
+                        <div className="text-sm text-blue-700 dark:text-blue-400">Low</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
+                {/* Suggestions List */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Improvement Suggestions
+                    </CardTitle>
+                    <CardDescription>
+                      Review and adopt suggestions to improve your contract
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {extractedDocument.gaps.length === 0 ? (
+                      <div className="text-center py-12">
+                        <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No Issues Found</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Your contract looks good! No major improvements needed.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {extractedDocument.gaps.map((gap, index) => (
+                          <div
+                            key={gap.id}
+                            className={`p-5 rounded-lg border-l-4 ${
+                              gap.severity === 'critical' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
+                              gap.severity === 'high' ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' :
+                              gap.severity === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                              'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 space-y-3">
+                                {/* Header with badges */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant={
+                                    gap.severity === 'critical' ? 'destructive' :
+                                    gap.severity === 'high' ? 'default' :
+                                    gap.severity === 'medium' ? 'secondary' :
+                                    'outline'
+                                  }>
+                                    {gap.severity.toUpperCase()}
+                                  </Badge>
+                                  <Badge variant="outline">
+                                    {gap.gapType.replace('-', ' ').toUpperCase()}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    Issue #{index + 1}
+                                  </span>
+                                </div>
+
+                                {/* Section Title */}
+                                <h4 className="font-semibold text-base text-gray-900 dark:text-gray-100">
+                                  {gap.sectionTitle}
+                                </h4>
+
+                                {/* Description */}
+                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                  {gap.description}
+                                </p>
+
+                                {/* Original Text (if exists) */}
+                                {gap.originalText && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-muted-foreground">Original:</p>
+                                    <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded text-sm border border-gray-200 dark:border-gray-700">
+                                      <code className="text-gray-800 dark:text-gray-200">"{gap.originalText}"</code>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Suggested Text */}
+                                {gap.suggestedText && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-muted-foreground">Suggested:</p>
+                                    <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded text-sm border border-green-300 dark:border-green-700">
+                                      <code className="text-green-800 dark:text-green-200">"{gap.suggestedText}"</code>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Recommendation */}
+                                {gap.recommendation && (
+                                  <div className="bg-white dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700">
+                                    <p className="text-xs font-semibold text-muted-foreground mb-1">Recommendation:</p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                      {gap.recommendation}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex flex-col gap-2 min-w-[120px]">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  onClick={() => {
+                                    toastSuccess('Suggestion Adopted', `Applied suggestion for "${gap.sectionTitle}"`);
+                                    // Here you can add logic to apply the suggestion to the document
+                                  }}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Adopt
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  onClick={() => {
+                                    toastSuccess('Suggestion Rejected', `Dismissed suggestion for "${gap.sectionTitle}"`);
+                                    // Here you can add logic to remove/hide this suggestion
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Contract Canvas (Optional - for advanced editing) */}
                 <Card>

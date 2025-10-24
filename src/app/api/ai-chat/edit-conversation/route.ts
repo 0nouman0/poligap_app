@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Use Supabase Postgrest API to update conversation
     const { data, error } = await supabase
-      .from('conversations')
+      .from('agent_conversations')
       .update({
         chat_name: chatName,
         summary: summary,
