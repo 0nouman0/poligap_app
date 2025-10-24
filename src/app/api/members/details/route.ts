@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const gqlService = new GraphQLService()
     const user = await gqlService.init()
+    const supabase = await createClient()
 
     const { searchParams } = new URL(request.url)
     const company_id = searchParams.get("company_id")

@@ -1,6 +1,6 @@
 import type { MessageProps, PlaygroundChatMessage } from "@/types/agent";
 import React, { useCallback, useState } from "react";
-import { Copy, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,12 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 import Icon from "./../../ui/icon";
 import MarkdownRenderer from "./../../ui/typography/MarkdownRenderer";
@@ -27,7 +21,6 @@ export const ActionTab = ({
   handleCreateProject,
   handleCreateDoc,
 }: MessageProps) => {
-  const [isCopied, setIsCopied] = useState(false);
   const [isExporting, setIsExporting] = useState("");
   const [isCreatingDocument, setIsCreatingDocument] = useState("");
 
@@ -108,16 +101,6 @@ export const ActionTab = ({
     }
   };
 
-  
-
-  const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(message.content ?? "");
-    setIsCopied(true);
-    setTimeout(() => {
-      setIsCopied(false);
-    }, 2000);
-    toastSuccess("Copied to clipboard");
-  }, [message.content]);
 
   const createDocument = async (message: PlaygroundChatMessage) => {
     try {
@@ -259,27 +242,6 @@ export const ActionTab = ({
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <button
-                  onClick={handleCopy}
-                  className={`cursor-pointer rounded-lg p-2 transition-colors hover:bg-[var(--agent-background-color)] ${
-                    isCopied
-                      ? "text-blue-500"
-                      : "text-[var(--secondary-text-color)]"
-                  }`}
-                >
-                  <Copy size={16} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent style={{ zIndex: 1600 }}>
-                {isCopied ? "Copied!" : "Copy"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
       </div>
     </div>
   );
