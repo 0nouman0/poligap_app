@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getSupabaseAIClient } from "@/lib/ai-client-supabase";
 import { z } from "zod";
+import { getPlatformContext, getPlatformSummary } from "@/lib/platform-context";
 
 // Rate limiting map (in-memory, reset on server restart)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -89,6 +90,25 @@ export async function POST(request: NextRequest) {
 
     // Get conversation history if session_id is provided
     const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [];
+    
+    // Inject platform context if this is a platform-related query
+    try {
+      const platformContext = getPlatformContext(user_query);
+      
+      if (platformContext) {
+        // Platform-specific query - inject full context
+        messages.push({ role: "system", content: platformContext });
+        console.log('📚 Platform context injected for query');
+      } else {
+        // General query - add lightweight platform summary
+        messages.push({ role: "system", content: getPlatformSummary() });
+        console.log('💬 General query - using platform summary');
+      }
+    } catch (contextError) {
+      // Fallback to summary if context loading fails
+      console.warn('⚠️ Platform context error, using summary:', contextError);
+      messages.push({ role: "system", content: getPlatformSummary() });
+    }
     
     if (session_id) {
       const { data: dbMessages } = await supabase
