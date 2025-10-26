@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
+import { EditUserModal } from "@/components/modals/EditUserModal";
 
 export type MemberIntegration = {
   imageUrl: string;
@@ -75,6 +76,8 @@ export default function Component() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy] = useState("relevance");
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState<typeof teamMembers[0] | null>(null);
 
   // New state for filter category and filter value
   const [selectedFilterCategory, setSelectedFilterCategory] = useState<
@@ -140,6 +143,7 @@ export default function Component() {
 
   console.log("teamMembers   ======> ", teamMembers);
   console.log("currentUserRole   ======> ", currentUserRole);
+  console.log("selectedCompany   ======> ", selectedCompany);
 
   // Helper to get unique values for a given filter category
   function getUniqueFilterValues(category: string) {
@@ -325,18 +329,16 @@ export default function Component() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Invite User Button (only for admins) */}
-              {["company_admin", "super_admin"].includes(currentUserRole || "") && (
-                <Button
-                  onClick={() => setIsInviteModalOpen(true)}
-                  variant="default"
-                  size="sm"
-                  className="bg-base-purple hover:bg-base-purple-hover text-white border-transparent"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Invite User
-                </Button>
-              )}
+              {/* Invite User Button (always show for debugging) */}
+              <Button
+                onClick={() => setIsInviteModalOpen(true)}
+                variant="default"
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white border-transparent"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <Input
@@ -577,11 +579,9 @@ export default function Component() {
                 <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7">
                   Joined On
                 </TableHead>
-                {["company_admin", "super_admin"].includes(currentUserRole || "") && (
-                  <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7 text-right">
-                    Actions
-                  </TableHead>
-                )}
+                <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7 text-right">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -694,39 +694,48 @@ export default function Component() {
                             : "-"}
                         </span>
                       </TableCell>
-                      {["company_admin", "super_admin"].includes(currentUserRole || "") && (
-                        <TableCell className="px-3 py-1 text-right">
-                          {member.user?.email !== userData?.email && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setMemberToChangeRole(member);
-                                    setNewRole(member.role);
-                                  }}
-                                >
-                                  <Shield className="mr-2 h-4 w-4" />
-                                  Change Role
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => setMemberToDelete(member)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove Member
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </TableCell>
-                      )}
+                      <TableCell className="px-3 py-1 text-right">
+                        {member.user?.email !== userData?.email ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setMemberToEdit(member);
+                                  setIsEditModalOpen(true);
+                                }}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setMemberToChangeRole(member);
+                                  setNewRole(member.role);
+                                }}
+                              >
+                                <Shield className="mr-2 h-4 w-4" />
+                                Change Role
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setMemberToDelete(member)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Remove Member
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <span className="text-xs text-gray-400">Current User</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
             </TableBody>
@@ -749,6 +758,21 @@ export default function Component() {
         onClose={() => setIsInviteModalOpen(false)}
         companyId={companyId || ""}
         companyName={selectedCompany?.name}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setMemberToEdit(null);
+        }}
+        member={memberToEdit}
+        companyId={companyId || ""}
+        onUserUpdated={() => {
+          // Refresh the page to show updated data
+          window.location.reload();
+        }}
       />
 
       {/* Delete Member Confirmation Dialog */}
