@@ -1,8 +1,12 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import type { AgentType } from "./../types/agent";
 import ChatInput from "./ChatInput/ChatInput";
 import MessageArea from "./MessageArea";
+import { DragDropOverlay } from "./DragDropOverlay";
+import { processFiles, formatFilesForChat, ProcessedFile } from "../utils/fileProcessor";
+import { toastSuccess, toastError } from "@/components/toast-varients";
 
 const ChatArea = ({
   agent_id,
@@ -32,8 +36,47 @@ const ChatArea = ({
   user_instructions,
   setInputMessage,
 }: AgentType) => {
+  const [uploadedFiles, setUploadedFiles] = useState<ProcessedFile[]>([]);
+
+  const handleFileDrop = useCallback(async (files: File[]) => {
+    try {
+      // Show loading toast
+      toastSuccess(`Processing ${files.length} file${files.length !== 1 ? 's' : ''}...`);
+      
+      // Process the files
+      const result = await processFiles(files);
+      
+      if (result.errors.length > 0) {
+        result.errors.forEach(error => toastError(error));
+      }
+      
+      if (result.files.length > 0) {
+        setUploadedFiles(prev => [...prev, ...result.files]);
+        
+        // Format files for chat and add to input message
+        const fileContext = formatFilesForChat(result.files);
+        const currentMessage = inputMessage || '';
+        const newMessage = currentMessage 
+          ? `${fileContext}${currentMessage}`
+          : `${fileContext}Please analyze the uploaded file${result.files.length !== 1 ? 's' : ''} and provide insights.`;
+        
+        setInputMessage(newMessage);
+        
+        toastSuccess(`Successfully uploaded ${result.files.length} file${result.files.length !== 1 ? 's' : ''}!`);
+      }
+    } catch (error) {
+      console.error('Error processing files:', error);
+      toastError('Failed to process files. Please try again.');
+    }
+  }, [inputMessage, setInputMessage]);
+
   return (
-    <div className="flex flex-col h-full bg-background">
+    <DragDropOverlay
+      onFileDrop={handleFileDrop}
+      className="flex flex-col h-full bg-background"
+      maxFiles={10}
+      maxFileSize={50}
+    >
       <MessageArea
         messages={messages}
         exportReactComponentAsPDF={exportReactComponentAsPDF}
@@ -67,9 +110,11 @@ const ChatArea = ({
           selectedConversation={selectedConversation}
           setSelectedLanguage={setSelectedLanguage}
           setSelectedModel={setSelectedModel}
+          uploadedFiles={uploadedFiles}
+          setUploadedFiles={setUploadedFiles}
         />
       </div>
-    </div>
+    </DragDropOverlay>
   );
 };
 

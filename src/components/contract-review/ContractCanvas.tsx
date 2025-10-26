@@ -18,21 +18,15 @@ interface TooltipData {
 
 export const ContractCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData>({ x: 0, y: 0, suggestion: null, visible: false });
   const [showHighlights, setShowHighlights] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableText, setEditableText] = useState('');
   
   const { 
     currentText, 
     suggestions, 
     patchStates,
     acceptSuggestion,
-    rejectSuggestion,
-    updateCurrentText,
-    hasUnsavedChanges,
-    generateMockSuggestions
+    rejectSuggestion
   } = useContractReviewStore();
 
   const getSeverityColor = (severity: string) => {
@@ -55,45 +49,12 @@ export const ContractCanvas: React.FC = () => {
     }
   };
 
-  // Initialize editable text when currentText changes
-  React.useEffect(() => {
-    if (currentText && !isEditing) {
-      setEditableText(currentText);
-    }
-  }, [currentText, isEditing]);
-
   const handleAcceptSuggestion = (suggestionId: string) => {
     acceptSuggestion(suggestionId);
   };
 
   const handleRejectSuggestion = (suggestionId: string) => {
     rejectSuggestion(suggestionId);
-  };
-
-  const handleStartEditing = () => {
-    setIsEditing(true);
-    setEditableText(currentText);
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 100);
-  };
-
-  const handleStopEditing = () => {
-    setIsEditing(false);
-    updateCurrentText(editableText);
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditableText(e.target.value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Escape') {
-      setIsEditing(false);
-      setEditableText(currentText); // Reset to original
-    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      handleStopEditing();
-    }
   };
 
   const renderTextWithInlineDiffs = () => {
@@ -219,139 +180,36 @@ export const ContractCanvas: React.FC = () => {
       {/* Canvas Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-foreground">Contract Analysis</h3>
-            {isEditing && (
-              <Badge variant="default" className="text-xs bg-blue-600 text-white">
-                Editing Mode
-              </Badge>
-            )}
-            {hasUnsavedChanges && !isEditing && (
-              <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
-                Unsaved Changes
-              </Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {isEditing 
-              ? "Click anywhere to edit • Ctrl+Enter to save • Esc to cancel" 
-              : "Review AI suggestions or click to edit text directly"
-            }
-          </p>
+          <h3 className="text-lg font-semibold text-foreground">Contract Analysis</h3>
+          <p className="text-sm text-muted-foreground">Review suggested changes by AI</p>
         </div>
         <div className="flex items-center gap-2">
-          {!isEditing && (
-            <>
-              {suggestions.length === 0 && currentText && (
-                <Button
-                  variant="default"
-                  onClick={generateMockSuggestions}
-                  className="h-8 px-3 text-sm bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Generate AI Suggestions
-                </Button>
-              )}
-              
-              {suggestions.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowHighlights(!showHighlights)}
-                  className="h-8 px-3 text-sm flex items-center gap-2"
-                >
-                  {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  {showHighlights ? 'Hide' : 'Show'} Highlights
-                </Button>
-              )}
-              
-              {suggestions.length > 0 && (
-                <>
-                  <Badge variant="secondary" className="text-xs">
-                    {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {suggestions.length} total suggestions
-                  </Badge>
-                </>
-              )}
-            </>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => setShowHighlights(!showHighlights)}
+            className="h-8 px-3 text-sm flex items-center gap-2"
+          >
+            {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showHighlights ? 'Hide' : 'Show'} Highlights
+          </Button>
           
-          {isEditing && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Characters: {editableText.length}</span>
-              <span>Words: {editableText.split(/\s+/).filter(w => w.length > 0).length}</span>
-            </div>
-          )}
+          <Badge variant="secondary" className="text-xs">
+            {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {suggestions.length} total suggestions
+          </Badge>
         </div>
       </div>
 
       {/* Canvas Content */}
       <div 
         ref={containerRef}
-        className="border border-border rounded-lg bg-white dark:bg-gray-900 min-h-[600px] max-h-[80vh] relative overflow-hidden"
+        className="border border-border rounded-lg p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-[600px] max-h-[80vh] overflow-y-auto"
       >
-        {isEditing ? (
-          /* Editing Mode */
-          <div className="h-full">
-            <textarea
-              ref={textareaRef}
-              value={editableText}
-              onChange={handleTextChange}
-              onKeyDown={handleKeyDown}
-              className="w-full h-full p-6 bg-transparent text-gray-900 dark:text-gray-100 leading-relaxed resize-none border-none outline-none font-mono text-sm"
-              placeholder="Start typing to edit the contract..."
-            />
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditableText(currentText);
-                }}
-                className="text-xs"
-              >
-                Cancel (Esc)
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleStopEditing}
-                className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Save (Ctrl+Enter)
-              </Button>
-            </div>
-          </div>
-        ) : (
-          /* Display Mode */
-          <div 
-            className="p-6 h-full overflow-y-auto cursor-text"
-            onClick={handleStartEditing}
-          >
-            {showHighlights && suggestions.length > 0 ? renderTextWithInlineDiffs() : (
-              <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
-                {currentText || (
-                  <span className="text-gray-400 italic">
-                    Click here to start editing the contract...
-                  </span>
-                )}
-              </div>
-            )}
-            {!isEditing && (
-              <div className="absolute top-4 right-4 opacity-0 hover:opacity-100 transition-opacity">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStartEditing();
-                  }}
-                  className="text-xs"
-                >
-                  Edit Text
-                </Button>
-              </div>
-            )}
+        {showHighlights ? renderTextWithInlineDiffs() : (
+          <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+            {currentText}
           </div>
         )}
       </div>

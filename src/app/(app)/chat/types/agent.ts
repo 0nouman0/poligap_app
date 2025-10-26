@@ -435,6 +435,8 @@ export interface AgentType {
   handleCreateDoc?: (content: PlaygroundChatMessage) => Promise<void>;
   publicCompanyId?: string;
   publicUserId?: string;
+  uploadedFiles?: any[];
+  setUploadedFiles?: (files: any[]) => void;
 }
 
 export interface companyPropTypes {

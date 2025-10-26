@@ -26,10 +26,12 @@ import { AddMediaButton } from "./AddMediaButton";
 import { LlmButton } from "./LlmButton";
 import { MediaCard, MediaCardSkeleton } from "./MediaCard";
 import { SelectLanguageButton } from "./SelectLanguageButton";
+import { FileAttachments } from "./FileAttachments";
 // SelectMetaProperties removed per request
 import { toastError } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/company-store";
+import { ProcessedFile } from "../../utils/fileProcessor";
 
 // Parse @mentions like @contract_2023
 function parseMentions(text: string): string[] {
@@ -70,6 +72,8 @@ const ChatInput = ({
   enabledKnowledge,
   setOpenGlobalModal,
   generateTitle,
+  uploadedFiles = [],
+  setUploadedFiles,
 }: AgentType) => {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const companyId = selectedCompany?.companyId;
@@ -198,15 +202,25 @@ const ChatInput = ({
     setInputMessage(next);
   };
 
+  const handleRemoveFile = (fileId: string) => {
+    if (setUploadedFiles) {
+      setUploadedFiles(uploadedFiles.filter((file: ProcessedFile) => file.id !== fileId));
+    }
+  };
+
   const handleSubmit = async () => {
-    // debugger;
-    if (!(inputMessage || "").trim()) return;
+    if (!inputMessage?.trim() || isStreamingResponse || !agent_id) return;
     if (setOpenGlobalModal) {
       setOpenGlobalModal();
     }
 
     const currentMessage = inputMessage;
     setInputMessage("");
+    
+    // Clear uploaded files after sending
+    if (setUploadedFiles) {
+      setUploadedFiles([]);
+    }
     try {
       let createdConvo: AgentSelectedChatType = {
         chatName: "",
@@ -298,9 +312,15 @@ const ChatInput = ({
         </div>
       )}
 
+      {/* File Attachments */}
+      <FileAttachments
+        files={uploadedFiles}
+        onRemoveFile={handleRemoveFile}
+      />
+
       <div className="relative flex w-full bg-background/50 dark:bg-background/50 rounded-[12px] border border-border/30 dark:border-border/30 p-4 focus-within:border-primary/50 dark:focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 dark:focus-within:ring-primary/10 transition-all duration-200">
         <textarea
-          placeholder="Ask anything... ✨"
+          placeholder={uploadedFiles.length > 0 ? `Ask about your ${uploadedFiles.length} uploaded file${uploadedFiles.length !== 1 ? 's' : ''}... ✨` : "Ask anything... ✨"}
           value={inputMessage || ""}
           onChange={(e) => {
             const val = e.target.value;
