@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "security:scan": "npx sonarqube-scanner",
+    "security:scan": "npx sonarqube-scanner -Dproject.settings=.sonarqube/sonar-project.properties",
     "security:setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-env.ps1",
     "security:check": "powershell -ExecutionPolicy Bypass -File ./scripts/sonar-scan.ps1",
     "test:gql-migration": "node ./scripts/verify-graphql-migration.mjs"

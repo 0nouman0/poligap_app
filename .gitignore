@@ -52,3 +52,5 @@ credentials/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+tsconfig.tsbuildinfo
+.env.local
