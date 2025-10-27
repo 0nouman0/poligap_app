@@ -424,7 +424,7 @@ export default function ComplianceCheckPage() {
     }
     
     // Fallback for testing - replace with your actual test user ID
-    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+    return null; // No fallback user - authentication required
   };
   
   // Use Zustand stores for caching

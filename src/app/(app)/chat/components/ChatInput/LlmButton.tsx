@@ -35,7 +35,7 @@ export const LlmButton = ({
                 variant="outline"
                 size="sm"
                 disabled={disabled}
-                className="w-full h-6 px-2 bg-card dark:bg-card border border-border dark:border-border rounded-[3px] text-xs font-medium text-muted-foreground dark:text-muted-foreground hover:bg-accent dark:hover:bg-accent"
+                className="w-20 h-6 px-2 bg-card dark:bg-card border border-border dark:border-border rounded-[3px] text-xs font-medium text-muted-foreground dark:text-muted-foreground hover:bg-accent dark:hover:bg-accent"
               >
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}

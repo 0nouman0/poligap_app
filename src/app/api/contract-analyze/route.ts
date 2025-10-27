@@ -206,24 +206,32 @@ function createAnalysisPrompt(contractText: string, templateClauses: any[], cont
   const textLength = contractText.length;
   const wordCount = contractText.split(/\s+/).length;
   
-  return `You are an expert legal AI assistant. Analyze this ENTIRE contract document and provide comprehensive suggestions throughout.
+  return `You are an expert legal AI assistant. You MUST provide MINIMUM 20-25 suggestions. Analyze this ENTIRE contract document and provide comprehensive suggestions throughout. DO NOT PROVIDE FEWER THAN 20 SUGGESTIONS.
 
-**DOCUMENT TO ANALYZE:**
+**DOCUMENT TO ANALYZE (${textLength} characters, ${wordCount} words):**
 ${contractText}
+
+**IMPORTANT**: This document has ${textLength} characters. You MUST analyze from character 0 to character ${textLength}. Do NOT stop at the beginning - read the ENTIRE document.
 
 **COMPREHENSIVE ANALYSIS REQUIREMENTS:**
 1. **SCAN ENTIRE DOCUMENT** - Analyze from character 0 to character ${textLength} (${wordCount} words)
-2. **PROVIDE 10-15 SUGGESTIONS MINIMUM** - Spread suggestions across the beginning, middle, and end
+2. **PROVIDE MINIMUM 20-25 SUGGESTIONS** - Spread suggestions across the beginning, middle, and end
 3. **FIND REAL ISSUES** - Identify actual problems in the text, not generic advice
 4. **EXACT POSITIONS** - Use precise startIndex and endIndex from the actual text
 5. **MULTIPLE TYPES** - Include additions, deletions, and modifications
 6. **LEGAL FOCUS** - Improve clarity, completeness, and legal protection
+7. **THOROUGH ANALYSIS** - Analyze every paragraph and clause for improvements
 
-**ANALYSIS STRATEGY:**
-- First third (0-${Math.floor(textLength/3)}): Find 3-5 suggestions
-- Middle third (${Math.floor(textLength/3)}-${Math.floor(2*textLength/3)}): Find 3-5 suggestions  
-- Final third (${Math.floor(2*textLength/3)}-${textLength}): Find 3-5 suggestions
-- Document-wide: Find missing clauses to add
+**ANALYSIS STRATEGY - YOU MUST FOLLOW THIS EXACTLY:**
+- **SECTION 1 (MANDATORY)**: Characters 0 to ${Math.floor(textLength/3)} - Find EXACTLY 6-8 suggestions
+- **SECTION 2 (MANDATORY)**: Characters ${Math.floor(textLength/3)} to ${Math.floor(2*textLength/3)} - Find EXACTLY 6-8 suggestions  
+- **SECTION 3 (MANDATORY)**: Characters ${Math.floor(2*textLength/3)} to ${textLength} - Find EXACTLY 6-8 suggestions
+- **MISSING CLAUSES (MANDATORY)**: Find EXACTLY 3-5 additional missing clause suggestions
+- **ABSOLUTE MINIMUM**: 20 suggestions total - DO NOT PROVIDE FEWER
+- **CRITICAL**: Analyze EVERY single paragraph and sentence
+- **CRITICAL**: Look for ANY possible improvement in EVERY line of text
+- **CRITICAL**: Find issues with wording, clarity, legal protection, completeness
+- TOTAL REQUIREMENT: MINIMUM 20-25 suggestions across ENTIRE document
 
 **TEMPLATE REFERENCE (for comparison):**
 ${templateClauses.map((clause: any) => `
@@ -231,12 +239,22 @@ ${templateClauses.map((clause: any) => `
 `).join('\n')}
 
 **CRITICAL INSTRUCTIONS:**
-- Analyze EVERY sentence in the contract text above
-- Provide AT LEAST 5-10 suggestions spread throughout the document
-- Find issues in the beginning, middle, and end of the document
-- Give REAL suggestions based on the actual text, not generic advice
-- Use exact character positions from the contract text
-- Focus on legal improvements, clarity, and completeness
+- **SCAN ENTIRE DOCUMENT**: Read from first character to last character
+- **DISTRIBUTE SUGGESTIONS**: Must have suggestions in beginning, middle, AND end sections
+- **NO CLUSTERING**: Do not put all suggestions in one section of the document
+- **EXACT POSITIONS**: Use precise startIndex/endIndex from actual contract text
+- **REAL TEXT ANALYSIS**: Base suggestions on actual contract content, not generic advice
+- **FULL COVERAGE**: Analyze every paragraph, clause, and section thoroughly
+- **BALANCED DISTRIBUTION**: Ensure suggestions appear throughout entire document length
+- **CHARACTER RANGES**: Include suggestions from 0-33%, 33%-66%, and 66%-100% of document
+- **ABSOLUTE REQUIREMENT**: Provide MINIMUM 20-25 suggestions spread across ENTIRE document
+- **DO NOT PROVIDE FEWER THAN 20 SUGGESTIONS** - This is mandatory
+- Focus on: ambiguous language, missing definitions, weak clauses, unclear terms, grammar, punctuation
+- Target: termination provisions, payment terms, liability, dispute resolution, definitions, formatting
+- **MINIMUM DISTRIBUTION**: At least 6 suggestions in each third of the document
+- **COMPREHENSIVE COVERAGE**: Analyze every clause, paragraph, sentence, and word thoroughly
+- **FIND MORE ISSUES**: Look for minor improvements, word choices, clarity issues, formatting problems
+- **BE THOROUGH**: Even small improvements count as valid suggestions
 
 Return ONLY valid JSON with comprehensive suggestions for the entire document:
 
@@ -324,6 +342,18 @@ function parseAnalysisResult(analysisText: string, contractText: string) {
         startIndex: Math.max(0, s.startIndex || 0),
         endIndex: Math.min(contractText.length, s.endIndex || (s.startIndex || 0) + (s.originalText?.length || 0))
       }));
+
+      // Validate distribution across document
+      const textLength = contractText.length;
+      const firstThird = textLength / 3;
+      const secondThird = (2 * textLength) / 3;
+      
+      const firstThirdSuggestions = suggestions.filter(s => s.startIndex < firstThird).length;
+      const middleThirdSuggestions = suggestions.filter(s => s.startIndex >= firstThird && s.startIndex < secondThird).length;
+      const lastThirdSuggestions = suggestions.filter(s => s.startIndex >= secondThird).length;
+      
+      console.log(`Suggestion distribution: First third: ${firstThirdSuggestions}, Middle third: ${middleThirdSuggestions}, Last third: ${lastThirdSuggestions}`);
+      console.log(`Document sections: 0-${Math.floor(firstThird)}, ${Math.floor(firstThird)}-${Math.floor(secondThird)}, ${Math.floor(secondThird)}-${textLength}`);
       
       return {
         suggestions,

@@ -154,8 +154,8 @@ export default function VerifyEmailPage() {
 
           <div className="text-center text-xs text-gray-500 pt-4">
             Having trouble? Contact{" "}
-            <a href="mailto:support@poligap.com" className="text-purple-600 hover:underline">
-              support@poligap.com
+            <a href="mailto:support@example.com" className="text-purple-600 hover:underline">
+              support
             </a>
           </div>
         </CardContent>

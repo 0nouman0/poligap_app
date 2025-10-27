@@ -349,11 +349,11 @@ if (error || !user) {
 ### **Critical** (Application won't work without these):
 ```bash
 # Portkey AI (Primary)
-PORTKEY_API_KEY=pk-prod-xxxxx
+PORTKEY_API_KEY=your-portkey-api-key
 
 # Supabase (Database & Auth)
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 # MongoDB (Message storage)
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/poligap

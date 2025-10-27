@@ -251,10 +251,10 @@ console.log('Final:', useGlobalChatStore.getState().messages.length);
 cp .env.example .env.local
 
 # Fill in real values:
-NEXT_PUBLIC_SUPABASE_URL=https://ovnnsldnefxwypkclbjc.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-PORTKEY_API_KEY=pk-prod-xxxxx
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+PORTKEY_API_KEY=your-portkey-api-key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NODE_ENV=development
 ```

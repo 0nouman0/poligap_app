@@ -5,7 +5,7 @@ import { X, FileText, Image, FileAudio, FileVideo, File } from 'lucide-react';
 import { ProcessedFile } from '../../utils/fileProcessor';
 
 interface FileAttachmentsProps {
-  files: ProcessedFile[];
+  files: any[]; // Support both ProcessedFile and EnhancedProcessedFile
   onRemoveFile: (fileId: string) => void;
   className?: string;
 }
@@ -57,9 +57,16 @@ export const FileAttachments: React.FC<FileAttachmentsProps> = ({
               <p className="text-gray-900 dark:text-gray-100 font-medium truncate">
                 {file.name}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {formatFileSize(file.size)}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatFileSize(file.size)}
+                </p>
+                {file.isAnalyzed && (
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                    ✓ Analyzed
+                  </span>
+                )}
+              </div>
             </div>
 
             <button

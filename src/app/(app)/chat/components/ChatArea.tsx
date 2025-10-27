@@ -6,6 +6,7 @@ import ChatInput from "./ChatInput/ChatInput";
 import MessageArea from "./MessageArea";
 import { DragDropOverlay } from "./DragDropOverlay";
 import { processFiles, formatFilesForChat, ProcessedFile } from "../utils/fileProcessor";
+import { processDocumentsWithAI, formatAnalyzedFilesForChat, EnhancedProcessedFile } from "../utils/documentProcessor";
 import { toastSuccess, toastError } from "@/components/toast-varients";
 
 const ChatArea = ({
@@ -36,33 +37,39 @@ const ChatArea = ({
   user_instructions,
   setInputMessage,
 }: AgentType) => {
-  const [uploadedFiles, setUploadedFiles] = useState<ProcessedFile[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<EnhancedProcessedFile[]>([]);
 
   const handleFileDrop = useCallback(async (files: File[]) => {
     try {
       // Show loading toast
-      toastSuccess(`Processing ${files.length} file${files.length !== 1 ? 's' : ''}...`);
+      toastSuccess(`Processing and analyzing ${files.length} file${files.length !== 1 ? 's' : ''} with AI...`);
       
-      // Process the files
-      const result = await processFiles(files);
+      // Process the files with AI analysis
+      const result = await processDocumentsWithAI(files);
       
       if (result.errors.length > 0) {
-        result.errors.forEach(error => toastError(error));
+        result.errors.forEach(error => toastError('Upload Error', error));
       }
       
       if (result.files.length > 0) {
         setUploadedFiles(prev => [...prev, ...result.files]);
         
-        // Format files for chat and add to input message
-        const fileContext = formatFilesForChat(result.files);
+        // Format files for chat with AI analysis
+        const fileContext = formatAnalyzedFilesForChat(result.files);
+        console.log('Generated file context for AI:', fileContext);
+        
         const currentMessage = inputMessage || '';
         const newMessage = currentMessage 
           ? `${fileContext}${currentMessage}`
-          : `${fileContext}Please analyze the uploaded file${result.files.length !== 1 ? 's' : ''} and provide insights.`;
+          : `${fileContext}Please answer questions about the uploaded document${result.files.length !== 1 ? 's' : ''}.`;
         
+        console.log('Final message with document context:', newMessage);
         setInputMessage(newMessage);
         
-        toastSuccess(`Successfully uploaded ${result.files.length} file${result.files.length !== 1 ? 's' : ''}!`);
+        const analyzedCount = result.files.filter((f: any) => f.isAnalyzed).length;
+        toastSuccess(
+          `Successfully uploaded and analyzed ${analyzedCount} of ${result.files.length} file${result.files.length !== 1 ? 's' : ''}!`
+        );
       }
     } catch (error) {
       console.error('Error processing files:', error);

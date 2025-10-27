@@ -28,10 +28,12 @@ import { MediaCard, MediaCardSkeleton } from "./MediaCard";
 import { SelectLanguageButton } from "./SelectLanguageButton";
 import { FileAttachments } from "./FileAttachments";
 // SelectMetaProperties removed per request
-import { toastError } from "@/components/toast-varients";
+import { toastError, toastSuccess } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/company-store";
 import { ProcessedFile } from "../../utils/fileProcessor";
+import { EnhancedProcessedFile, processDocumentsWithAI } from "../../utils/documentProcessor";
+import { Paperclip } from "lucide-react";
 
 // Parse @mentions like @contract_2023
 function parseMentions(text: string): string[] {
@@ -204,7 +206,49 @@ const ChatInput = ({
 
   const handleRemoveFile = (fileId: string) => {
     if (setUploadedFiles) {
-      setUploadedFiles(uploadedFiles.filter((file: ProcessedFile) => file.id !== fileId));
+      setUploadedFiles(uploadedFiles.filter((file: any) => file.id !== fileId));
+    }
+  };
+
+  // File upload functionality
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const fileArray = Array.from(files);
+      
+      // Process files with AI analysis
+      const result = await processDocumentsWithAI(fileArray);
+      
+      if (result.errors.length > 0) {
+        result.errors.forEach(error => toastError('Upload Error', error));
+      }
+      
+      if (result.files.length > 0 && setUploadedFiles) {
+        setUploadedFiles([...uploadedFiles, ...result.files]);
+        
+        // Show success message
+        const analyzedCount = result.files.filter((f: any) => f.isAnalyzed).length;
+        toastSuccess(
+          'Files Uploaded',
+          `Successfully uploaded and analyzed ${analyzedCount} of ${result.files.length} file${result.files.length !== 1 ? 's' : ''}!`
+        );
+      }
+    } catch (error) {
+      console.error('Error processing files:', error);
+      toastError('Upload Error', 'Failed to process files. Please try again.');
+    }
+
+    // Reset input
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
@@ -376,8 +420,40 @@ const ChatInput = ({
           </div>
         )}
       </div>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.json,.md,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,audio/*,video/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       <div className="mt-4 flex flex-row justify-between items-center">
         <div className="flex gap-3 items-center">
+          {/* Upload button before model selection */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFileUpload}
+                  disabled={isStreamingResponse}
+                  className="h-9 px-3 border-border/30 hover:bg-accent transition-colors"
+                >
+                  <Paperclip className="h-4 w-4 mr-2" />
+                  Upload
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload documents & images</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           <LlmButton
             value={selectedLlmModel}
             disabled={isStreamingResponse}

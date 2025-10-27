@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Eye,
-  EyeOff
+  EyeOff,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { useContractReviewStore } from '@/store/contractReview';
 
@@ -20,6 +24,8 @@ export const ContractCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData>({ x: 0, y: 0, suggestion: null, visible: false });
   const [showHighlights, setShowHighlights] = useState(true);
+  const [canvasSize, setCanvasSize] = useState<'small' | 'medium' | 'large' | 'fullscreen'>('medium');
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   
   const { 
     currentText, 
@@ -57,9 +63,57 @@ export const ContractCanvas: React.FC = () => {
     rejectSuggestion(suggestionId);
   };
 
+  const getCanvasClasses = () => {
+    const baseClasses = "border border-border rounded-lg p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-y-auto transition-all duration-300";
+    
+    switch (canvasSize) {
+      case 'small':
+        return `${baseClasses} min-h-[300px] max-h-[40vh] max-w-4xl mx-auto`;
+      case 'medium':
+        return `${baseClasses} min-h-[500px] max-h-[60vh] max-w-6xl mx-auto`;
+      case 'large':
+        return `${baseClasses} min-h-[600px] max-h-[70vh] max-w-7xl mx-auto`;
+      case 'fullscreen':
+        return `${baseClasses} min-h-[75vh] max-h-[75vh] w-full`;
+      default:
+        return `${baseClasses} min-h-[500px] max-h-[60vh] max-w-6xl mx-auto`;
+    }
+  };
+
+  const getFontClasses = () => {
+    switch (fontSize) {
+      case 'small':
+        return 'text-sm leading-relaxed';
+      case 'medium':
+        return 'text-base leading-relaxed';
+      case 'large':
+        return 'text-lg leading-relaxed';
+      default:
+        return 'text-base leading-relaxed';
+    }
+  };
+
+  const toggleCanvasSize = () => {
+    const sizes: Array<'small' | 'medium' | 'large' | 'fullscreen'> = ['small', 'medium', 'large', 'fullscreen'];
+    const currentIndex = sizes.indexOf(canvasSize);
+    const nextIndex = (currentIndex + 1) % sizes.length;
+    setCanvasSize(sizes[nextIndex]);
+  };
+
+  const adjustFontSize = (direction: 'up' | 'down') => {
+    const sizes: Array<'small' | 'medium' | 'large'> = ['small', 'medium', 'large'];
+    const currentIndex = sizes.indexOf(fontSize);
+    
+    if (direction === 'up' && currentIndex < sizes.length - 1) {
+      setFontSize(sizes[currentIndex + 1]);
+    } else if (direction === 'down' && currentIndex > 0) {
+      setFontSize(sizes[currentIndex - 1]);
+    }
+  };
+
   const renderTextWithInlineDiffs = () => {
     if (!currentText || suggestions.length === 0) {
-      return <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">{currentText}</div>;
+      return currentText;
     }
 
     const textElements: React.ReactElement[] = [];
@@ -176,14 +230,9 @@ export const ContractCanvas: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      {/* Canvas Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">Contract Analysis</h3>
-          <p className="text-sm text-muted-foreground">Review suggested changes by AI</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="w-full">
+      {/* Canvas Controls */}
+      <div className="flex flex-wrap items-center justify-end mb-4 gap-2">
           <Button
             variant="outline"
             onClick={() => setShowHighlights(!showHighlights)}
@@ -192,6 +241,47 @@ export const ContractCanvas: React.FC = () => {
             {showHighlights ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             {showHighlights ? 'Hide' : 'Show'} Highlights
           </Button>
+
+          {/* Canvas Size Controls */}
+          <div className="flex items-center gap-1 border border-border rounded-md">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleCanvasSize}
+              className="h-8 px-2 text-xs flex items-center gap-1"
+              title={`Canvas: ${canvasSize} (click to cycle)`}
+            >
+              {canvasSize === 'fullscreen' ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+              {canvasSize}
+            </Button>
+          </div>
+
+          {/* Font Size Controls */}
+          <div className="flex items-center gap-1 border border-border rounded-md">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => adjustFontSize('down')}
+              className="h-8 px-2"
+              disabled={fontSize === 'small'}
+              title="Decrease font size"
+            >
+              <ZoomOut className="h-3 w-3" />
+            </Button>
+            <span className="text-xs px-2 text-muted-foreground border-x border-border">
+              {fontSize}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => adjustFontSize('up')}
+              className="h-8 px-2"
+              disabled={fontSize === 'large'}
+              title="Increase font size"
+            >
+              <ZoomIn className="h-3 w-3" />
+            </Button>
+          </div>
           
           <Badge variant="secondary" className="text-xs">
             {suggestions.filter(s => patchStates[s.id] === 'pending').length} pending
@@ -199,19 +289,24 @@ export const ContractCanvas: React.FC = () => {
           <Badge variant="outline" className="text-xs">
             {suggestions.length} total suggestions
           </Badge>
-        </div>
       </div>
 
-      {/* Canvas Content */}
-      <div 
-        ref={containerRef}
-        className="border border-border rounded-lg p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-[600px] max-h-[80vh] overflow-y-auto"
-      >
-        {showHighlights ? renderTextWithInlineDiffs() : (
-          <div className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+      {/* Canvas Content Container */}
+      <div className="w-full">
+        <div 
+          ref={containerRef}
+          className={getCanvasClasses()}
+        >
+        {showHighlights ? (
+          <div className={`${getFontClasses()} whitespace-pre-wrap`}>
+            {renderTextWithInlineDiffs()}
+          </div>
+        ) : (
+          <div className={`${getFontClasses()} whitespace-pre-wrap`}>
             {currentText}
           </div>
         )}
+        </div>
       </div>
 
       {/* Canvas Footer Stats */}

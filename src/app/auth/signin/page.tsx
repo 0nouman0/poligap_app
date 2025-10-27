@@ -353,7 +353,7 @@ export default function SignInPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder="your@email.com"
                   {...register("email")}
                   disabled={isLoading}
                   className={cn(
@@ -570,7 +570,7 @@ export default function SignInPage() {
                 {fpStep === "email" ? (
                   <div className="space-y-3">
                     <Label htmlFor="fpEmail" className="font-title-14">Email</Label>
-                    <Input id="fpEmail" type="email" value={fpEmail} onChange={(e)=>setFpEmail(e.target.value)} placeholder="you@example.com" />
+                    <Input id="fpEmail" type="email" value={fpEmail} onChange={(e)=>setFpEmail(e.target.value)} placeholder="your@email.com" />
                     <Button onClick={sendReset} disabled={fpLoading} className="w-full bg-base-purple hover:bg-base-purple-hover text-white">
                       {fpLoading ? "Sending…" : "Send reset email / OTP"}
                     </Button>

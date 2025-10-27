@@ -868,7 +868,7 @@ export default function ContractReviewPage() {
     { id: 1, title: "Select Template" },
     { id: 2, title: "Review Template" },
     { id: 3, title: "Upload Contract" },
-    { id: 4, title: "Contract Analysis" },
+    { id: 4, title: "Review Results" },
     { id: 5, title: "Make Corrections" }
   ];
 
@@ -2480,144 +2480,7 @@ export default function ContractReviewPage() {
                   Complete the analysis to see contract review results
                 </p>
               </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 min-w-0">
-                        <h3 className="text-xl font-semibold flex items-center gap-2">
-                          <FileText className="h-5 w-5 flex-shrink-0" />
-                          <span className="truncate block max-w-[60vw]">{extractedDocument.fileName}</span>
-                        </h3>
-                      <p className="text-muted-foreground">
-                        {selectedTemplate?.name || 'Contract Analysis'} • Analyzed on {formatDateShort(new Date())}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs font-semibold text-muted-foreground mr-2 uppercase">Assessed</span>
-                      <Badge className={extractedDocument.overallScore >= 90 ? 'bg-green-100 text-green-800' : extractedDocument.overallScore >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}>
-                        {extractedDocument.overallScore >= 90 ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertTriangle className="h-3 w-3 mr-1" />}
-                        <span className="ml-1">{extractedDocument.overallScore >= 90 ? 'compliant' : extractedDocument.overallScore >= 70 ? 'partial' : 'non-compliant'}</span>
-                      </Badge>
-                      <Badge className={extractedDocument.gaps.length > 5 ? 'bg-red-100 text-red-800' : extractedDocument.gaps.length > 2 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
-                        Risk: {extractedDocument.gaps.length > 5 ? 'high' : extractedDocument.gaps.length > 2 ? 'medium' : 'low'}
-                      </Badge>
-                      <Badge variant="outline">{extractedDocument.overallScore}% Score</Badge>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Contract Quality Score</span>
-                      <span>{extractedDocument.overallScore}%</span>
-                    </div>
-                    <Progress value={extractedDocument.overallScore} className="h-3" />
-                  </div>
-
-                  {/* Severity Overview */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {(() => {
-                      const counts = { critical: 0, high: 0, medium: 0, low: 0 } as Record<string, number>;
-                      if (extractedDocument?.gaps) {
-                        extractedDocument.gaps.forEach(g => counts[g.severity] = (counts[g.severity] || 0) + 1);
-                      }
-                      const tiles = [
-                        { key: 'critical', label: 'Critical', icon: AlertTriangle },
-                        { key: 'high', label: 'High', icon: AlertTriangle },
-                        { key: 'medium', label: 'Medium', icon: FileText },
-                        { key: 'low', label: 'Low', icon: CheckCircle },
-                      ];
-                      return tiles.map(({ key, label, icon: Icon }) => (
-                        <Card key={key} className="border-muted">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-2xl font-bold leading-none">{counts[key] || 0}</div>
-                                <div className="text-sm text-muted-foreground mt-1">{label} issues</div>
-                              </div>
-                              <Badge variant="outline" className="capitalize flex items-center gap-1">
-                                <Icon className="h-3 w-3" /> {label}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ));
-                    })()}
-                  </div>
-
-                  {/* Issues and Suggestions */}
-                  <div className="space-y-6 mt-4">
-                    {extractedDocument.gaps && extractedDocument.gaps.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg font-bold flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-red-600" />
-                            Issues Found ({extractedDocument.gaps.length})
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <ul className="space-y-3">
-                            {extractedDocument.gaps.map((g) => (
-                              <li key={g.id} className="rounded-md border p-3">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className={`text-xs capitalize ${
-                                    g.severity === 'critical' ? 'border-red-300 text-red-700' :
-                                    g.severity === 'high' ? 'border-orange-300 text-orange-700' :
-                                    g.severity === 'medium' ? 'border-yellow-300 text-yellow-700' :
-                                    'border-blue-300 text-blue-700'
-                                  }`}>{g.severity}</Badge>
-                                  <div className="text-sm font-medium">{g.sectionTitle}</div>
-                                  <span className="text-xs text-muted-foreground">• {g.gapType.replace('-', ' ')}</span>
-                                </div>
-                                <div className="text-sm text-muted-foreground mt-1">{g.description}</div>
-                                {g.recommendation && (
-                                  <div className="text-sm text-green-700 dark:text-green-400 mt-2 p-2 bg-green-50 dark:bg-green-950/20 rounded">
-                                    <strong>Recommendation:</strong> {g.recommendation}
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {extractedDocument.sections && extractedDocument.sections.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg font-bold flex items-center gap-2">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                            Document Sections ({extractedDocument.sections.length})
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <ul className="space-y-2">
-                            {extractedDocument.sections.map((section) => (
-                              <li key={section.id} className="text-sm flex items-start gap-2 p-2 rounded border">
-                                <span className={`mt-1 ${section.hasGaps ? 'text-red-600' : 'text-green-600'}`}>
-                                  {section.hasGaps ? '⚠️' : '✅'}
-                                </span>
-                                <div className="flex-1">
-                                  <div className="font-medium">{section.title}</div>
-                                  <div className="text-muted-foreground text-xs mt-1">
-                                    {section.content.substring(0, 100)}...
-                                  </div>
-                                  {section.hasGaps && (
-                                    <div className="text-red-600 text-xs mt-1">
-                                      {section.gapIds.length} issue(s) found
-                                    </div>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>

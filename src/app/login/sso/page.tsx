@@ -168,7 +168,7 @@ export default function SsoLogin() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="john@workmail.com"
+                    placeholder="your@company.com"
                     value={ssoLoginData.email}
                     onChange={(e) => onEmailChange(e.target.value)}
                     disabled={ssoLoginError.disabled}

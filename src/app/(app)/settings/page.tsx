@@ -79,19 +79,19 @@ function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Simple profile state - initialize with default values
+  // Simple profile state - initialize with empty values
   const [profile, setProfile] = useState({
-    name: 'Mohammad Nouman',
-    email: 'mohammadnouman604@gmail.com',
-    mobile: '8431609172',
+    name: '',
+    email: '',
+    mobile: '',
     country: '',
   });
 
   // Backup for cancel functionality
   const [originalProfile, setOriginalProfile] = useState({
-    name: 'Mohammad Nouman',
-    email: 'mohammadnouman604@gmail.com',
-    mobile: '8431609172',
+    name: '',
+    email: '',
+    mobile: '',
     country: '',
   });
 
@@ -99,9 +99,9 @@ function SettingsPage() {
   useEffect(() => {
     if (userData) {
       const newProfile = {
-        name: userData.name || 'Mohammad Nouman',
-        email: userData.email || 'mohammadnouman604@gmail.com',
-        mobile: userData.mobile || '8431609172',
+        name: userData.name || '',
+        email: userData.email || '',
+        mobile: userData.mobile || '',
         country: userData.country || '',
       };
       setProfile(newProfile);

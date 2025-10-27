@@ -98,7 +98,7 @@ export default function HistoryPage() {
       const storedId = localStorage.getItem('user_id');
       if (storedId) return storedId;
     }
-    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+    return null; // No fallback user - authentication required
   };
 
   // Fetch logs using Zustand store

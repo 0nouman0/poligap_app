@@ -109,7 +109,7 @@ export default function SignUpPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs font-medium">Work Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" {...register("email")} disabled={isLoading} className={cn("w-full px-3 py-2 rounded-md border border-transparent outline-none bg-transparent shadow-none transition-colors hover:border-base-purple focus:border-base-purple focus-visible:border-base-purple", errors.email && "border border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-red-500/20 focus-visible:border-red-500")} />
+                <Input id="email" type="email" placeholder="your@email.com" {...register("email")} disabled={isLoading} className={cn("w-full px-3 py-2 rounded-md border border-transparent outline-none bg-transparent shadow-none transition-colors hover:border-base-purple focus:border-base-purple focus-visible:border-base-purple", errors.email && "border border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-red-500/20 focus-visible:border-red-500")} />
                 {errors.email && <p className="text-xs text-error-red">{errors.email.message}</p>}
               </div>
               <div className="space-y-2">

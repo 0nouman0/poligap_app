@@ -36,7 +36,7 @@ export default function MyTasksPage() {
       const storedId = localStorage.getItem('user_id');
       if (storedId) return storedId;
     }
-    return process.env.NEXT_PUBLIC_FALLBACK_USER_ID || null;
+    return null; // No fallback user - authentication required
   };
 
   // Extract only the suggested fix from mixed descriptions like

@@ -12,9 +12,6 @@ if (-not (Test-Path ".env")) {
     Write-Host "⚠️  IMPORTANT: Please edit .env file and replace all placeholder values with real credentials!" -ForegroundColor Yellow
     Write-Host "Required variables to update:" -ForegroundColor Yellow
     Write-Host "  - MONGODB_URI" -ForegroundColor Cyan
-    Write-Host "  - FALLBACK_USER_ID" -ForegroundColor Cyan
-    Write-Host "  - FALLBACK_USER_EMAIL" -ForegroundColor Cyan
-    Write-Host "  - FALLBACK_USER_NAME" -ForegroundColor Cyan
     Write-Host "  - SONAR_TOKEN" -ForegroundColor Cyan
     Write-Host "  - All API keys (OpenAI, Gemini, etc.)" -ForegroundColor Cyan
 } else {
@@ -27,8 +24,6 @@ Write-Host "🔍 Checking environment configuration..." -ForegroundColor Blue
 
 $envVars = @(
     "MONGODB_URI",
-    "FALLBACK_USER_ID", 
-    "FALLBACK_USER_EMAIL",
     "SONAR_TOKEN"
 )
 
