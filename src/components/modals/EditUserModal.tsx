@@ -29,6 +29,8 @@ interface EditUserModalProps {
   member: UserCompany | null;
   companyId: string;
   onUserUpdated?: () => void;
+  currentUserEmail?: string;
+  isCurrentUserAdmin?: boolean;
 }
 
 export const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -37,6 +39,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   member,
   companyId,
   onUserUpdated,
+  currentUserEmail,
+  isCurrentUserAdmin = false,
 }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -61,6 +65,9 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   }, [member]);
 
+  // Check if current user is editing themselves
+  const isEditingSelf = member?.user?.email === currentUserEmail && !isCurrentUserAdmin;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!member || !companyId) return;
@@ -82,8 +89,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
         throw new Error("Failed to update user profile");
       }
 
-      // Update member role if changed
-      if (formData.role !== member.role) {
+      // Update member role if changed and user is not editing themselves (or is admin)
+      if (!isEditingSelf && formData.role !== member.role) {
         const roleResponse = await fetch(`/api/members/update-role`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -99,8 +106,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
         }
       }
 
-      // Update member status if changed
-      if (formData.status !== member.status) {
+      // Update member status if changed and user is not editing themselves (or is admin)
+      if (!isEditingSelf && formData.status !== member.status) {
         const statusResponse = await fetch(`/api/members/update-status`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -198,44 +205,50 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
               />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Role
-              </Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                  <SelectItem value="company_admin">Admin</SelectItem>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Only show Role field if admin or editing another user */}
+            {!isEditingSelf && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="role" className="text-right">
+                  Role
+                </Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                    <SelectItem value="company_admin">Admin</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Status
-              </Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Only show Status field if admin or editing another user */}
+            {!isEditingSelf && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           
           <DialogFooter>

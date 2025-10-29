@@ -62,7 +62,7 @@ export default function ConfirmEmailPage() {
           console.log('🔄 Invitation flow detected')
           
           // Create or update profile
-          const { error: profileError } = await supabase
+          const { error: profileError, data: profileData } = await supabase
             .from('profiles')
             .upsert({
               id: user.id,
@@ -73,7 +73,20 @@ export default function ConfirmEmailPage() {
             })
 
           if (profileError) {
-            console.error('Error creating profile:', profileError)
+            console.error('Error creating profile:', {
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint,
+              code: profileError.code,
+              fullError: profileError
+            })
+            // Log the error but don't block the flow if it's just a duplicate key
+            // (profile might already exist)
+            if (profileError.code !== '23505') { // Not a duplicate key error
+              console.warn('Profile creation failed, but continuing with invitation flow')
+            }
+          } else {
+            console.log('✅ Profile created/updated successfully:', profileData ? 'Profile exists' : 'No data returned')
           }
 
           // Create user-company relationship if company_id exists
@@ -90,7 +103,19 @@ export default function ConfirmEmailPage() {
               })
 
             if (memberError) {
-              console.error('Error creating membership:', memberError)
+              console.error('Error creating membership:', {
+                message: memberError.message,
+                details: memberError.details,
+                hint: memberError.hint,
+                code: memberError.code,
+                fullError: memberError
+              })
+              // Log the error but continue - membership might already exist
+              if (memberError.code !== '23505') { // Not a duplicate key error
+                console.warn('Membership creation failed, but continuing')
+              }
+            } else {
+              console.log('✅ User-company membership created/updated successfully')
             }
           }
 

@@ -37,6 +37,7 @@ import {
 import { useCompanyStore } from "@/stores/company-store";
 import { useUserStore } from "@/stores/user-store";
 import { useListMembers, useRemoveMember, useUpdateMemberRole } from "@/hooks/use-user-management";
+import { createClient } from "@/lib/supabase/client";
 import {
   Table,
   TableHeader,
@@ -48,6 +49,105 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
 import { EditUserModal } from "@/components/modals/EditUserModal";
+
+// Separate component for action dots to ensure proper re-rendering
+function ActionDotsCell({
+  member,
+  currentUserEmail,
+  currentUserRole,
+  onEdit,
+  onChangeRole,
+  onDelete,
+}: {
+  member: any;
+  currentUserEmail: string | null | undefined;
+  currentUserRole: string;
+  onEdit: () => void;
+  onChangeRole: () => void;
+  onDelete: () => void;
+}) {
+  // CRITICAL: If we don't have currentUserEmail, don't show anything
+  if (!currentUserEmail || typeof currentUserEmail !== 'string' || currentUserEmail.trim() === '') {
+    console.log(`[ActionDotsCell] No currentUserEmail for ${member.user?.email}`, { currentUserEmail });
+    return null;
+  }
+  
+  // Normalize emails for comparison (case-insensitive, trimmed)
+  const memberEmail = String(member.user?.email || "").toLowerCase().trim();
+  const currentUserEmailNormalized = String(currentUserEmail || "").toLowerCase().trim();
+  
+  // Strict comparison - both emails must be non-empty and EXACTLY equal
+  const isCurrentUser = memberEmail.length > 0 && 
+                        currentUserEmailNormalized.length > 0 && 
+                        memberEmail === currentUserEmailNormalized;
+  
+  // Explicitly check role - should be EXACTLY "super_admin" or "company_admin"
+  // Use strict equality to avoid any type coercion issues
+  // Convert to string and do exact comparison
+  const roleString = String(currentUserRole || "").toLowerCase();
+  const isAdmin = roleString === "super_admin" || roleString === "company_admin";
+  
+  // CRITICAL DEBUG: Log every single check to console (these MUST show up)
+  const debugInfo = {
+    memberEmail,
+    currentUserEmailNormalized,
+    emailsMatch: memberEmail === currentUserEmailNormalized,
+    isCurrentUser: Boolean(isCurrentUser),
+    isAdmin: Boolean(isAdmin),
+    currentUserRole: String(currentUserRole),
+    willShowDots: isAdmin || isCurrentUser
+  };
+  
+  // THE CRITICAL CHECK: Only show if user is admin OR if this is the current user
+  // If BOTH conditions are false, return null immediately
+  // Using explicit boolean checks to avoid any truthy/falsy issues
+  const shouldShowDots = Boolean(isAdmin) || Boolean(isCurrentUser);
+  
+  if (!shouldShowDots) {
+    // NOT admin AND NOT current user = absolutely NO action dots
+    return null;
+  }
+  
+  // At this point, we know either:
+  // 1. User IS an admin (can see actions for all users)
+  // 2. User IS the current user (can see actions for themselves)
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        {/* Edit User - available for current user or if admin */}
+        <DropdownMenuItem onClick={onEdit}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit User
+        </DropdownMenuItem>
+        
+        {/* Change Role - only for admins editing other users */}
+        {!isCurrentUser && isAdmin && (
+          <DropdownMenuItem onClick={onChangeRole}>
+            <Shield className="mr-2 h-4 w-4" />
+            Change Role
+          </DropdownMenuItem>
+        )}
+        
+        {/* Remove Member - only for admins, never for current user */}
+        {!isCurrentUser && isAdmin && (
+          <DropdownMenuItem onClick={onDelete} className="text-red-600">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Remove Member
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export type MemberIntegration = {
   imageUrl: string;
@@ -137,6 +237,53 @@ export default function Component() {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const companyId = selectedCompany?.companyId;
   const { userData } = useUserStore();
+  
+  // Get current user email directly from Supabase auth (more reliable than userData)
+  const [authUserEmail, setAuthUserEmail] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const getAuthUser = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error("❌ Error getting auth user:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+          return;
+        }
+        console.log("🔍 Auth user data:", { userId: user?.id, email: user?.email, hasUser: !!user });
+        if (user?.email) {
+          const normalizedEmail = user.email.toLowerCase().trim();
+          setAuthUserEmail(normalizedEmail);
+          console.log("✅ Got email from Supabase auth:", normalizedEmail);
+        } else {
+          console.warn("⚠️ No email in auth user:", user);
+          // Try to get email from userData as immediate fallback
+          if (userData?.email) {
+            const fallbackEmail = userData.email.toLowerCase().trim();
+            console.log("⚠️ Using userData email as fallback:", fallbackEmail);
+            setAuthUserEmail(fallbackEmail);
+          }
+        }
+      } catch (error) {
+        console.error("❌ Failed to get auth user:", error);
+      }
+    };
+    getAuthUser();
+  }, [userData?.email]); // Re-run if userData.email becomes available
+  
+  // Track if userData has been loaded (not just null/undefined check)
+  const userDataLoaded = !!userData?.email;
+
+  // Debug: Log when userData loads/changes
+  useEffect(() => {
+    console.log("🔄 userData changed:", {
+      hasEmail: !!userData?.email,
+      email: userData?.email,
+      userDataLoaded,
+      authUserEmail
+    });
+  }, [userData?.email, userDataLoaded, authUserEmail]);
 
   const {
     data: membersResponse,
@@ -149,10 +296,16 @@ export default function Component() {
 
   const teamMembers = membersResponse?.members || [];
   
+  // Get current user's email - use authUserEmail first (most reliable), then fallback to userData
+  const currentUserEmailNormalized = authUserEmail || userData?.email?.toLowerCase()?.trim() || null;
+  
   // Get current user's actual role from teamMembers (from API) - more reliable than selectedCompany
-  const currentUserMember = teamMembers.find((m: any) => 
-    m.user?.email === userData?.email
-  );
+  // Normalize emails for comparison (case-insensitive, trimmed)
+  const currentUserMember = teamMembers.find((m: any) => {
+    if (!currentUserEmailNormalized) return false;
+    const memberEmail = m.user?.email?.toLowerCase()?.trim();
+    return memberEmail === currentUserEmailNormalized && !!currentUserEmailNormalized;
+  });
   const currentUserRole = currentUserMember?.role || selectedCompany?.role || "viewer";
 
   // Sync selectedCompany role with actual API role if it differs
@@ -179,6 +332,34 @@ export default function Component() {
   console.log("teamMembers   ======> ", teamMembers);
   console.log("currentUserRole (from API)   ======> ", currentUserRole);
   console.log("selectedCompany   ======> ", selectedCompany);
+  console.log("currentUserEmailNormalized   ======> ", currentUserEmailNormalized);
+  console.log("currentUserMember found   ======> ", currentUserMember);
+  console.log("userDataLoaded   ======> ", userDataLoaded);
+  console.log("userData   ======> ", userData);
+  console.log("userData?.email   ======> ", userData?.email);
+  console.log("authUserEmail STATE   ======> ", authUserEmail); // ADDED
+  
+  // Use currentUserEmailNormalized (from auth or userData) or fallback to currentUserMember
+  // Only use currentUserMember as fallback if we have teamMembers loaded
+  const effectiveCurrentUserEmail = currentUserEmailNormalized || 
+    (teamMembers.length > 0 ? currentUserMember?.user?.email?.toLowerCase()?.trim() : null);
+  
+  console.log("🔍 EMAIL SOURCES (FULL DEBUG):", {
+    authUserEmail: authUserEmail || "NULL",
+    userDataEmail: userData?.email || "NULL",
+    currentUserEmailNormalized: currentUserEmailNormalized || "NULL",
+    currentUserMemberEmail: currentUserMember?.user?.email || "NULL",
+    effectiveCurrentUserEmail: effectiveCurrentUserEmail || "NULL", // This is the critical one
+    teamMembersCount: teamMembers.length,
+    hasCurrentUserMember: !!currentUserMember,
+    typeOfEffective: typeof effectiveCurrentUserEmail
+  });
+  
+  // CRITICAL: Log if effectiveCurrentUserEmail is missing
+  if (!effectiveCurrentUserEmail && teamMembers.length > 0) {
+    console.error("❌❌❌ CRITICAL: effectiveCurrentUserEmail is NULL/UNDEFINED when teamMembers are loaded!");
+    console.error("This means action dots will NOT show properly!");
+  }
 
   // Helper to get unique values for a given filter category
   function getUniqueFilterValues(category: string) {
@@ -272,15 +453,105 @@ export default function Component() {
     return sorted;
   }, [filteredPeople, sortBy]);
 
-  // Sort Admins to the top only after filtering and sorting
+  // Sort current user to the top, then admins, then others
+  // IMPORTANT: Use currentUserMember email as fallback if userData.email not available
   const sortedAndFilteredPeople = useMemo(() => {
     if (!sortedPeople || sortedPeople.length === 0) return [];
-    return [...sortedPeople].sort((a, b) => {
-      if (a.role === "company_admin" && b.role !== "company_admin") return -1;
-      if (a.role !== "company_admin" && b.role === "company_admin") return 1;
-      return 0;
+    
+    // Use currentUserMember email as fallback if userData.email is not available
+    const currentUserEmail = effectiveCurrentUserEmail;
+    
+    // CRITICAL: Need teamMembers to be loaded to sort properly
+    if (teamMembers.length === 0) {
+      console.log("⏳ Waiting for teamMembers to load...");
+      return [];
+    }
+    
+    // If we don't have current user email from either source, just sort admins to top
+    if (!currentUserEmail) {
+      console.log("⏳ No current user email found, sorting admins to top only");
+      return [...sortedPeople].sort((a, b) => {
+        const aIsAdmin = a.role === "super_admin" || a.role === "company_admin";
+        const bIsAdmin = b.role === "super_admin" || b.role === "company_admin";
+        if (aIsAdmin && !bIsAdmin) return -1;
+        if (!aIsAdmin && bIsAdmin) return 1;
+        return 0;
+      });
+    }
+    
+    console.log("🔄 Sorting WITH current user email:", currentUserEmail, "Total users:", sortedPeople.length);
+    
+    const sorted = [...sortedPeople].sort((a, b) => {
+      const aEmail = a.user?.email?.toLowerCase()?.trim();
+      const bEmail = b.user?.email?.toLowerCase()?.trim();
+      const aIsCurrentUser = aEmail === currentUserEmail;
+      const bIsCurrentUser = bEmail === currentUserEmail;
+      const aIsAdmin = a.role === "super_admin" || a.role === "company_admin";
+      const bIsAdmin = b.role === "super_admin" || b.role === "company_admin";
+      
+      // Current user always at top
+      if (aIsCurrentUser && !bIsCurrentUser) return -1;
+      if (!aIsCurrentUser && bIsCurrentUser) return 1;
+      
+      // If both or neither are current user, then sort by admin status
+      if (aIsCurrentUser && bIsCurrentUser) return 0; // Both are current user (shouldn't happen, but safe)
+      
+      // After current user, sort admins to top
+      if (aIsAdmin && !bIsAdmin) return -1;
+      if (!aIsAdmin && bIsAdmin) return 1;
+      
+      return 0; // Maintain original sort order for same priority items
     });
-  }, [sortedPeople]);
+    
+    // Verify current user is first
+    const firstUser = sorted[0];
+    const firstIsCurrentUser = firstUser?.user?.email?.toLowerCase()?.trim() === currentUserEmail;
+    if (!firstIsCurrentUser && sorted.length > 0) {
+      console.warn("⚠️ Sorting failed! Current user is NOT first:", {
+        firstUserEmail: firstUser?.user?.email,
+        currentUserEmail,
+        firstUserRole: firstUser?.role,
+        allEmails: sorted.map((m, idx) => `${idx + 1}. ${m.user?.email}`).join(", ")
+      });
+    } else {
+      console.log("✅ Current user is FIRST in sorted list");
+    }
+    
+    return sorted;
+  }, [sortedPeople, effectiveCurrentUserEmail, teamMembers.length]);
+  
+  // Debug: Log the sorted order and verify current user is first
+  useEffect(() => {
+    if (sortedAndFilteredPeople.length > 0 && userDataLoaded && currentUserEmailNormalized) {
+      const currentUserIndex = sortedAndFilteredPeople.findIndex(m => 
+        m.user?.email?.toLowerCase()?.trim() === currentUserEmailNormalized
+      );
+      const isFirst = currentUserIndex === 0;
+      console.log("🔍 Sorting Status:", {
+        isFirst: isFirst ? "✅ YES" : "❌ NO",
+        position: currentUserIndex + 1,
+        totalUsers: sortedAndFilteredPeople.length,
+        currentUserEmail: currentUserEmailNormalized,
+        firstUserEmail: sortedAndFilteredPeople[0]?.user?.email
+      });
+      if (!isFirst) {
+        console.warn("⚠️ Current user is NOT first! Expected position: 1, Actual:", currentUserIndex + 1);
+      }
+      console.log("🔍 First 3 users:", sortedAndFilteredPeople.slice(0, 3).map((m, idx) => ({
+        position: idx + 1,
+        name: m.user?.name,
+        email: m.user?.email,
+        isCurrentUser: m.user?.email?.toLowerCase()?.trim() === currentUserEmailNormalized,
+        role: m.role
+      })));
+    } else {
+      console.log("⏳ Waiting for data:", {
+        hasUsers: sortedAndFilteredPeople.length > 0,
+        userDataLoaded,
+        hasCurrentUserEmail: !!currentUserEmailNormalized
+      });
+    }
+  }, [sortedAndFilteredPeople, currentUserEmailNormalized, userDataLoaded]);
 
   function getInitials(name: string): string {
     if (!name) return "";
@@ -727,48 +998,44 @@ export default function Component() {
                       </TableCell>
                       <TableCell className="px-3 py-1 text-right">
                         {(() => {
-                          const isCurrentUser = member.user?.email === userData?.email;
+                          // Only render ActionDotsCell if we have the current user's email
+                          if (!effectiveCurrentUserEmail || teamMembers.length === 0) {
+                            return null;
+                          }
                           
+                          // Pre-check: Determine if we should show action dots BEFORE rendering component
+                          const memberEmail = String(member.user?.email || "").toLowerCase().trim();
+                          const currentUserEmailNormalized = String(effectiveCurrentUserEmail || "").toLowerCase().trim();
+                          const isCurrentUser = memberEmail.length > 0 && 
+                                                currentUserEmailNormalized.length > 0 && 
+                                                memberEmail === currentUserEmailNormalized;
+                          
+                          const roleString = String(currentUserRole || "").toLowerCase();
+                          const isAdmin = roleString === "super_admin" || roleString === "company_admin";
+                          
+                          const shouldShowDots = Boolean(isAdmin) || Boolean(isCurrentUser);
+                          
+                          // Don't even render the component if we shouldn't show dots
+                          if (!shouldShowDots) {
+                            // No dots for this user - return null immediately
+                            return null;
+                          }
                           return (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setMemberToEdit(member);
-                                    setIsEditModalOpen(true);
-                                  }}
-                                >
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit User
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setMemberToChangeRole(member);
-                                    setNewRole(member.role);
-                                  }}
-                                >
-                                  <Shield className="mr-2 h-4 w-4" />
-                                  Change Role
-                                </DropdownMenuItem>
-                                {/* Only admins can remove, and never allow removing yourself */}
-                                {!isCurrentUser && (currentUserRole === "super_admin" || currentUserRole === "company_admin") && (
-                                  <DropdownMenuItem
-                                    onClick={() => setMemberToDelete(member)}
-                                    className="text-red-600"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Remove Member
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <ActionDotsCell
+                              key={`${member.user_id}-${effectiveCurrentUserEmail}-${currentUserRole}`}
+                              member={member}
+                              currentUserEmail={effectiveCurrentUserEmail}
+                              currentUserRole={currentUserRole}
+                              onEdit={() => {
+                                setMemberToEdit(member);
+                                setIsEditModalOpen(true);
+                              }}
+                              onChangeRole={() => {
+                                setMemberToChangeRole(member);
+                                setNewRole(member.role);
+                              }}
+                              onDelete={() => setMemberToDelete(member)}
+                            />
                           );
                         })()}
                       </TableCell>
@@ -814,6 +1081,8 @@ export default function Component() {
         }}
         member={memberToEdit}
         companyId={companyId || ""}
+        currentUserEmail={userData?.email}
+        isCurrentUserAdmin={currentUserRole === "super_admin" || currentUserRole === "company_admin"}
       />
 
       {/* Delete Member Confirmation Dialog */}
