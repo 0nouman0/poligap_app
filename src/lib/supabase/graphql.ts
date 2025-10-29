@@ -804,6 +804,26 @@ export const queries = {
           node {
             role
             is_primary
+            status
+          }
+        }
+      }
+    }
+  `,
+
+  getMemberDetailsWithoutStatus: `
+    query GetMemberDetailsWithoutStatus($userId: UUID!, $companyId: UUID!) {
+      user_companiesCollection(
+        filter: { 
+          user_id: { eq: $userId },
+          company_id: { eq: $companyId }
+        }
+      ) {
+        edges {
+          node {
+            role
+            is_primary
+            status
           }
         }
       }

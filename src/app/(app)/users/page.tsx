@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Search, X, UserPlus, MoreVertical, Edit, Trash2, Shield, ListFilter } from "lucide-react";
+import { Search, X, UserPlus, MoreVertical, Edit, Trash2, Shield, ListFilter, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ import {
 
 import { useCompanyStore } from "@/stores/company-store";
 import { useUserStore } from "@/stores/user-store";
-import { useListMembers } from "@/hooks/use-user-management";
+import { useListMembers, useRemoveMember, useUpdateMemberRole } from "@/hooks/use-user-management";
 import {
   Table,
   TableHeader,
@@ -78,6 +78,7 @@ export default function Component() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState<typeof teamMembers[0] | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   // New state for filter category and filter value
   const [selectedFilterCategory, setSelectedFilterCategory] = useState<
@@ -97,6 +98,11 @@ export default function Component() {
 
   // Ref for filter dropdown
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Prevent hydration mismatch - only render dynamic content after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Click outside to close filter dropdown
   useEffect(() => {
@@ -130,7 +136,6 @@ export default function Component() {
 
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const companyId = selectedCompany?.companyId;
-  const currentUserRole = selectedCompany?.role;
   const { userData } = useUserStore();
 
   const {
@@ -139,10 +144,40 @@ export default function Component() {
     isLoading,
   } = useListMembers(companyId || "");
 
+  const removeMemberMutation = useRemoveMember();
+  const updateRoleMutation = useUpdateMemberRole();
+
   const teamMembers = membersResponse?.members || [];
+  
+  // Get current user's actual role from teamMembers (from API) - more reliable than selectedCompany
+  const currentUserMember = teamMembers.find((m: any) => 
+    m.user?.email === userData?.email
+  );
+  const currentUserRole = currentUserMember?.role || selectedCompany?.role || "viewer";
+
+  // Sync selectedCompany role with actual API role if it differs
+  useEffect(() => {
+    if (currentUserMember?.role && selectedCompany && currentUserMember.role !== selectedCompany.role) {
+      console.log(`Role mismatch detected - updating selectedCompany role from "${selectedCompany.role}" to "${currentUserMember.role}"`);
+      const { setSelectedCompany } = useCompanyStore.getState();
+      setSelectedCompany({
+        ...selectedCompany,
+        role: currentUserMember.role,
+      });
+    }
+  }, [currentUserMember, selectedCompany]);
+
+  // Debug logging to verify role data
+  useEffect(() => {
+    if (currentUserMember) {
+      console.log("Current user's role from API:", currentUserMember.role);
+      console.log("Current user can perform admin actions:", 
+        currentUserMember.role === "super_admin" || currentUserMember.role === "company_admin");
+    }
+  }, [currentUserMember]);
 
   console.log("teamMembers   ======> ", teamMembers);
-  console.log("currentUserRole   ======> ", currentUserRole);
+  console.log("currentUserRole (from API)   ======> ", currentUserRole);
   console.log("selectedCompany   ======> ", selectedCompany);
 
   // Helper to get unique values for a given filter category
@@ -177,10 +212,12 @@ export default function Component() {
   }
 
   // Filtered people based on search and filter dropdown
-  const filteredPeople = teamMembers.filter((member) => {
-    const matchesSearch = member.user?.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+  const filteredPeople = useMemo(() => {
+    if (!teamMembers || !Array.isArray(teamMembers)) return [];
+    return teamMembers.filter((member) => {
+      const matchesSearch = member.user?.name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ?? true;
 
     // Apply filter dropdown if selected
     let matchesFilter = true;
@@ -207,8 +244,9 @@ export default function Component() {
       }
     }
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+  }, [teamMembers, searchQuery, selectedFilterCategory, selectedFilterValue]);
 
   // Dynamic user counts
   const totalUsers = teamMembers.length;
@@ -216,6 +254,7 @@ export default function Component() {
 
   // Sorting logic
   const sortedPeople = useMemo(() => {
+    if (!filteredPeople || filteredPeople.length === 0) return [];
     if (sortBy === "relevance") return filteredPeople;
     const sorted = [...filteredPeople];
     if (sortBy === "name") {
@@ -235,6 +274,7 @@ export default function Component() {
 
   // Sort Admins to the top only after filtering and sorting
   const sortedAndFilteredPeople = useMemo(() => {
+    if (!sortedPeople || sortedPeople.length === 0) return [];
     return [...sortedPeople].sort((a, b) => {
       if (a.role === "company_admin" && b.role !== "company_admin") return -1;
       if (a.role !== "company_admin" && b.role === "company_admin") return 1;
@@ -255,60 +295,48 @@ export default function Component() {
 
   // Handle remove member
   const handleRemoveMember = async () => {
-    if (!companyId || !memberToDelete) return;
-
-    try {
-      const response = await fetch(`/api/members/remove`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: companyId,
-          member_user_id: memberToDelete.user_id,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to remove member");
-      }
-
-      toast.success("Member removed successfully");
-      setMemberToDelete(null);
-      // Refetch members
-      window.location.reload();
-    } catch (error) {
-      console.error("Error removing member:", error);
-      toast.error("Failed to remove member");
+    if (!companyId || !memberToDelete) {
+      console.error("Missing companyId or memberToDelete", { companyId, memberToDelete });
+      return;
     }
+
+    removeMemberMutation.mutate(
+      {
+        company_id: companyId,
+        member_user_id: memberToDelete.user_id,
+      },
+      {
+        onSuccess: () => {
+          setMemberToDelete(null);
+        },
+        onError: () => {
+          setMemberToDelete(null);
+        },
+      }
+    );
   };
 
   // Handle change role
   const handleChangeRole = async () => {
     if (!companyId || !memberToChangeRole || !newRole) return;
 
-    try {
-      const response = await fetch(`/api/members/update-role`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_id: companyId,
-          member_user_id: memberToChangeRole.user_id,
-          new_role: newRole,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update role");
+    updateRoleMutation.mutate(
+      {
+        company_id: companyId,
+        member_user_id: memberToChangeRole.user_id,
+        new_role: newRole,
+      },
+      {
+        onSuccess: () => {
+          setMemberToChangeRole(null);
+          setNewRole("");
+        },
+        onError: () => {
+          setMemberToChangeRole(null);
+          setNewRole("");
+        },
       }
-
-      toast.success("Role updated successfully");
-      setMemberToChangeRole(null);
-      setNewRole("");
-      // Refetch members
-      window.location.reload();
-    } catch (error) {
-      console.error("Error updating role:", error);
-      toast.error("Failed to update role");
-    }
+    );
   };
 
   return (
@@ -316,15 +344,18 @@ export default function Component() {
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-1">
-            <div className="flex items-center">
-              <h1 className="base-heading font-semibold">Users</h1>
+          <div className="flex justify-between items-center mb-1" suppressHydrationWarning>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#3B43D6] flex-shrink-0">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
               <Badge
                 variant="secondary"
                 className="text-13 ml-2 relative"
                 style={{ top: "-4px" }}
               >
-                {filteredPeople.length.toLocaleString()}
+                {isMounted && !isLoading ? filteredPeople.length.toLocaleString() : "0"}
               </Badge>
             </div>
 
@@ -560,7 +591,7 @@ export default function Component() {
               </span>
             </div>
           </div>
-        ) : (
+        ) : (isLoading || (sortedAndFilteredPeople && sortedAndFilteredPeople.length > 0)) ? (
           <Table className="bg-background rounded-lg border-t border-b border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400">
             <TableHeader className="text-13">
               <TableRow className="border-b border-gray-100 dark:border-gray-700 hover:bg-transparent h-7">
@@ -620,7 +651,7 @@ export default function Component() {
                       </TableCell>
                     </TableRow>
                   ))
-                : sortedAndFilteredPeople.map((member) => (
+                : (sortedAndFilteredPeople || []).map((member) => (
                     <TableRow
                       key={member.user_id}
                       className="text-13 border-b border-gray-100 dark:border-gray-700 hover:bg-transparent"
@@ -695,58 +726,72 @@ export default function Component() {
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-1 text-right">
-                        {member.user?.email !== userData?.email ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setMemberToEdit(member);
-                                  setIsEditModalOpen(true);
-                                }}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setMemberToChangeRole(member);
-                                  setNewRole(member.role);
-                                }}
-                              >
-                                <Shield className="mr-2 h-4 w-4" />
-                                Change Role
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => setMemberToDelete(member)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Remove Member
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          <span className="text-xs text-gray-400">Current User</span>
-                        )}
+                        {(() => {
+                          const isCurrentUser = member.user?.email === userData?.email;
+                          
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setMemberToEdit(member);
+                                    setIsEditModalOpen(true);
+                                  }}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setMemberToChangeRole(member);
+                                    setNewRole(member.role);
+                                  }}
+                                >
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Change Role
+                                </DropdownMenuItem>
+                                {/* Only admins can remove, and never allow removing yourself */}
+                                {!isCurrentUser && (currentUserRole === "super_admin" || currentUserRole === "company_admin") && (
+                                  <DropdownMenuItem
+                                    onClick={() => setMemberToDelete(member)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Remove Member
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}
             </TableBody>
           </Table>
-        )}
+        ) : null}
 
-        {/* No Results */}
-        {filteredPeople.length === 0 && !isLoading && (
+        {/* No Results - Only show if data has loaded, search/filter applied, and no results */}
+        {!isLoading && !error && teamMembers.length > 0 && filteredPeople.length === 0 && (searchQuery || selectedFilterCategory) && (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-13">
-              No users found matching your search.
+              No users found matching your search or filters.
+            </p>
+          </div>
+        )}
+        
+        {/* Show when data has loaded but no users exist at all (only after loading completes) */}
+        {!isLoading && !error && teamMembers.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-13">
+              No users found. Click "Add User" to invite team members.
             </p>
           </div>
         )}
@@ -769,10 +814,6 @@ export default function Component() {
         }}
         member={memberToEdit}
         companyId={companyId || ""}
-        onUserUpdated={() => {
-          // Refresh the page to show updated data
-          window.location.reload();
-        }}
       />
 
       {/* Delete Member Confirmation Dialog */}

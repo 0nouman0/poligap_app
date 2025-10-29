@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   companyId,
   onUserUpdated,
 }) => {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -115,6 +117,12 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
       }
 
       toast.success("User updated successfully");
+      
+      // Invalidate queries to refresh the members list
+      queryClient.invalidateQueries({ 
+        queryKey: ["members", companyId] 
+      });
+      
       onClose();
       if (onUserUpdated) {
         onUserUpdated();

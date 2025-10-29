@@ -54,12 +54,38 @@ const CompanyDropdown = memo(() => {
         const res: any = await gql.request(queries.getUserCompanies, { userId });
         const edges = res?.user_companiesCollection?.edges || [];
         
+        // If user has no company memberships, try to auto-fix via API
+        if (edges.length === 0) {
+          console.log('No company memberships found, attempting auto-fix...');
+          try {
+            // Call the ensure-all-users-synced endpoint to create membership
+            const fixResponse = await fetch('/api/users/ensure-all-users-synced', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({}),
+            });
+            const fixData = await fixResponse.json();
+            console.log('Auto-fix result:', fixData);
+            
+            // Retry fetching companies after a short delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const retryRes: any = await gql.request(queries.getUserCompanies, { userId });
+            const retryEdges = retryRes?.user_companiesCollection?.edges || [];
+            
+            if (retryEdges.length > 0) {
+              edges.push(...retryEdges);
+            }
+          } catch (fixError) {
+            console.error('Auto-fix failed:', fixError);
+          }
+        }
+        
         const COLORS = ["#7164FF", "#FFD600", "#FF4A4A", "#34A853"];
         const mapped = edges.map((e: any) => ({
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
           companyId: e.node.company?.id,
           name: e.node.company?.name, // Use 'name' consistently
-          role: e.node.role || "Member",
+          role: e.node.role || "member", // Use lowercase role values
         })).filter((c: any) => c.companyId && c.name);
 
         if (mapped.length > 0) {

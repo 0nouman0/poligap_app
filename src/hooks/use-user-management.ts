@@ -158,6 +158,9 @@ export function useListMembers(
       })
       if (role) params.append("role", role)
 
+      // Add cache-busting timestamp to ensure fresh data
+      params.append("_t", Date.now().toString())
+
       const response = await fetch(`/api/members/list?${params}`)
       if (!response.ok) {
         const error = await response.json()
@@ -166,6 +169,8 @@ export function useListMembers(
       return response.json()
     },
     enabled: !!companyId,
+    staleTime: 0, // Always consider data stale to ensure fresh fetches
+    cacheTime: 0, // Don't cache results
   })
 }
 

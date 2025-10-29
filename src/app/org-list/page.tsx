@@ -67,7 +67,7 @@ export default function OrgListPage() {
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
           companyId: e.node.company?.id,
           name: e.node.company?.name, // Use 'name' consistently instead of 'companyName'
-          role: e.node.role || "Member",
+          role: e.node.role || "member", // Use lowercase to match type definitions
         })).filter((c: any) => c.companyId && c.name);
 
         setCompanies(mapped);
