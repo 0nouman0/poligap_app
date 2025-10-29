@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GraphQLService, extractNodes } from '@/lib/graphql-service';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 
 // GET /api/tasks - Fetch all tasks for a user
 export async function GET(request: NextRequest) {
@@ -66,9 +67,33 @@ export async function POST(request: NextRequest) {
       userId
     } = body;
 
-    if (!title || !userId) {
+    if (!title) {
       return NextResponse.json(
-        { success: false, error: 'Title and User ID are required' },
+        { success: false, error: 'Title is required' },
+        { status: 400 }
+      );
+    }
+
+    // If userId is not provided by the client, try to derive it from the server-side
+    // Supabase session (cookies). This allows authenticated users to create tasks
+    // without the client needing to supply the userId explicitly.
+    let effectiveUserId = userId;
+    if (!effectiveUserId) {
+      try {
+        const supabase = await createSupabaseClient();
+        const { data: { user }, error: userErr } = await supabase.auth.getUser();
+        if (!userErr && user) {
+          effectiveUserId = user.id;
+        }
+      } catch (err) {
+        // ignore and fallback to validation below
+        console.warn('Could not derive user from server session:', err);
+      }
+    }
+
+    if (!effectiveUserId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID is required' },
         { status: 400 }
       );
     }
@@ -77,7 +102,8 @@ export async function POST(request: NextRequest) {
     await gqlService.init();
 
     // Create task using GraphQL
-    const response: any = await gqlService.query('createTask', {
+    // Prepare variables for GraphQL
+    const variables: any = {
       title,
       description,
       status,
@@ -86,11 +112,35 @@ export async function POST(request: NextRequest) {
       assignee,
       category,
       source,
-      source_ref: sourceRef || {},
-      user_id: userId
-    });
+      source_ref: sourceRef || null,
+      user_id: effectiveUserId
+    };
+
+    let response: any;
+    try {
+      response = await gqlService.query('createTask', variables);
+    } catch (err: any) {
+      // If GraphQL rejects the JSON input for source_ref, retry without it
+      const msg = err?.response?.errors?.[0]?.message || err?.message || '';
+      console.warn('GraphQL createTask error, retrying without source_ref if applicable:', msg);
+      if (msg.includes('Invalid input for JSON type') || msg.includes('Invalid input for json')) {
+        const retryVars = { ...variables };
+        delete retryVars.source_ref;
+        response = await gqlService.query('createTask', retryVars);
+      } else {
+        throw err;
+      }
+    }
     
-    const data = response.insertIntotasksCollection.records[0];
+    // Ensure we have a valid response shape
+    const data = response?.insertIntotasksCollection?.records?.[0];
+    if (!data) {
+      console.error('Invalid GraphQL response for createTask:', response);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create task (invalid response)' },
+        { status: 500 }
+      );
+    }
 
     // Transform response to match expected format
     const task = {

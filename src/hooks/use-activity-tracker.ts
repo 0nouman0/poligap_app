@@ -111,15 +111,6 @@ export const useActivityTracker = () => {
     });
   }, [trackActivity]);
 
-  const trackPageVisit = useCallback((
-    pageName: string
-  ) => {
-    const action = ActivityHelpers.pageVisit(pageName);
-    trackActivity('profile', action, {
-      pageVisited: pageName,
-    });
-  }, [trackActivity]);
-
   return {
     trackActivity,
     trackComplianceCheck,
@@ -130,7 +121,6 @@ export const useActivityTracker = () => {
     trackChat,
     trackKnowledgeBase,
     trackHistoryView,
-    trackPageVisit,
   };
 };
 

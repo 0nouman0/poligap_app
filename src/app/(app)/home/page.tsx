@@ -21,7 +21,6 @@ import { DashboardSkeleton } from "@/components/ui/page-loader";
 import { useOverviewStats } from "@/lib/queries/useHome";
 import { formatGlobalDate } from "@/utils/date.util";
 import RecentActivity from "@/components/recent-activity";
-import { useActivityTracker } from "@/hooks/use-activity-tracker";
 
 
 interface OverviewStats {
@@ -34,12 +33,7 @@ interface OverviewStats {
 export default function HomePage() {
   const { userData } = useUserStore();
   const { data: overviewStats = { complianceChecks: 0, contractsReviewed: 0, policiesGenerated: 0, trainingModules: 0 }, isLoading: isLoadingStats } = useOverviewStats();
-  const { trackPageVisit } = useActivityTracker();
-
-  // Track page visit
-  React.useEffect(() => {
-    trackPageVisit('home');
-  }, [trackPageVisit]);
+  // Page visit tracking intentionally disabled; only result events are recorded
   
   // Get current time-based greeting
   const getGreeting = () => {

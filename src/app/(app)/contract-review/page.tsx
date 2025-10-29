@@ -707,12 +707,9 @@ export default function ContractReviewPage() {
   const { userData } = useUserStore();
   const { addLog } = useAuditLogsStore();
   const crStore = useContractReviewStore();
-  const { trackContractReview, trackPageVisit } = useActivityTracker();
+  const { trackContractReview } = useActivityTracker();
 
-  // Track page visit
-  useEffect(() => {
-    trackPageVisit('contract-review');
-  }, [trackPageVisit]);
+  
 
   const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -2066,10 +2063,9 @@ export default function ContractReviewPage() {
                 {/* Upload Area */}
                 <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 px-5 py-[15px] flex justify-center items-center">
                   <div className="flex flex-col items-center justify-center gap-2.5">
-                    <svg className="w-16 h-16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm4.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" className="text-gray-400 dark:text-gray-500"/>
-                      <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2Zm2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2Z" className="text-gray-400 dark:text-gray-500"/>
-                    </svg>
+                    <div className="w-6 h-6 text-black dark:text-gray-300">
+                      <Upload className="w-full h-full" strokeWidth={2} />
+                    </div>
                     
                     <label className="bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-xs font-semibold h-9 px-4 rounded-[5px] cursor-pointer flex items-center justify-center">
                       Choose File
@@ -2129,10 +2125,9 @@ export default function ContractReviewPage() {
                 {/* Browse Area */}
                 <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 px-5 py-[15px] flex justify-center items-center">
                   <div className="flex flex-col items-center justify-center gap-2.5">
-                    <svg className="w-16 h-16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm4.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" className="text-gray-400 dark:text-gray-500"/>
-                      <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2Zm2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2Z" className="text-gray-400 dark:text-gray-500"/>
-                    </svg>
+                    <div className="w-6 h-6 text-black dark:text-gray-300">
+                      <FolderOpen className="w-full h-full" strokeWidth={2} />
+                    </div>
                     
                     <Button 
                       onClick={() => setIsAssetPickerOpen(true)}

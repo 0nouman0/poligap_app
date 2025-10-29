@@ -86,13 +86,46 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   showHeader = true, 
   compact = false 
 }) => {
-  const { getRecentActivities, clearActivities } = useActivityStore();
+  const { getRecentActivities, clearActivities, removeActivitiesByType } = useActivityStore();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    // As an immediate, last-resort safeguard: force-remove any persisted
+    // activity store and clear in-memory activities so legacy "Visited ..."
+    // and 'profile' entries cannot appear. This is destructive (clears all
+    // client-side activities) but guarantees the UI won't show stale page
+    // visit items. New result events will still be recorded normally.
+    try {
+      localStorage.removeItem('user-activity-store');
+    } catch (e) {
+      // ignore
+    }
+    try {
+      clearActivities();
+    } catch (e) {
+      // ignore
+    }
+
     // Only run on client side after hydration
-    setActivities(getRecentActivities(limit));
+    // Note: we already removed persisted store and cleared memory above. If
+    // that failed for some reason, we still attempt a non-destructive filter
+    // below when reading the in-memory activities.
+
+    // Then read from the in-memory store and filter to only allowed result types
+    const raw = getRecentActivities(100); // get a larger slice then filter
+    const allowedTypes: ActivityItem['type'][] = ['compliance-check', 'contract-review', 'policy-generator'];
+    const filtered = raw
+      .filter((a) => allowedTypes.includes(a.type))
+      .filter((a) => {
+        const action = a.action || '';
+        // Also exclude any legacy "Visited ..." actions or profile visits
+        if (action.startsWith('Visited ')) return false;
+        if (a.type === 'profile') return false;
+        return true;
+      })
+      .slice(0, limit);
+    setActivities(filtered);
     setIsHydrated(true);
   }, [getRecentActivities, limit]);
 
@@ -150,10 +183,14 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             <Clock className="h-5 w-5" />
             Recent Activity
           </CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={clearActivities}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Only clear the visible high-signal types
+              const allowedTypes: ActivityItem['type'][] = ['compliance-check', 'contract-review', 'policy-generator'];
+              removeActivitiesByType(allowedTypes);
+            }}
             className="text-xs"
           >
             Clear All

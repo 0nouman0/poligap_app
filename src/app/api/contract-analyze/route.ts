@@ -348,9 +348,9 @@ function parseAnalysisResult(analysisText: string, contractText: string) {
       const firstThird = textLength / 3;
       const secondThird = (2 * textLength) / 3;
       
-      const firstThirdSuggestions = suggestions.filter(s => s.startIndex < firstThird).length;
-      const middleThirdSuggestions = suggestions.filter(s => s.startIndex >= firstThird && s.startIndex < secondThird).length;
-      const lastThirdSuggestions = suggestions.filter(s => s.startIndex >= secondThird).length;
+  const firstThirdSuggestions = suggestions.filter((s: any) => s.startIndex < firstThird).length;
+  const middleThirdSuggestions = suggestions.filter((s: any) => s.startIndex >= firstThird && s.startIndex < secondThird).length;
+  const lastThirdSuggestions = suggestions.filter((s: any) => s.startIndex >= secondThird).length;
       
       console.log(`Suggestion distribution: First third: ${firstThirdSuggestions}, Middle third: ${middleThirdSuggestions}, Last third: ${lastThirdSuggestions}`);
       console.log(`Document sections: 0-${Math.floor(firstThird)}, ${Math.floor(firstThird)}-${Math.floor(secondThird)}, ${Math.floor(secondThird)}-${textLength}`);

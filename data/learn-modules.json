@@ -1,0 +1,162 @@
+[
+  {
+    "id": "lm-001",
+    "title": "Introduction to GDPR Compliance",
+    "summary": "Overview of GDPR requirements, data subject rights, and practical steps to become compliant.",
+    "durationMinutes": 25,
+    "level": "Beginner",
+    "author": "Legal Team",
+    "tags": ["gdpr", "privacy", "compliance"],
+    "objectives": [
+      "Understand key GDPR principles",
+      "Identify data subject rights",
+      "Learn practical steps to improve compliance"
+    ],
+    "prerequisites": ["Basic familiarity with company data handling practices"],
+    "detailedDescription": "This module covers the core GDPR concepts and practical steps teams should take to comply, including data mapping, lawful basis, and handling subject requests.",
+    "lessons": [
+      { "id": "lm-001-1", "title": "What is GDPR?", "durationMinutes": 5, "summary": "High-level overview and history.", "content": "GDPR (General Data Protection Regulation) is an EU law that standardizes data protection across member states. This lesson explains who it applies to and key terms like personal data and processing." },
+      {
+        "id": "lm-001-2",
+        "title": "Data Subject Rights",
+        "durationMinutes": 20,
+        "summary": "Detailed walkthrough of rights and operational handling.",
+        "content": "Data subjects have a set of enforceable rights under GDPR: the right of access (to see what personal data an organisation holds), the right to rectification (to correct inaccurate data), the right to erasure (right to be forgotten under certain conditions), the right to restriction of processing, the right to data portability, and the right to object. This lesson explains each right in depth, outlines the lawful bases for processing, and provides a step-by-step operational procedure for receiving and responding to a data subject access request (DSAR): 1) Verify requester identity; 2) Log the request; 3) Search systems and extract data; 4) Review and redact third-party data; 5) Reply within statutory timelines (usually 1 month) with scope and delivery. The lesson includes recommended templates for acknowledging requests and logging evidence of fulfillment.",
+        "resources": [
+          { "title": "ICO: Subject access requests", "url": "https://ico.org.uk/for-organisations/subject-access-requests/" },
+          { "title": "EDPB Guidelines", "url": "https://edpb.europa.eu/" }
+        ]
+      },
+      {
+        "id": "lm-001-3",
+        "title": "Practical Steps",
+        "durationMinutes": 25,
+        "summary": "Operational checklist and templates for small teams.",
+        "content": "This lesson provides a hands-on checklist and suggested ownership map: (a) Map data flows and record processing activities (ROPA); (b) Define lawful grounds for processing (consent, contract, legitimate interest, legal obligation, vital interests, public task); (c) Set retention schedules and deletion workflows; (d) Implement access controls and encryption for sensitive fields; (e) Prepare DSAR handling procedures and a breach response template. Each step includes a short example, recommended evidence to capture for audits, and a mini-template you can copy into internal documentation.\n\nPractical examples: an example ROPA entry for customer support tickets, retention policy for logs, and a template DSAR acknowledgement email. The module ends with a short checklist you can use to run a one-hour team workshop to apply these steps to your product or process.",
+        "resources": [
+          { "title": "EU GDPR text (official)", "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj" },
+          { "title": "Sample ROPA template", "url": "https://example.com/ropa-template" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lm-002",
+    "title": "HIPAA Basics for Teams",
+    "summary": "Key HIPAA concepts, administrative safeguards, and workforce training best practices.",
+    "durationMinutes": 30,
+    "level": "Intermediate",
+    "author": "Security",
+    "tags": ["hipaa", "healthcare", "security"],
+    "objectives": [
+      "Learn HIPAA terminology",
+      "Understand administrative safeguards",
+      "Know reporting requirements"
+    ],
+    "prerequisites": ["Working in or with healthcare data is helpful"],
+    "detailedDescription": "HIPAA protects health information in the U.S. This module covers the rules, safeguards, and how teams should handle PHI securely.",
+    "lessons": [
+      {
+        "id": "lm-002-1",
+        "title": "HIPAA Overview",
+        "durationMinutes": 15,
+        "summary": "Foundations, scope, and roles.",
+        "content": "HIPAA (Health Insurance Portability and Accountability Act) establishes rules for the handling of protected health information in the United States. This lesson explains the difference between covered entities and business associates, the Privacy Rule vs the Security Rule, and the types of PHI covered. It provides real-world scenarios (clinical records, billing data, patient portals) and clarifies when HIPAA applies. We also cover breach notification obligations and potential penalties.",
+        "resources": [
+          { "title": "HHS HIPAA Overview", "url": "https://www.hhs.gov/hipaa/index.html" }
+        ]
+      },
+      {
+        "id": "lm-002-2",
+        "title": "Safeguards",
+        "durationMinutes": 20,
+        "summary": "Administrative, physical, and technical controls explained.",
+        "content": "Implementing safeguards requires three pillars: administrative (policies, workforce training, role-based access), physical (facility controls, device management), and technical (access controls, encryption, audit logs). This lesson provides checklist items for each pillar and examples such as how to configure audit logging for EHRs, recommended encryption-at-rest settings, and acceptable use policies for mobile devices. It includes sample policy language for device encryption and a suggested training cadence for staff."
+      },
+      {
+        "id": "lm-002-3",
+        "title": "Reporting & Training",
+        "durationMinutes": 15,
+        "summary": "Incident reporting workflow and training best practices.",
+        "content": "A robust breach reporting workflow includes immediate containment steps, timeline capture, impact assessment, notification triggers, and a designated communications lead. This lesson walks through a sample incident timeline, templates for internal and external notifications, and a training plan for onboarding and annual refreshers. It also includes exercises for tabletop drills and how to capture lessons learned for updated controls."
+      }
+    ]
+  },
+  {
+    "id": "lm-003",
+    "title": "Building an Incident Response Playbook",
+    "summary": "Hands-on guide to creating and testing incident response procedures for data breaches.",
+    "durationMinutes": 40,
+    "level": "Advanced",
+    "author": "Ops",
+    "tags": ["incident-response", "security", "playbook"],
+    "objectives": [
+      "Design an incident response workflow",
+      "Assign roles and escalation paths",
+      "Run tabletop exercises"
+    ],
+    "prerequisites": ["Familiarity with basic security and incident reporting procedures"],
+    "detailedDescription": "This hands-on module helps teams build an incident response playbook, define roles, and run exercises to validate readiness.",
+    "lessons": [
+      {
+        "id": "lm-003-1",
+        "title": "Planning & Roles",
+        "durationMinutes": 20,
+        "summary": "Define roles, responsibilities and runbooks.",
+        "content": "A practical response plan names an incident commander, a technical lead, a communications lead, and legal/HR contacts. This lesson provides example runbook entries with decision trees for common incident types (data exfiltration, ransomware, phishing-driven compromise). It includes templates for escalation matrices, contact lists, and an example SLA for initial response times.",
+        "resources": [
+          { "title": "NIST Computer Security Incident Handling Guide (SP 800-61)", "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r2.pdf" }
+        ]
+      },
+      {
+        "id": "lm-003-2",
+        "title": "Detection & Triage",
+        "durationMinutes": 25,
+        "summary": "Instrumentation and triage workflow.",
+        "content": "Detection relies on instrumentation: log collection, SIEM correlation rules, IDS alerts, and user reports. This lesson outlines a triage checklist: identify affected systems, isolate compromised hosts, preserve volatile evidence, and determine scope. It provides a prioritized decision matrix (contain, eradicate, recover) and examples of containment actions (network segmentation, credential resets)."
+      },
+      {
+        "id": "lm-003-3",
+        "title": "Response Exercises",
+        "durationMinutes": 20,
+        "summary": "Tabletop and post-incident review practices.",
+        "content": "Exercises validate your playbook. This lesson describes how to design a tabletop scenario, invite stakeholders, run the scenario, capture gaps, and update documentation. It recommends an after-action report template with root cause analysis, impact summary, remediation actions, and owners."
+      }
+    ]
+  }
+  ,
+  {
+    "id": "lm-004",
+    "title": "Security Basics for Non-Engineers",
+    "summary": "A practical introduction to security best practices for business teams.",
+    "durationMinutes": 20,
+    "level": "Beginner",
+    "author": "Security",
+    "tags": ["security", "basics", "awareness"],
+    "prerequisites": ["No technical background required"],
+    "detailedDescription": "This short module teaches common security hygiene: password managers, phishing recognition, device protections and safe data sharing.",
+    "objectives": ["Recognize phishing", "Use a password manager", "Secure devices"],
+    "lessons": [
+      { "id": "lm-004-1", "title": "Phishing & Social Engineering", "durationMinutes": 6, "summary": "Spot common phishing patterns.", "content": "Examples of phishing emails, signs to look for, and safe reporting steps." },
+      { "id": "lm-004-2", "title": "Passwords & MFA", "durationMinutes": 7, "summary": "Strong passwords and MFA.", "content": "Why passwords fail, how password managers help, and enabling multi-factor authentication." },
+      { "id": "lm-004-3", "title": "Device Hygiene", "durationMinutes": 7, "summary": "Keep devices secure.", "content": "OS updates, disk encryption, and secure Wi-Fi practices." }
+    ]
+  },
+  {
+    "id": "lm-005",
+    "title": "Privacy by Design Essentials",
+    "summary": "Principles and practices to embed privacy into product and process design.",
+    "durationMinutes": 35,
+    "level": "Intermediate",
+    "author": "Product",
+    "tags": ["privacy", "product", "design"],
+    "prerequisites": ["Familiarity with product development lifecycle"],
+    "detailedDescription": "Learn how to apply Privacy by Design principles across requirements, design, and deployment to reduce privacy risk.",
+    "objectives": ["Embed privacy in design decisions", "Perform privacy risk assessments", "Document privacy choices"],
+    "lessons": [
+      { "id": "lm-005-1", "title": "Privacy Principles", "durationMinutes": 10, "summary": "Core principles explained.", "content": "Overview of privacy by design, minimization, transparency, and defaults." },
+      { "id": "lm-005-2", "title": "Operationalizing Privacy", "durationMinutes": 15, "summary": "Integrate into workflows.", "content": "Checklists for product teams, privacy risk templates, and stakeholder mapping." },
+      { "id": "lm-005-3", "title": "Documentation & Accountability", "durationMinutes": 10, "summary": "How to document decisions.", "content": "Keeping records of processing, DPIAs, and how to show accountability." }
+    ]
+  }
+]
