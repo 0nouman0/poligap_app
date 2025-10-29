@@ -945,11 +945,17 @@ export default function Component() {
                               <span className="text-gray-900 dark:text-gray-100">
                                 {member.user?.name || "-"}
                               </span>
-                              {member.user?.email === userData?.email && (
-                                <Badge className="bg-white dark:bg-background text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-[4px] px-1 py-0.5 text-xs font-medium card-border">
-                                  You
-                                </Badge>
-                              )}
+                              {(() => {
+                                // Check if this is the current user using the reliable email source
+                                const memberEmail = String(member.user?.email || "").toLowerCase().trim();
+                                const currentEmail = effectiveCurrentUserEmail ? String(effectiveCurrentUserEmail).toLowerCase().trim() : "";
+                                const isCurrentUser = memberEmail === currentEmail && memberEmail !== "" && currentEmail !== "";
+                                return isCurrentUser ? (
+                                  <Badge className="bg-white dark:bg-background text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-[4px] px-1 py-0.5 text-xs font-medium card-border">
+                                    You
+                                  </Badge>
+                                ) : null;
+                              })()}
                             </div>
                             <p className="text-muted-foreground truncate">
                               {member.user?.email || "-"}
@@ -1003,23 +1009,37 @@ export default function Component() {
                             return null;
                           }
                           
-                          // Pre-check: Determine if we should show action dots BEFORE rendering component
+                          // CRITICAL PRE-CHECK: Determine if we should show action dots BEFORE rendering component
+                          // This prevents rendering the ActionDotsCell component entirely for users who shouldn't see dots
+                          
+                          // Normalize emails for strict comparison
                           const memberEmail = String(member.user?.email || "").toLowerCase().trim();
-                          const currentUserEmailNormalized = String(effectiveCurrentUserEmail || "").toLowerCase().trim();
-                          const isCurrentUser = memberEmail.length > 0 && 
-                                                currentUserEmailNormalized.length > 0 && 
+                          const currentUserEmailNormalized = String(effectiveCurrentUserEmail).toLowerCase().trim();
+                          
+                          // Both emails must be non-empty strings and exactly equal
+                          const isCurrentUser = memberEmail !== "" && 
+                                                currentUserEmailNormalized !== "" && 
                                                 memberEmail === currentUserEmailNormalized;
                           
-                          const roleString = String(currentUserRole || "").toLowerCase();
-                          const isAdmin = roleString === "super_admin" || roleString === "company_admin";
+                          // Check role - must be exactly "super_admin" or "company_admin" (case-insensitive)
+                          const roleString = String(currentUserRole || "").toLowerCase().trim();
+                          const isAdmin = (roleString === "super_admin") || (roleString === "company_admin");
                           
-                          const shouldShowDots = Boolean(isAdmin) || Boolean(isCurrentUser);
+                          // Only show dots if: (current user is admin) OR (this is the current user)
+                          // If BOTH are false, do NOT render component at all
+                          const shouldShowDots = isAdmin === true || isCurrentUser === true;
                           
-                          // Don't even render the component if we shouldn't show dots
+                          // STRICT CHECK: If we shouldn't show dots, return null immediately (no component render)
                           if (!shouldShowDots) {
-                            // No dots for this user - return null immediately
+                            // NOT admin AND NOT current user = absolutely NO action dots
+                            // Return null to prevent any rendering
                             return null;
                           }
+                          
+                          // At this point, we know:
+                          // - Either current user is admin (can see dots for all)
+                          // - Or this IS the current user (can see dots for themselves)
+                          // Safe to render ActionDotsCell component
                           return (
                             <ActionDotsCell
                               key={`${member.user_id}-${effectiveCurrentUserEmail}-${currentUserRole}`}
