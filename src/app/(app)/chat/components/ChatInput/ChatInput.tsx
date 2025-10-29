@@ -90,6 +90,9 @@ const ChatInput = ({
 
   const isStreamingResponse = Boolean(isStreaming);
 
+  // State for file attachment
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+
   const [selectedOptions, setSelectedOptions] = useState<MultiSelectOption[]>([
     { id: "web-search", label: "Enable Web Search", enabled: false },
     { id: "research", label: "Enable Reasoning", enabled: false },
@@ -218,24 +221,22 @@ const ChatInput = ({
     try {
       const fileArray = Array.from(files);
       
-      // For now, handle only single file uploads to Portkey
+      // For now, handle only single file uploads
       if (fileArray.length > 1) {
         toastError('Multiple file upload not supported yet. Please upload one file at a time.');
         return;
       }
 
       const file = fileArray[0];
-      console.log(`🚀 Uploading file directly to Portkey API: ${file.name}`);
+      console.log(`📎 File attached: ${file.name}`);
       
-      // Show loading toast
-      toastSuccess(`Uploading ${file.name} directly to AI for analysis...`);
-      
-      // Send file directly to Portkey API with streaming
-      await handleFileUploadToPortkey(file);
+      // Store file attachment without sending
+      setAttachedFile(file);
+      toastSuccess(`File attached: ${file.name}. Type your query and send.`);
       
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toastError('Failed to upload file. Please try again.');
+      console.error('Error attaching file:', error);
+      toastError('Failed to attach file. Please try again.');
     }
 
     // Reset input
@@ -244,16 +245,18 @@ const ChatInput = ({
     }
   };
 
-  const handleFileUploadToPortkey = async (file: File) => {
+  // Remove attached file
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    toastSuccess('File attachment removed');
+  };
+
+  const handleFileUploadToPortkey = async (file: File, userQuery: string) => {
     try {
-      const userQuery = inputMessage || 'Please analyze this file';
-      console.log('📡 Sending file to Portkey API via regular chat stream...');
+      console.log('📡 Sending file to Portkey API with user query...');
 
       // Create a user message for the file upload
-      const fileMessage = `[File Upload: ${file.name}] ${userQuery}`;
-      
-      // Clear input 
-      setInputMessage('');
+      const fileMessage = `[File: ${file.name}] ${userQuery}`;
 
       // Create form data for file upload
       const formData = new FormData();
@@ -401,6 +404,16 @@ const ChatInput = ({
       setOpenGlobalModal();
     }
 
+    // If file is attached, send file with query
+    if (attachedFile) {
+      const query = inputMessage.trim();
+      setInputMessage(''); // Clear input
+      const file = attachedFile;
+      setAttachedFile(null); // Clear attachment
+      await handleFileUploadToPortkey(file, query);
+      return;
+    }
+
     const currentMessage = inputMessage;
     setInputMessage("");
     
@@ -497,11 +510,35 @@ const ChatInput = ({
         </div>
       )}
 
-      {/* File Attachments removed - files now handled directly via API */}
+      {/* File Attachment Display */}
+      {attachedFile && (
+        <div className="mb-3 p-3 bg-accent/30 dark:bg-accent/20 rounded-lg border border-border/50 dark:border-border/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Paperclip className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                {attachedFile.name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({(attachedFile.size / 1024).toFixed(1)} KB)
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRemoveFile}
+              className="h-7 px-2 text-muted-foreground hover:text-destructive"
+            >
+              ×
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="relative flex w-full bg-background/50 dark:bg-background/50 rounded-[12px] border border-border/30 dark:border-border/30 p-4 focus-within:border-primary/50 dark:focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 dark:focus-within:ring-primary/10 transition-all duration-200">
         <textarea
-          placeholder="Ask anything... ✨"
+          placeholder={attachedFile ? `Ask a question about ${attachedFile.name}...` : "Ask anything... ✨"}
           value={inputMessage || ""}
           onChange={(e) => {
             const val = e.target.value;

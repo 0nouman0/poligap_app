@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
-import { getSupabaseAIClient } from "@/lib/ai-client-supabase";
-import { parseDocumentWithGemini } from "@/lib/parsers/gemini-document-parser";
+import { createPortkeyClient } from "@/lib/portkey/client";
+import { parseDocumentWithPortkey } from "@/lib/parsers/portkey-document-parser";
 
 // File upload validation
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -65,64 +65,91 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔄 Processing file upload: ${file.name} (${file.type}, ${file.size} bytes)`);
 
-    // Get AI client
-    const aiClient = await getSupabaseAIClient();
-    
-    // Convert file to base64 for API transmission
-    const arrayBuffer = await file.arrayBuffer();
-    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+    // Step 1: Extract file content using Portkey
+    console.log('📤 Extracting file content with Portkey...');
+    const parseResult = await parseDocumentWithPortkey(file);
 
-    console.log('🚀 Attempting to send file directly to Portkey API...');
+    if (!parseResult.success) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Failed to extract file content: ${parseResult.error}` 
+        }),
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json" } 
+        }
+      );
+    }
 
-    // Create streaming response
+    console.log(`✅ File content extracted successfully`);
+
+    // Step 2: Create streaming response with file content embedded in message
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Try Portkey API first - attempt with file data in message
-          console.log('📡 Attempting to send file directly to Portkey API...');
+          // Get Portkey client
+          const portkey = createPortkeyClient('openai'); // Use OpenAI for file support
           
-          // First try: Include file info in the message text
-          const portkeyMessages = [
+          if (!portkey) {
+            throw new Error('Portkey client not available');
+          }
+
+          console.log('📡 Sending chat request with file content to Portkey...');
+          
+          // Create a comprehensive message that combines the file content with the user query
+          const combinedMessage = `I have uploaded a document titled "${file.name}". Here is the complete content of the document:
+
+--- BEGIN DOCUMENT CONTENT ---
+${parseResult.content}
+--- END DOCUMENT CONTENT ---
+
+Document Summary: ${parseResult.summary}
+
+Document Type: ${parseResult.documentType}
+
+Key Points:
+${parseResult.keyPoints.map((point: string, i: number) => `${i + 1}. ${point}`).join('\n')}
+
+Now, based on this document, please answer the following question:
+
+${userQuery}`;
+
+          // Create message with embedded file content
+          const messages = [
             {
-              role: "user",
-              content: `${userQuery}
-
-File uploaded: ${file.name} (${file.type}, ${Math.round(file.size / 1024)}KB)
-
-Please analyze this file. If you can process files directly, please do so. If not, I will provide the extracted content separately.`
+              role: "user" as const,
+              content: combinedMessage
             }
           ];
 
-          const portkeyResponse = await aiClient.createStreamingCompletion(portkeyMessages, {
-            taskType: "chat",
-            strategy: "balanced",
+          // Stream chat completion with file attachment
+          const chatStream = await portkey.chat.completions.create({
+            model: 'gpt-4o', // Use GPT-4o for best file handling
+            messages: messages as any,
+            max_tokens: 4000,
             temperature: 0.7,
-            maxTokens: 4000,
+            stream: true,
           });
 
-          console.log('✅ Portkey streaming response...');
+          console.log('✅ Receiving streaming response from Portkey with file context...');
 
           let fullContent = "";
-          let hasContent = false;
 
-          // Stream the response using the same format as stream-chat
-          for await (const chunk of portkeyResponse as any) {
+          // Stream the response
+          for await (const chunk of chatStream) {
             try {
-              const content = chunk.choices?.[0]?.delta?.content || 
-                             chunk.choices?.[0]?.text || 
-                             chunk.content || 
-                             '';
+              const content = chunk.choices?.[0]?.delta?.content || '';
               
               if (content) {
-                hasContent = true;
                 fullContent += content;
                 
                 // Send in RunResponse format expected by frontend
                 const data = `data: ${JSON.stringify({ 
                   event: "RunResponseContent",
                   content: fullContent,
-                  created_at: Date.now()
+                  created_at: Date.now(),
+                  file_name: file.name
                 })}\n\n`;
                 
                 controller.enqueue(encoder.encode(data));
@@ -131,11 +158,12 @@ Please analyze this file. If you can process files directly, please do so. If no
               // Check for completion
               const finishReason = chunk.choices?.[0]?.finish_reason;
               if (finishReason) {
-                console.log('✅ Portkey completed response');
+                console.log('✅ Portkey completed response with file analysis');
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
                   event: "RunResponseComplete",
                   content: fullContent,
-                  created_at: Date.now()
+                  created_at: Date.now(),
+                  file_name: file.name
                 })}\n\n`));
                 controller.close();
                 return;
@@ -145,108 +173,18 @@ Please analyze this file. If you can process files directly, please do so. If no
             }
           }
 
-          // If we get here without content, Portkey might not support files
-          if (!hasContent) {
-            throw new Error('Portkey did not provide file analysis - falling back to Gemini');
-          }
-
           controller.close();
 
-        } catch (portkeyError) {
-          console.warn('⚠️ Portkey failed to process file:', portkeyError);
-          console.log('🔄 Falling back to Gemini API for file processing...');
-
-          try {
-            // Fallback to Gemini API
-            console.log('🔄 Using Gemini to extract file content...');
-
-            // Use Gemini to process the file
-            const geminiResult = await parseDocumentWithGemini(file);
-
-            if (geminiResult.success) {
-              // Send extracted content to Portkey for chat processing
-              const fallbackMessages = [
-                {
-                  role: "user",
-                  content: `${userQuery}
-
-File: ${file.name}
-Document Type: ${geminiResult.documentType}
-Summary: ${geminiResult.summary}
-
-Content extracted from document:
-
-${geminiResult.content}
-
-Please provide a comprehensive response based on this document content.`
-                }
-              ];
-
-              const fallbackResponse = await aiClient.createStreamingCompletion(fallbackMessages, {
-                taskType: "chat",
-                strategy: "balanced",
-                temperature: 0.7,
-                maxTokens: 4000,
-              });
-
-              console.log('✅ Gemini processed file, Portkey streaming response...');
-
-              let fallbackContent = "";
-
-              // Stream the fallback response in the same format
-              for await (const chunk of fallbackResponse as any) {
-                try {
-                  const content = chunk.choices?.[0]?.delta?.content || 
-                                 chunk.choices?.[0]?.text || 
-                                 chunk.content || 
-                                 '';
-                  
-                  if (content) {
-                    fallbackContent += content;
-                    
-                    const data = `data: ${JSON.stringify({ 
-                      event: "RunResponseContent",
-                      content: fallbackContent,
-                      created_at: Date.now()
-                    })}\n\n`;
-                    
-                    controller.enqueue(encoder.encode(data));
-                  }
-
-                  // Check for completion
-                  const finishReason = chunk.choices?.[0]?.finish_reason;
-                  if (finishReason) {
-                    console.log('✅ Gemini+Portkey completed response');
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                      event: "RunResponseComplete",
-                      content: fallbackContent,
-                      created_at: Date.now()
-                    })}\n\n`));
-                    controller.close();
-                    return;
-                  }
-                } catch (chunkError) {
-                  console.warn('⚠️ Error processing fallback chunk:', chunkError);
-                }
-              }
-
-              controller.close();
-
-            } else {
-              throw new Error(geminiResult.error || 'Gemini processing failed');
-            }
-
-          } catch (geminiError) {
-            console.error('❌ Both Portkey and Gemini failed:', geminiError);
-            
-            const errorData = `data: ${JSON.stringify({
-              event: "RunResponseError",
-              error: `Failed to process file: ${geminiError instanceof Error ? geminiError.message : 'Unknown error'}`,
-              created_at: Date.now()
-            })}\n\n`;
-            controller.enqueue(encoder.encode(errorData));
-            controller.close();
-          }
+        } catch (error) {
+          console.error('❌ Portkey file chat failed:', error);
+          
+          const errorData = `data: ${JSON.stringify({
+            event: "RunResponseError",
+            error: `Failed to process file with Portkey: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            created_at: Date.now()
+          })}\n\n`;
+          controller.enqueue(encoder.encode(errorData));
+          controller.close();
         }
       }
     });

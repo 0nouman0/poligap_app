@@ -35,10 +35,10 @@ export async function parseDocumentWithGemini(file: File): Promise<{
 
     // Try different Gemini models with proper API version
     const modelVersions = [
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest', 
+      'gemini-2.0-flash-exp',
       'gemini-1.5-flash',
-      'gemini-pro-vision',
+      'gemini-1.5-pro',
+      'gemini-1.5-flash-8b',
       'gemini-pro'
     ];
 

@@ -63,8 +63,8 @@ export function getAvailableModels(): ModelConfig[] {
     });
   }
 
-  // Check Gemini (direct, not through Portkey)
-  if (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+  // Check Gemini (through Portkey direct routing)
+  if (process.env.PORTKEY_API_KEY) {
     models.push({
       provider: 'gemini',
       model: 'gemini-2.0-flash-exp',
@@ -105,7 +105,7 @@ export function getBestAvailableModel(): ModelConfig | null {
  * Portkey provides unified API access, caching, fallbacks, and analytics
  * @param provider - Which virtual key to use (openai, aws, groq, openrouter)
  */
-export function createPortkeyClient(provider: 'openai' | 'aws' | 'groq' | 'openrouter' | 'gemini' = 'openai') {
+export function createPortkeyClient(provider: 'openai' | 'aws' | 'groq' | 'openrouter' | 'gemini' | 'google-ai' = 'openai') {
   const apiKey = process.env.PORTKEY_API_KEY;
 
   if (!apiKey) {
@@ -114,20 +114,25 @@ export function createPortkeyClient(provider: 'openai' | 'aws' | 'groq' | 'openr
   }
 
   try {
-    // Select virtual key based on provider
-    let virtualKey: string | undefined;
-    
-    if (provider === 'gemini') {
-      virtualKey = process.env.GEMINI_API_KEY;
-    } else {
-      const keyMap = {
-        openai: PORTKEY_VIRTUAL_KEYS.OPENAI,
-        aws: PORTKEY_VIRTUAL_KEYS.AWS,
-        groq: PORTKEY_VIRTUAL_KEYS.GROQ,
-        openrouter: PORTKEY_VIRTUAL_KEYS.OPENROUTER
-      };
-      virtualKey = keyMap[provider];
+    // For Gemini/Google AI, use direct provider routing without virtual key
+    if (provider === 'gemini' || provider === 'google-ai') {
+      const portkey = new Portkey({
+        apiKey: apiKey,
+        provider: 'google',  // Portkey's provider name for Gemini
+      });
+      console.log(`✅ Portkey client initialized with ${provider} provider (direct routing)`);
+      return portkey;
     }
+    
+    // For other providers, use virtual keys
+    let virtualKey: string | undefined;
+    const keyMap = {
+      openai: PORTKEY_VIRTUAL_KEYS.OPENAI,
+      aws: PORTKEY_VIRTUAL_KEYS.AWS,
+      groq: PORTKEY_VIRTUAL_KEYS.GROQ,
+      openrouter: PORTKEY_VIRTUAL_KEYS.OPENROUTER,
+    };
+    virtualKey = keyMap[provider as keyof typeof keyMap];
 
     const portkey = new Portkey({
       apiKey: apiKey,
@@ -149,11 +154,24 @@ export interface PortkeyChatOptions {
   model?: string;
   messages: Array<{
     role: 'user' | 'assistant' | 'system';
-    content: string;
+    content: string | Array<{
+      type: 'text' | 'image_url' | 'file';
+      text?: string;
+      image_url?: { url: string };
+      file?: { file_id: string };
+    }>;
+    attachments?: Array<{
+      file_id: string;
+      tools?: Array<{ type: string }>;
+    }>;
   }>;
   maxTokens?: number;
   temperature?: number;
   stream?: boolean;
+  tools?: Array<{
+    type: string;
+    [key: string]: any;
+  }>;
 }
 
 /**
