@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
     console.log("Initializing Gemini for document parsing...");
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // Use Gemini Flash for document parsing
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Use stable Gemini model for document parsing
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
     const prompt = `You are a document parsing expert. Extract all readable text from this document and return it as clean, structured text.
 

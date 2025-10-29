@@ -31,8 +31,7 @@ import { FileAttachments } from "./FileAttachments";
 import { toastError, toastSuccess } from "@/components/toast-varients";
 import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/company-store";
-import { ProcessedFile } from "../../utils/fileProcessor";
-import { EnhancedProcessedFile, processDocumentsWithAI } from "../../utils/documentProcessor";
+// Removed old file processing imports - now using direct Portkey API upload
 import { Paperclip } from "lucide-react";
 
 // Parse @mentions like @contract_2023
@@ -74,8 +73,7 @@ const ChatInput = ({
   enabledKnowledge,
   setOpenGlobalModal,
   generateTitle,
-  uploadedFiles = [],
-  setUploadedFiles,
+  // Removed uploadedFiles props - now using direct API upload
 }: AgentType) => {
   const selectedCompany = useCompanyStore((s) => s.selectedCompany);
   const companyId = selectedCompany?.companyId;
@@ -204,11 +202,7 @@ const ChatInput = ({
     setInputMessage(next);
   };
 
-  const handleRemoveFile = (fileId: string) => {
-    if (setUploadedFiles) {
-      setUploadedFiles(uploadedFiles.filter((file: any) => file.id !== fileId));
-    }
-  };
+  // File removal no longer needed - files are handled directly via API
 
   // File upload functionality
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -224,31 +218,180 @@ const ChatInput = ({
     try {
       const fileArray = Array.from(files);
       
-      // Process files with AI analysis
-      const result = await processDocumentsWithAI(fileArray);
-      
-      if (result.errors.length > 0) {
-        result.errors.forEach(error => toastError('Upload Error', error));
+      // For now, handle only single file uploads to Portkey
+      if (fileArray.length > 1) {
+        toastError('Multiple file upload not supported yet. Please upload one file at a time.');
+        return;
       }
+
+      const file = fileArray[0];
+      console.log(`🚀 Uploading file directly to Portkey API: ${file.name}`);
       
-      if (result.files.length > 0 && setUploadedFiles) {
-        setUploadedFiles([...uploadedFiles, ...result.files]);
-        
-        // Show success message
-        const analyzedCount = result.files.filter((f: any) => f.isAnalyzed).length;
-        toastSuccess(
-          'Files Uploaded',
-          `Successfully uploaded and analyzed ${analyzedCount} of ${result.files.length} file${result.files.length !== 1 ? 's' : ''}!`
-        );
-      }
+      // Show loading toast
+      toastSuccess(`Uploading ${file.name} directly to AI for analysis...`);
+      
+      // Send file directly to Portkey API with streaming
+      await handleFileUploadToPortkey(file);
+      
     } catch (error) {
-      console.error('Error processing files:', error);
-      toastError('Upload Error', 'Failed to process files. Please try again.');
+      console.error('Error uploading file:', error);
+      toastError('Failed to upload file. Please try again.');
     }
 
     // Reset input
     if (event.target) {
       event.target.value = '';
+    }
+  };
+
+  const handleFileUploadToPortkey = async (file: File) => {
+    try {
+      const userQuery = inputMessage || 'Please analyze this file';
+      console.log('📡 Sending file to Portkey API via regular chat stream...');
+
+      // Create a user message for the file upload
+      const fileMessage = `[File Upload: ${file.name}] ${userQuery}`;
+      
+      // Clear input 
+      setInputMessage('');
+
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('user_query', userQuery);
+      formData.append('conversation_id', selectedConversation?._id || '');
+
+      // Send to our upload API endpoint
+      const response = await fetch('/api/ai-chat/upload-file', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      // Handle streaming response through the existing chat system
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response stream available');
+      }
+
+      console.log('📡 Receiving streaming response from Portkey...');
+
+      // Add user message to chat
+      if (setMessages) {
+        const userMessage = {
+          id: Date.now().toString(),
+          content: fileMessage,
+          role: 'user',
+          created_at: Date.now(),
+          user_query: userQuery,
+        };
+        setMessages(prev => [...(prev || []), userMessage]);
+      }
+
+      // Process streaming response and add to chat
+      await handleStreamingFileResponseToChat(reader);
+
+    } catch (error) {
+      console.error('❌ File upload to Portkey failed:', error);
+      toastError(`File upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleStreamingFileResponseToChat = async (reader: ReadableStreamDefaultReader<Uint8Array>) => {
+    try {
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let assistantMessage = {
+        id: (Date.now() + 1).toString(),
+        content: '',
+        role: 'assistant',
+        created_at: Date.now() + 1,
+        user_query: '',
+      };
+
+      // Add initial empty assistant message
+      if (setMessages) {
+        setMessages(prev => [...(prev || []), assistantMessage]);
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('✅ File upload streaming completed');
+          toastSuccess('File analysis completed successfully!');
+          break;
+        }
+
+        // Decode the chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              // Handle different event types
+              if (data.event === 'RunResponseContent') {
+                console.log('📄 Streaming content received');
+                assistantMessage.content = data.content;
+                
+                // Update the assistant message in chat
+                if (setMessages) {
+                  setMessages(prev => {
+                    const updated = [...(prev || [])];
+                    const lastIndex = updated.length - 1;
+                    if (updated[lastIndex]?.id === assistantMessage.id) {
+                      updated[lastIndex] = { ...assistantMessage };
+                    }
+                    return updated;
+                  });
+                }
+              } else if (data.event === 'RunResponseComplete') {
+                console.log('✅ File analysis completed');
+                // Final update
+                assistantMessage.content = data.content;
+                if (setMessages) {
+                  setMessages(prev => {
+                    const updated = [...(prev || [])];
+                    const lastIndex = updated.length - 1;
+                    if (updated[lastIndex]?.id === assistantMessage.id) {
+                      updated[lastIndex] = { ...assistantMessage };
+                    }
+                    return updated;
+                  });
+                }
+              } else if (data.event === 'RunResponseError') {
+                console.error('❌ File processing error:', data.error);
+                assistantMessage.content = `Sorry, I encountered an error processing your file: ${data.error}`;
+                if (setMessages) {
+                  setMessages(prev => {
+                    const updated = [...(prev || [])];
+                    const lastIndex = updated.length - 1;
+                    if (updated[lastIndex]?.id === assistantMessage.id) {
+                      updated[lastIndex] = { ...assistantMessage };
+                    }
+                    return updated;
+                  });
+                }
+                toastError('File processing failed');
+              }
+            } catch (parseError) {
+              console.warn('⚠️ Failed to parse streaming data:', parseError);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Streaming response error:', error);
+      toastError('Error receiving file analysis response');
     }
   };
 
@@ -261,10 +404,7 @@ const ChatInput = ({
     const currentMessage = inputMessage;
     setInputMessage("");
     
-    // Clear uploaded files after sending
-    if (setUploadedFiles) {
-      setUploadedFiles([]);
-    }
+    // Files are now handled directly via API, no local state to clear
     try {
       let createdConvo: AgentSelectedChatType = {
         chatName: "",
@@ -294,6 +434,7 @@ const ChatInput = ({
         }
       }
 
+      // Files are now handled directly via API upload, no need for context inclusion
       console.log("createdConvo ==>", currentMessage, createdConvo);
       await handleStreamResponse(currentMessage, createdConvo);
     } catch (error) {
@@ -356,15 +497,11 @@ const ChatInput = ({
         </div>
       )}
 
-      {/* File Attachments */}
-      <FileAttachments
-        files={uploadedFiles}
-        onRemoveFile={handleRemoveFile}
-      />
+      {/* File Attachments removed - files now handled directly via API */}
 
       <div className="relative flex w-full bg-background/50 dark:bg-background/50 rounded-[12px] border border-border/30 dark:border-border/30 p-4 focus-within:border-primary/50 dark:focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 dark:focus-within:ring-primary/10 transition-all duration-200">
         <textarea
-          placeholder={uploadedFiles.length > 0 ? `Ask about your ${uploadedFiles.length} uploaded file${uploadedFiles.length !== 1 ? 's' : ''}... ✨` : "Ask anything... ✨"}
+          placeholder="Ask anything... ✨"
           value={inputMessage || ""}
           onChange={(e) => {
             const val = e.target.value;

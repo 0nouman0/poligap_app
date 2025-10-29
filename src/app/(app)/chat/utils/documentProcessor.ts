@@ -1,6 +1,7 @@
 "use client";
 
 import { ProcessedFile, FileProcessingResult } from './fileProcessor';
+import { processDocumentWithGemini } from '@/lib/parsers/gemini-document-parser';
 
 export interface DocumentAnalysis {
   summary: string;
@@ -149,19 +150,24 @@ export const processDocumentsWithAI = async (files: File[]): Promise<FileProcess
 
   for (const file of files) {
     try {
+      console.log(`🚀 Processing file with Gemini AI: ${file.name}`);
+      
+      // Use Gemini AI for document processing
+      const geminiResult = await processDocumentWithGemini(file);
+      
       const processedFile: EnhancedProcessedFile = {
         id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        isAnalyzed: false,
+        name: geminiResult.name,
+        type: geminiResult.type,
+        size: geminiResult.size,
+        content: geminiResult.content,
+        isAnalyzed: geminiResult.isAnalyzed,
+        analysis: geminiResult.analysis,
+        error: geminiResult.error
       };
 
-      let extractedContent = '';
-
-      // Extract content based on file type
+      // Add preview for images
       if (file.type.startsWith('image/')) {
-        // Handle images
         try {
           const reader = new FileReader();
           const preview = await new Promise<string>((resolve, reject) => {
@@ -169,59 +175,10 @@ export const processDocumentsWithAI = async (files: File[]): Promise<FileProcess
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-          
           processedFile.preview = preview;
-          extractedContent = `[Image] ${file.name} - Image file ready for visual analysis.`;
         } catch (error) {
-          processedFile.error = 'Failed to process image';
+          console.warn('Failed to generate image preview:', error);
         }
-      } else if (file.type.startsWith('text/') || 
-                 file.type === 'application/json' ||
-                 file.type === 'text/csv' ||
-                 file.type === 'text/markdown') {
-        // Handle text files
-        try {
-          const reader = new FileReader();
-          extractedContent = await new Promise<string>((resolve, reject) => {
-            reader.onload = (e) => resolve(e.target?.result as string);
-            reader.onerror = reject;
-            reader.readAsText(file);
-          });
-        } catch (error) {
-          processedFile.error = 'Failed to read text file';
-        }
-      } else if (file.type === 'application/pdf') {
-        // Handle PDF files
-        extractedContent = await extractPdfTextClient(file);
-      } else if (file.type.includes('document') || 
-                 file.type.includes('wordprocessingml') ||
-                 file.type.includes('spreadsheet') ||
-                 file.type.includes('presentation')) {
-        // Handle Office documents
-        extractedContent = `[${getDocumentType(file.type)}] ${file.name} - Office document uploaded. Content will be analyzed by AI.`;
-      } else {
-        // Handle other file types
-        extractedContent = `[${getDocumentType(file.type)}] ${file.name} - File uploaded for analysis.`;
-      }
-
-      // Analyze content with Gemini AI if we have extractable content
-      if (extractedContent && extractedContent.length > 50) {
-        try {
-          const analysis = await analyzeDocumentWithGemini(
-            file.name,
-            extractedContent,
-            file.type
-          );
-          
-          processedFile.analysis = analysis;
-          processedFile.content = analysis.summary;
-          processedFile.isAnalyzed = true;
-        } catch (error) {
-          console.error('AI analysis failed:', error);
-          processedFile.content = extractedContent;
-        }
-      } else {
-        processedFile.content = extractedContent;
       }
 
       processedFiles.push(processedFile);

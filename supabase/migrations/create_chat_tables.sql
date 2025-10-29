@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
   extra_data JSONB DEFAULT '{}'::jsonb,
   images TEXT[] DEFAULT ARRAY[]::TEXT[],
   videos TEXT[] DEFAULT ARRAY[]::TEXT[],
+  streaming_error BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );

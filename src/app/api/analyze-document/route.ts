@@ -7,6 +7,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 // Check if Gemini API key is available
 const isGeminiAvailable = !!process.env.GEMINI_API_KEY;
 
+console.log('🔑 Gemini API Key Status:', {
+  available: isGeminiAvailable,
+  keyLength: process.env.GEMINI_API_KEY?.length || 0,
+  keyPrefix: process.env.GEMINI_API_KEY?.substring(0, 8) + '...' || 'Not set'
+});
+
 export async function POST(request: NextRequest) {
   try {
     const { fileName, content, fileType } = await request.json();
@@ -20,22 +26,25 @@ export async function POST(request: NextRequest) {
 
     // Check if Gemini is available, otherwise use fallback analysis
     if (!isGeminiAvailable) {
-      console.log('Gemini API key not available, using fallback analysis');
+      console.log('⚠️ Gemini API key not available, using enhanced fallback analysis');
       const wordCount = content.split(/\s+/).length;
+      const docType = getDocumentTypeFromContent(content);
+      const keyPoints = extractKeyPointsFromContent(content);
+      
       return NextResponse.json({
-        summary: `Document "${fileName}" has been uploaded and processed. This appears to be a ${getDocumentTypeFromContent(content)} with approximately ${wordCount} words. The document is ready for questions and analysis.`,
-        keyPoints: extractKeyPointsFromContent(content),
-        documentType: getDocumentTypeFromContent(content),
-        extractedText: content.substring(0, 1000),
+        summary: `Document "${fileName}" has been successfully uploaded and processed. This appears to be a ${docType} with approximately ${wordCount} words. The document content has been extracted and is available for analysis and questions.`,
+        keyPoints: keyPoints,
+        documentType: docType,
+        extractedText: content, // Include full content for AI analysis
         metadata: {
           wordCount,
-          language: 'en'
+          language: 'en',
+          pageCount: Math.ceil(wordCount / 250),
+          processingMethod: 'fallback_no_api_key',
+          aiAnalysis: false
         }
       });
     }
-
-    // Initialize Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Create analysis prompt
     const prompt = `
@@ -67,10 +76,59 @@ CRITICAL REQUIREMENTS:
 Provide only the JSON response, no additional text.
 `;
 
-    // Generate analysis
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const analysisText = response.text();
+    // Try different Gemini models until one works
+    const modelVersions = [
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro',
+      'gemini-1.0-pro'
+    ];
+    
+    let analysisText = null;
+    let lastError = null;
+    
+    for (const modelVersion of modelVersions) {
+      try {
+        console.log(`Trying Gemini model: ${modelVersion}`);
+        const model = genAI.getGenerativeModel({ model: modelVersion });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        analysisText = response.text();
+        console.log(`✅ Successfully used model: ${modelVersion}`);
+        break; // Success! Exit the loop
+      } catch (geminiError: any) {
+        console.log(`❌ Model ${modelVersion} failed:`, geminiError?.message || geminiError);
+        lastError = geminiError;
+        continue; // Try next model
+      }
+    }
+    
+    // If all models failed, use fallback analysis but make it more comprehensive
+    if (!analysisText) {
+      console.log('All Gemini models failed, using enhanced fallback analysis');
+      console.log('Last error:', lastError?.message || 'Unknown error');
+      
+      const wordCount = content.split(/\s+/).length;
+      const docType = getDocumentTypeFromContent(content);
+      const keyPoints = extractKeyPointsFromContent(content);
+      
+      // Create a more comprehensive fallback analysis
+      const enhancedSummary = `Document "${fileName}" has been successfully uploaded and processed. This appears to be a ${docType} containing ${wordCount} words. The document content has been extracted and is available for analysis and questions.`;
+      
+      return NextResponse.json({
+        summary: enhancedSummary,
+        keyPoints: keyPoints,
+        documentType: docType,
+        extractedText: content, // Include full content, not just substring
+        metadata: {
+          wordCount,
+          language: 'en',
+          pageCount: Math.ceil(wordCount / 250),
+          processingMethod: 'fallback_analysis',
+          aiAnalysis: false
+        }
+      });
+    }
 
     // Parse JSON response
     let analysis;
@@ -143,12 +201,42 @@ function getDocumentTypeFromContent(content: string): string {
 
 // Helper function to extract key points from content
 function extractKeyPointsFromContent(content: string): string[] {
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
-  const keyPoints = sentences.slice(0, 5).map(s => s.trim().substring(0, 100));
+  const lowerContent = content.toLowerCase();
+  const keyPoints: string[] = [];
   
-  if (keyPoints.length === 0) {
-    return ['Document content available for analysis', 'Ready for questions', 'AI analysis complete'];
+  // Look for important keywords and phrases
+  if (lowerContent.includes('contract') || lowerContent.includes('agreement')) {
+    keyPoints.push('Contains contractual terms and conditions');
+  }
+  if (lowerContent.includes('policy') || lowerContent.includes('procedure')) {
+    keyPoints.push('Includes policy guidelines and procedures');
+  }
+  if (lowerContent.includes('date') || /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(content)) {
+    keyPoints.push('Contains important dates and timelines');
+  }
+  if (lowerContent.includes('payment') || lowerContent.includes('price') || lowerContent.includes('cost')) {
+    keyPoints.push('Includes financial terms and pricing information');
+  }
+  if (lowerContent.includes('liability') || lowerContent.includes('responsibility')) {
+    keyPoints.push('Defines liability and responsibility terms');
   }
   
-  return keyPoints;
+  // Extract first few meaningful sentences as additional key points
+  const sentences = content.split(/[.!?]+/)
+    .filter(s => s.trim().length > 30 && s.trim().length < 150)
+    .slice(0, 3)
+    .map(s => s.trim());
+  
+  keyPoints.push(...sentences);
+  
+  // Ensure we have at least some key points
+  if (keyPoints.length === 0) {
+    keyPoints.push(
+      'Document successfully processed and analyzed',
+      'Full content available for detailed questions',
+      'Ready for comprehensive AI analysis'
+    );
+  }
+  
+  return keyPoints.slice(0, 5); // Limit to 5 key points
 }

@@ -14,6 +14,103 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          message_id: string
+          user_query: string
+          ai_response: string | null
+          message_type: string
+          tool_calls: Json | null
+          extra_data: Json | null
+          images: string[] | null
+          videos: string[] | null
+          streaming_error: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          message_id: string
+          user_query: string
+          ai_response?: string | null
+          message_type: string
+          tool_calls?: Json | null
+          extra_data?: Json | null
+          images?: string[] | null
+          videos?: string[] | null
+          streaming_error?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          message_id?: string
+          user_query?: string
+          ai_response?: string | null
+          message_type?: string
+          tool_calls?: Json | null
+          extra_data?: Json | null
+          images?: string[] | null
+          videos?: string[] | null
+          streaming_error?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      conversations: {
+        Row: {
+          id: string
+          user_id: string
+          company_id: string | null
+          chat_name: string
+          summary: string | null
+          status: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          company_id?: string | null
+          chat_name: string
+          summary?: string | null
+          status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          company_id?: string | null
+          chat_name?: string
+          summary?: string | null
+          status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       agent_conversations: {
         Row: {
           agent_id: string | null

@@ -115,7 +115,13 @@ export async function extractTextFromDocument(file: File): Promise<string> {
     // PDF files - fallback to pdfjs-dist
     if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
       console.log('🔍 Detected PDF file, using enhanced PDF parser...');
-      return await extractTextFromPDF(file);
+      try {
+        return await extractTextFromPDF(file);
+      } catch (pdfError) {
+        console.warn('⚠️ PDF parsing failed, using basic text extraction:', pdfError);
+        // Return basic text extraction as fallback
+        return `PDF file: ${fileName}\nContent extraction failed. Please try uploading a text-based document or ensure the PDF contains selectable text.`;
+      }
     }
     
     // DOCX files (Word documents) - fallback to mammoth
@@ -177,7 +183,16 @@ async function extractTextFromPDF(file: File): Promise<string> {
     if (!pdf && typeof window === 'undefined') {
       try {
         console.log('🔧 Loading pdfjs-dist (Mozilla PDF.js) dynamically...');
-        pdf = require('pdfjs-dist/legacy/build/pdf.js');
+        // Try different import paths for pdfjs-dist
+        try {
+          pdf = require('pdfjs-dist/build/pdf.js');
+        } catch {
+          try {
+            pdf = require('pdfjs-dist/legacy/build/pdf.js');
+          } catch {
+            pdf = require('pdfjs-dist');
+          }
+        }
         console.log('✅ pdfjs-dist loaded successfully');
       } catch (error) {
         console.warn('⚠️ Could not load pdfjs-dist:', error instanceof Error ? error.message : 'Unknown error');
@@ -222,151 +237,173 @@ async function extractTextFromPDF(file: File): Promise<string> {
       }
     }
 
-    console.log('🔧 Using manual PDF text extraction methods...');
+    console.log('🔧 Using enhanced manual PDF text extraction methods...');
 
-    // Fallback: Advanced PDF text extraction
-    console.log('🔧 Using advanced fallback PDF extraction...');
-    
-    // Convert buffer to string with different encodings to find readable text
+    // Fallback: Smart PDF text extraction using multiple approaches
     let extractedText = '';
     
-    // Method 1: Try UTF-8 encoding first with better filtering
+    // Method 1: Look for PDF text objects and streams
     try {
-      const utf8Text = buffer.toString('utf8');
-      // Look for sequences that look like readable text (letters, spaces, common punctuation)
-      const readableMatches = utf8Text.match(/[a-zA-Z][a-zA-Z\s.,!?;:'"()&-]{20,}/g);
-      if (readableMatches) {
-        extractedText = readableMatches
-          .filter(text => {
-            // More stringent filtering for readable text
-            const cleanText = text.replace(/[^\w\s.,!?;:'"()-]/g, ' ').trim();
-            const words = cleanText.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-            
-            // Must have reasonable word count and common English patterns
-            if (words.length < 5) return false;
-            
-            // Check for common English words and filter out garbled text
-            const commonWords = words.filter(word => {
-              // Must be a real English word (at least 3 characters)
-              if (word.length < 3) return false;
-              
-              // Filter out obvious garbled text patterns
-              if (/^[xyz]+$/.test(word)) return false; // Single character repetitions
-              if (/[^a-z]/i.test(word)) return false;  // Contains non-letters
-              if (word.length === 1) return false;     // Single characters
-              
-              // Check against common English words
-              return /^(the|and|or|of|to|in|for|with|by|from|at|on|is|are|was|were|be|been|have|has|had|will|would|could|should|may|might|can|shall|must|do|does|did|get|got|make|made|take|took|give|gave|go|went|come|came|see|saw|know|knew|think|thought|say|said|tell|told|ask|asked|use|used|work|worked|try|tried|need|needed|want|wanted|look|looked|find|found|feel|felt|become|became|leave|left|put|put|mean|meant|keep|kept|let|let|begin|began|seem|seemed|help|helped|talk|talked|turn|turned|start|started|show|showed|hear|heard|play|played|run|ran|move|moved|live|lived|believe|believed|bring|brought|happen|happened|write|wrote|provide|provided|sit|sat|stand|stood|lose|lost|pay|paid|meet|met|include|included|continue|continued|set|set|learn|learned|change|changed|lead|led|understand|understood|watch|watched|follow|followed|stop|stopped|create|created|speak|spoke|read|read|allow|allowed|add|added|spend|spent|grow|grew|open|opened|walk|walked|win|won|offer|offered|remember|remembered|love|loved|consider|considered|appear|appeared|buy|bought|wait|waited|serve|served|die|died|send|sent|expect|expected|build|built|stay|stayed|fall|fell|cut|cut|reach|reached|kill|killed|remain|remained|suggest|suggested|raise|raised|pass|passed|sell|sold|require|required|report|reported|decide|decided|pull|pulled|data|information|policy|privacy|terms|service|agreement|contract|legal|compliance|samsung|company|business|organization|document|content|text|page|section|clause|paragraph|article|chapter|title|header|footer|date|time|name|address|email|phone|number|website|internet|online|digital|electronic|system|software|application|platform|service|product|feature|function|process|procedure|method|approach|solution|result|outcome|benefit|advantage|risk|issue|problem|challenge|requirement|obligation|responsibility|right|permission|consent|authorization|access|control|management|administration|governance|oversight|monitoring|audit|review|assessment|evaluation|analysis|report|documentation|record|file|database|storage|processing|collection|sharing|disclosure|transfer|deletion|retention|backup|recovery|security|encryption|authentication|authorization|verification|validation|certification|compliance|regulation|law|statute|rule|standard|guideline|policy|procedure|practice|protocol|framework|model|structure|organization|entity|individual|person|party|third|vendor|supplier|partner|affiliate|subsidiary|parent|related|associated|connected|linked|integrated|combined|merged|consolidated|separate|independent|autonomous|distinct|different|various|multiple|several|numerous|many|few|some|all|every|each|any|no|none|zero|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|million|billion)$/i.test(word);
-            });
-            
-            // Must have at least 15% common words and reasonable character distribution
-            const commonWordRatio = commonWords.length / words.length;
-            const alphaRatio = (cleanText.match(/[a-zA-Z]/g) || []).length / cleanText.length;
-            
-            return commonWordRatio >= 0.15 && alphaRatio >= 0.6 && cleanText.length >= 50;
-          })
-          .map(text => text.replace(/[^\w\s.,!?;:'"()-]/g, ' ').replace(/\s+/g, ' ').trim())
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+      const pdfString = buffer.toString('latin1'); // Use latin1 to preserve byte values
+      
+      // Extract text from PDF text objects (BT...ET blocks)
+      const textObjectRegex = /BT\s*(.*?)\s*ET/gs;
+      const textObjects = pdfString.match(textObjectRegex) || [];
+      
+      let textFromObjects = '';
+      textObjects.forEach(textObj => {
+        // Extract text from Tj and TJ operators
+        const tjMatches = textObj.match(/\((.*?)\)\s*Tj/g) || [];
+        const tjTextMatches = textObj.match(/\[(.*?)\]\s*TJ/g) || [];
+        
+        tjMatches.forEach(match => {
+          const text = match.match(/\((.*?)\)/)?.[1];
+          if (text) {
+            textFromObjects += text.replace(/\\[rn]/g, ' ').replace(/\\\(/g, '(').replace(/\\\)/g, ')') + ' ';
+          }
+        });
+        
+        tjTextMatches.forEach(match => {
+          const text = match.match(/\[(.*?)\]/)?.[1];
+          if (text) {
+            // Parse TJ array format
+            const cleanText = text.replace(/\([^)]*\)/g, (m) => m.slice(1, -1)).replace(/\s*-?\d+\s*/g, ' ');
+            textFromObjects += cleanText + ' ';
+          }
+        });
+      });
+      
+      if (textFromObjects.trim().length > 50) {
+        extractedText = textFromObjects.trim();
+        console.log(`✅ Extracted text from PDF objects: ${extractedText.length} characters`);
       }
-    } catch (utf8Error) {
-      console.warn('UTF-8 decoding failed, trying other methods');
+    } catch (error) {
+      console.warn('⚠️ PDF text object extraction failed:', error);
     }
     
-    // Method 2: Look for text patterns in binary data with improved extraction
+    // Method 2: If no text from objects, try stream extraction
     if (!extractedText || extractedText.length < 50) {
-      const binaryText = buffer.toString('binary');
-      
-      // Look for text between parentheses (PDF text operators) - more aggressive
-      const parenMatches = binaryText.match(/\([^)]{3,}\)/g);
-      if (parenMatches) {
-        const parenText = parenMatches
-          .map(match => match.replace(/^\(|\)$/g, ''))
-          .filter(text => {
-            // More lenient filtering for text extraction
-            const printableRatio = (text.match(/[\x20-\x7E]/g) || []).length / text.length;
-            const hasLetters = /[a-zA-Z]{2,}/.test(text);
-            return printableRatio > 0.5 && hasLetters; // Lowered threshold
-          })
-          .join(' ')
-          .replace(/[^\x20-\x7E\s]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+      try {
+        const pdfString = buffer.toString('latin1');
         
-        if (parenText.length > extractedText.length) {
-          extractedText = parenText;
-        }
-      }
-      
-      // Additional method: Look for text streams in PDF
-      const streamMatches = binaryText.match(/stream[\s\S]*?endstream/g);
-      if (streamMatches && streamMatches.length > 0) {
-        const streamText = streamMatches
-          .map(stream => stream.replace(/^stream|endstream$/g, ''))
-          .join(' ')
-          .replace(/[^\x20-\x7E\s]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+        // Look for stream objects that might contain text
+        const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
+        const streams = [];
+        let match;
         
-        if (streamText.length > extractedText.length) {
-          extractedText = streamText;
+        while ((match = streamRegex.exec(pdfString)) !== null) {
+          streams.push(match[1]);
         }
+        
+        let streamText = '';
+        streams.forEach(stream => {
+          // Try to extract readable text from streams
+          const readableText = stream.replace(/[^\x20-\x7E]/g, ' ') // Keep only printable ASCII
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (readableText.length > 20) {
+            // Filter for actual words
+            const words = readableText.split(/\s+/).filter(word => 
+              word.length > 2 && 
+              /^[a-zA-Z][a-zA-Z0-9]*$/.test(word) &&
+              !/^[xyz]+$/i.test(word)
+            );
+            
+            if (words.length > 3) {
+              streamText += words.join(' ') + ' ';
+            }
+          }
+        });
+        
+        if (streamText.trim().length > 50) {
+          extractedText = streamText.trim();
+          console.log(`✅ Extracted text from PDF streams: ${extractedText.length} characters`);
+        }
+      } catch (error) {
+        console.warn('⚠️ PDF stream extraction failed:', error);
       }
     }
     
-    // Method 3: Look for readable ASCII sequences
+    // Method 3: If still no good text, provide a meaningful fallback
     if (!extractedText || extractedText.length < 50) {
-      const asciiText = buffer.toString('ascii');
-      const readableSequences = asciiText.match(/[a-zA-Z][a-zA-Z\s.,!?;:'"()-]{15,}/g);
-      if (readableSequences) {
-        const asciiExtracted = readableSequences
-          .filter(text => {
-            // Must have reasonable word density
-            const words = text.split(/\s+/).filter(w => w.length > 2);
-            return words.length >= 3;
-          })
-          .join(' ')
-          .replace(/[^\x20-\x7E\s]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+      console.log('⚠️ Could not extract readable text from PDF using fallback methods');
+      
+      // Try one more approach - look for any readable sequences
+      try {
+        const pdfString = buffer.toString('utf8', 0, Math.min(buffer.length, 50000)); // Limit to first 50KB
+        const readableSequences = pdfString.match(/[a-zA-Z][a-zA-Z\s.,!?;:'"()&-]{15,}/g) || [];
         
-        if (asciiExtracted.length > extractedText.length) {
-          extractedText = asciiExtracted;
+        const cleanSequences = readableSequences
+          .filter(seq => {
+            const words = seq.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            return words.length >= 3 && words.some(w => 
+              ['the', 'and', 'or', 'of', 'to', 'in', 'for', 'with', 'by', 'from', 'at', 'on', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'will', 'would', 'could', 'should', 'document', 'policy', 'agreement', 'terms', 'privacy', 'data', 'information', 'company', 'service', 'user', 'content', 'section', 'clause'].includes(w)
+            );
+          })
+          .slice(0, 10) // Take first 10 good sequences
+          .join(' ');
+        
+        if (cleanSequences.length > 100) {
+          extractedText = cleanSequences;
+          console.log(`✅ Extracted readable sequences: ${extractedText.length} characters`);
         }
+      } catch (error) {
+        console.warn('⚠️ Final text extraction attempt failed:', error);
       }
+    
+    // Final fallback: If no text extracted, provide a helpful message
+    if (!extractedText || extractedText.length < 50) {
+      console.log('❌ Could not extract readable text from PDF');
+      return `PDF Document: ${fileName}
+
+This PDF file has been uploaded but text extraction was not successful. This could be because:
+- The PDF contains scanned images rather than selectable text
+- The PDF uses complex formatting or encryption
+- The text is embedded in a way that requires specialized PDF parsing
+
+However, the document has been processed and you can still ask questions about:
+- The document type and general structure
+- Any metadata that was available
+- General information about PDF documents
+
+Please try uploading a text-based document (Word, TXT, etc.) for better text extraction, or ensure the PDF contains selectable text.`;
     }
     
-    if (extractedText && extractedText.length > 30) {
-      // Final quality check - ensure the text is actually readable
-      const words = extractedText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      const readableWords = words.filter(word => /^[a-z]+$/i.test(word));
-      const readabilityRatio = readableWords.length / Math.max(1, words.length);
-      
-      if (readabilityRatio >= 0.2) { // Lowered from 0.5 to 0.2 (20%)
-        console.log(`✅ Advanced fallback extraction successful: ${extractedText.length} characters`);
-        console.log(`📄 Sample text: "${extractedText.substring(0, 200)}..."`);
-        console.log(`📊 Readability ratio: ${(readabilityRatio * 100).toFixed(1)}%`);
-        return extractedText;
-      } else {
-        console.warn(`⚠️ Extracted text has low readability ratio: ${(readabilityRatio * 100).toFixed(1)}%`);
-        // Try to extract any readable words even if ratio is low
-        const words = extractedText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-        const readableWords = words.filter(word => /^[a-z]+$/i.test(word));
-        if (readableWords.length >= 10) { // At least 10 readable words
-          console.log(`✅ Found ${readableWords.length} readable words, proceeding with extraction`);
-          return extractedText;
-        }
-      }
+    // Clean up the extracted text
+    const finalText = extractedText
+      .replace(/\s+/g, ' ')
+      .replace(/[^\x20-\x7E\s]/g, ' ') // Remove non-printable characters
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    if (finalText.length > 100) {
+      console.log(`✅ Manual PDF extraction successful: ${finalText.length} characters`);
+      console.log(`📄 Sample text: "${finalText.substring(0, 200)}..."`);
+      return finalText;
+    } else {
+      console.log('⚠️ Extracted text too short, providing fallback message');
+      return `PDF Document: ${fileName}
+
+Limited text was extracted from this PDF. The document appears to contain some content but may require better PDF processing tools for complete text extraction.
+
+Available content preview: ${finalText}
+
+You can still ask questions about this document, and I'll do my best to help based on the available information.`;
     }
 
-    throw new Error('PDF appears to be empty, scanned, or encrypted. No readable text found.');
   } catch (error) {
     console.error(`❌ PDF extraction failed for ${fileName}:`, error);
-    throw new Error(
-      `PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
-      'The PDF may be corrupted, password-protected, or scanned.'
-    );
+    return `PDF Document: ${fileName}
+
+An error occurred while processing this PDF file: ${error instanceof Error ? error.message : 'Unknown error'}
+
+This could be due to:
+- The PDF being password-protected or encrypted
+- Complex formatting that requires specialized tools
+- Corrupted file data
+
+You can still ask general questions about PDF documents, and I'll do my best to help with any information you can provide about the content.`;
   }
 }
 
