@@ -86,6 +86,7 @@ function ActionDotsCell({
   // Convert to string and do exact comparison
   const roleString = String(currentUserRole || "").toLowerCase();
   const isAdmin = roleString === "super_admin" || roleString === "company_admin";
+  const isCompanyAdminViewingSuperAdmin = roleString === "company_admin" && String(member?.role || "").toLowerCase() === "super_admin";
   
   // CRITICAL DEBUG: Log every single check to console (these MUST show up)
   const debugInfo = {
@@ -112,6 +113,22 @@ function ActionDotsCell({
   // 1. User IS an admin (can see actions for all users)
   // 2. User IS the current user (can see actions for themselves)
   
+  // If company_admin hovers on a super_admin row, show disabled three-dots (no actions)
+  if (isCompanyAdminViewingSuperAdmin) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 text-muted-foreground cursor-not-allowed opacity-60"
+        disabled
+        title="Actions disabled for Super Admin"
+        aria-disabled="true"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </Button>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -129,8 +146,8 @@ function ActionDotsCell({
           Edit User
         </DropdownMenuItem>
         
-        {/* Change Role - only for admins editing other users */}
-        {!isCurrentUser && isAdmin && (
+        {/* Change Role - only for admins editing other users and not targeting a super admin if current user is only company_admin */}
+        {!isCurrentUser && isAdmin && !(String(currentUserRole).toLowerCase() === "company_admin" && String(member?.role).toLowerCase() === "super_admin") && (
           <DropdownMenuItem onClick={onChangeRole}>
             <Shield className="mr-2 h-4 w-4" />
             Change Role
@@ -631,16 +648,43 @@ export default function Component() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Invite User Button (always show for debugging) */}
-              <Button
-                onClick={() => setIsInviteModalOpen(true)}
-                variant="default"
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white border-transparent"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add User
-              </Button>
+              {/* Only show "Add User" button if current user is admin or super admin */}
+              {/* Wait for mount and ensure we have role data to prevent hydration mismatch */}
+              {isMounted && teamMembers.length > 0 && (() => {
+                // Get role from currentUserMember first (most reliable), then fallback to currentUserRole
+                const roleToCheck = currentUserMember?.role || currentUserRole || "";
+                const roleString = String(roleToCheck).toLowerCase().trim();
+                const isAdmin = (roleString === "super_admin") || (roleString === "company_admin");
+                
+                // Debug log
+                console.log("[Add User Button Check]:", {
+                  roleToCheck,
+                  roleString,
+                  isAdmin,
+                  currentUserMember: currentUserMember?.role,
+                  currentUserRole,
+                  shouldShow: isAdmin
+                });
+                
+                // Only show button if user is admin or super admin
+                if (!isAdmin) {
+                  // NOT admin - hide button completely
+                  return null;
+                }
+                
+                // User IS admin - show button
+                return (
+                  <Button
+                    onClick={() => setIsInviteModalOpen(true)}
+                    variant="default"
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white border-transparent"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                );
+              })()}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <Input
@@ -1101,8 +1145,9 @@ export default function Component() {
         }}
         member={memberToEdit}
         companyId={companyId || ""}
-        currentUserEmail={userData?.email}
+        currentUserEmail={effectiveCurrentUserEmail || userData?.email}
         isCurrentUserAdmin={currentUserRole === "super_admin" || currentUserRole === "company_admin"}
+        currentUserRole={currentUserRole}
       />
 
       {/* Delete Member Confirmation Dialog */}

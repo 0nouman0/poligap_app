@@ -31,6 +31,7 @@ interface EditUserModalProps {
   onUserUpdated?: () => void;
   currentUserEmail?: string;
   isCurrentUserAdmin?: boolean;
+  currentUserRole?: string;
 }
 
 export const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -41,6 +42,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   onUserUpdated,
   currentUserEmail,
   isCurrentUserAdmin = false,
+  currentUserRole,
 }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -65,8 +67,15 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   }, [member]);
 
-  // Check if current user is editing themselves
-  const isEditingSelf = member?.user?.email === currentUserEmail && !isCurrentUserAdmin;
+  // Check if current user is editing their own account (case-insensitive)
+  const isEditingSelf = (member?.user?.email || "").toLowerCase().trim() === (currentUserEmail || "").toLowerCase().trim();
+
+  // Determine if role/status can be edited in this modal
+  // - Never for self
+  // - If requester is only company_admin, they cannot edit a super_admin
+  const isTargetSuperAdmin = (member?.role || "").toLowerCase() === "super_admin";
+  const requesterIsCompanyAdmin = (currentUserRole || "").toLowerCase() === "company_admin";
+  const canEditRoleStatus = !isEditingSelf && !(requesterIsCompanyAdmin && isTargetSuperAdmin);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,8 +214,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
               />
             </div>
             
-            {/* Only show Role field if admin or editing another user */}
-            {!isEditingSelf && (
+            {/* Only show Role field if allowed */}
+            {canEditRoleStatus && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="role" className="text-right">
                   Role
@@ -228,8 +237,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
               </div>
             )}
             
-            {/* Only show Status field if admin or editing another user */}
-            {!isEditingSelf && (
+            {/* Only show Status field if allowed */}
+            {canEditRoleStatus && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="status" className="text-right">
                   Status
