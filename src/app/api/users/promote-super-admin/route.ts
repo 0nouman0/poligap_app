@@ -3,6 +3,26 @@ import { GraphQLClient } from "graphql-request";
 
 type GqlRecord<T> = { node: T };
 
+type UserCompanyRecord = {
+  user_id: string;
+  company_id: string;
+  role: string;
+  is_primary: boolean;
+  status: string;
+};
+
+type UpdateUserCompaniesResponse = {
+  updateuser_companiesCollection?: {
+    records: UserCompanyRecord[];
+  };
+};
+
+type InsertUserCompaniesResponse = {
+  insertIntouser_companiesCollection?: {
+    records: UserCompanyRecord[];
+  };
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -81,7 +101,7 @@ export async function POST(request: NextRequest) {
             ) { records { user_id company_id role is_primary status } }
           }
         `;
-        const upd = await gql.request(updateMutation, { userId: user_id, companyId: company_id, role: "super_admin" });
+        const upd = await gql.request(updateMutation, { userId: user_id, companyId: company_id, role: "super_admin" }) as UpdateUserCompaniesResponse;
         const rec = upd?.updateuser_companiesCollection?.records?.[0];
         
         // Verify the update worked
@@ -108,7 +128,7 @@ export async function POST(request: NextRequest) {
       company_id,
       role: "super_admin",
       is_primary: true,
-    });
+    }) as InsertUserCompaniesResponse;
     const rec = ins?.insertIntouser_companiesCollection?.records?.[0];
     return NextResponse.json({ success: true, action: "created", membership: rec });
   } catch (error: any) {
