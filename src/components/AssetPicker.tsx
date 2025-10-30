@@ -238,12 +238,13 @@ export function AssetPicker({
                         
                         {asset.mimetype.startsWith('image/') && asset.thumbnailUrl && (
                             <div className="w-full h-20 bg-muted rounded-md mb-2 overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
                               src={asset.thumbnailUrl} 
                               alt={asset.originalName}
                               className="w-full h-full object-cover"
                             />
-                          </div>
+                            </div>
                         )}
                         
                         <div className="space-y-2">

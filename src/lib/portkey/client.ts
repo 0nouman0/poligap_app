@@ -125,14 +125,13 @@ export function createPortkeyClient(provider: 'openai' | 'aws' | 'groq' | 'openr
     }
     
     // For other providers, use virtual keys
-    let virtualKey: string | undefined;
     const keyMap = {
       openai: PORTKEY_VIRTUAL_KEYS.OPENAI,
       aws: PORTKEY_VIRTUAL_KEYS.AWS,
       groq: PORTKEY_VIRTUAL_KEYS.GROQ,
       openrouter: PORTKEY_VIRTUAL_KEYS.OPENROUTER,
     };
-    virtualKey = keyMap[provider as keyof typeof keyMap];
+    const virtualKey = keyMap[provider as keyof typeof keyMap];
 
     const portkey = new Portkey({
       apiKey: apiKey,

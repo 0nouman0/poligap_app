@@ -313,7 +313,9 @@ export default function Component() {
   const updateRoleMutation = useUpdateMemberRole();
 
   // Tolerant access during build inference: some TS generics hide the response shape
-  const teamMembers = (membersResponse as any)?.members || [];
+  const teamMembers = useMemo(() => {
+    return ((membersResponse as any)?.members || []) as any[];
+  }, [membersResponse]);
   
   // Get current user's email - use authUserEmail first (most reliable), then fallback to userData
   const currentUserEmailNormalized = authUserEmail || userData?.email?.toLowerCase()?.trim() || null;

@@ -294,6 +294,7 @@ export const Header = memo(function Header() {
         />
         {/* Logo Section */}
         <div className="flex items-center flex-shrink-0 min-w-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={headerImageSrc}
             alt="Poligap"

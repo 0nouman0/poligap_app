@@ -103,8 +103,6 @@ export async function POST(request: NextRequest) {
       password,
       email_confirm: true, // Auto-confirm email so user can login immediately
     });
-
-    let userId: string;
     
     if (createError || !authUser.user) {
       console.error("Error creating user:", createError);
@@ -114,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    userId = authUser.user.id;
+    const userId: string = authUser.user.id;
     
     // VERIFY: Check that user was actually created in auth.users
     const { data: verifyUsers } = await supabaseAdmin.auth.admin.listUsers();
@@ -138,7 +136,7 @@ export async function POST(request: NextRequest) {
     const nameFromEmail = email.split("@")[0].replace(/\./g, " ");
     const displayName = nameFromEmail
       .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
     const firstName = displayName.split(" ")[0] || displayName;
     const lastName = displayName.split(" ").slice(1).join(" ") || "";

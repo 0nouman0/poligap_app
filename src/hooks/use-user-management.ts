@@ -170,7 +170,7 @@ export function useListMembers(
     },
     enabled: !!companyId,
     staleTime: 0, // Always consider data stale to ensure fresh fetches
-    cacheTime: 0, // Don't cache results
+    gcTime: 0, // Don't cache results (TanStack v5)
   })
 }
 

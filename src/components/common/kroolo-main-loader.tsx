@@ -19,6 +19,7 @@ const KrooloMainLoader = ({ message = "Loading Poligap…" }: KrooloMainLoaderPr
       }}
     >
       <div style={{ textAlign: "center" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/assets/Poligap_wide_erased.png"
           alt="Logo"

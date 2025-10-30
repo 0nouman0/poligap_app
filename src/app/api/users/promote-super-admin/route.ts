@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
             ) { records { user_id company_id role is_primary status } }
           }
         `;
-        const upd = await gql.request(updateMutation, { userId: user_id, companyId: company_id, role: "super_admin" });
-        const rec = upd?.updateuser_companiesCollection?.records?.[0];
+        const upd: any = await gql.request(updateMutation, { userId: user_id, companyId: company_id, role: "super_admin" });
+        const rec = (upd as any)?.updateuser_companiesCollection?.records?.[0];
         
         // Verify the update worked
         if (!rec || rec.role !== "super_admin") {
@@ -103,13 +103,13 @@ export async function POST(request: NextRequest) {
         ) { records { user_id company_id role is_primary status } }
       }
     `;
-    const ins = await gql.request(insertMutation, {
+    const ins: any = await gql.request(insertMutation, {
       user_id,
       company_id,
       role: "super_admin",
       is_primary: true,
     });
-    const rec = ins?.insertIntouser_companiesCollection?.records?.[0];
+    const rec = (ins as any)?.insertIntouser_companiesCollection?.records?.[0];
     return NextResponse.json({ success: true, action: "created", membership: rec });
   } catch (error: any) {
     console.error("promote-super-admin error:", error);
