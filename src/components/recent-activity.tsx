@@ -91,42 +91,24 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // As an immediate, last-resort safeguard: force-remove any persisted
-    // activity store and clear in-memory activities so legacy "Visited ..."
-    // and 'profile' entries cannot appear. This is destructive (clears all
-    // client-side activities) but guarantees the UI won't show stale page
-    // visit items. New result events will still be recorded normally.
-    try {
-      localStorage.removeItem('user-activity-store');
-    } catch (e) {
-      // ignore
-    }
-    try {
-      clearActivities();
-    } catch (e) {
-      // ignore
-    }
-
     // Only run on client side after hydration
-    // Note: we already removed persisted store and cleared memory above. If
-    // that failed for some reason, we still attempt a non-destructive filter
-    // below when reading the in-memory activities.
+    setIsHydrated(true);
 
-    // Then read from the in-memory store and filter to only allowed result types
+    // Read from the activity store and filter to meaningful activities
     const raw = getRecentActivities(100); // get a larger slice then filter
-    const allowedTypes: ActivityItem['type'][] = ['compliance-check', 'contract-review', 'policy-generator'];
+    const allowedTypes: ActivityItem['type'][] = ['compliance-check', 'contract-review', 'policy-generator', 'rules', 'chat'];
     const filtered = raw
       .filter((a) => allowedTypes.includes(a.type))
       .filter((a) => {
         const action = a.action || '';
-        // Also exclude any legacy "Visited ..." actions or profile visits
+        // Exclude legacy "Visited ..." actions or profile visits
         if (action.startsWith('Visited ')) return false;
         if (a.type === 'profile') return false;
         return true;
       })
       .slice(0, limit);
+    
     setActivities(filtered);
-    setIsHydrated(true);
   }, [getRecentActivities, limit]);
 
   // Show loading state during hydration to prevent mismatch
@@ -167,7 +149,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">No recent activity</p>
             <p className="text-sm text-gray-500 mt-1">
-              Your activity will appear here as you use the platform
+              Start by uploading documents for compliance analysis or contract review
             </p>
           </div>
         </CardContent>

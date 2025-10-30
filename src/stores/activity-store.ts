@@ -43,9 +43,30 @@ export const useActivityStore = create<ActivityState>()(
           timestamp: new Date().toISOString(),
         };
 
-        set((state) => ({
-          activities: [newActivity, ...state.activities].slice(0, 100) // Keep only last 100 activities
-        }));
+        set((state) => {
+          // Check for duplicate activities within the last 30 seconds
+          const now = new Date().getTime();
+          const recentDuplicate = state.activities.find(existing => {
+            const existingTime = new Date(existing.timestamp).getTime();
+            const timeDiff = now - existingTime;
+            return (
+              timeDiff < 30000 && // Within 30 seconds
+              existing.type === newActivity.type &&
+              existing.action === newActivity.action &&
+              existing.details.fileName === newActivity.details.fileName
+            );
+          });
+
+          // If duplicate found, don't add the new activity
+          if (recentDuplicate) {
+            console.log('Duplicate activity prevented:', newActivity.action);
+            return state;
+          }
+
+          return {
+            activities: [newActivity, ...state.activities].slice(0, 100) // Keep only last 100 activities
+          };
+        });
       },
 
       getRecentActivities: (limit = 10) => {

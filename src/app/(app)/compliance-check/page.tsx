@@ -536,9 +536,9 @@ export default function ComplianceCheckPage() {
   const handleSaveAndExit = async () => {
     try {
       if (results && results.length > 0) {
-        // Save all results to MongoDB
+        // Save all results to MongoDB (without tracking activity to avoid duplicates)
         for (const r of results) {
-          await saveAuditLog(r);
+          await saveAuditLog(r, false);
         }
         
         // Show success notification
@@ -593,7 +593,7 @@ export default function ComplianceCheckPage() {
     });
   };
 
-  const saveAuditLog = async (result: ComplianceResult) => {
+  const saveAuditLog = async (result: ComplianceResult, trackActivity: boolean = true) => {
     try {
       const userId = getUserId();
       
@@ -649,8 +649,8 @@ export default function ComplianceCheckPage() {
         }
       }
       
-      // Track compliance check activity with detailed results
-      if (uploadedFile && selectedStandards.length > 0) {
+      // Track compliance check activity with detailed results (only if trackActivity is true)
+      if (trackActivity && uploadedFile && selectedStandards.length > 0) {
         const overallScore = result.score || 75;
         const status = result.status || 'partial';
         trackComplianceCheck(uploadedFile.name, selectedStandards, overallScore, status);
