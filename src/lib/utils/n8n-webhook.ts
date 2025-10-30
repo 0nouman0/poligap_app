@@ -23,27 +23,50 @@ export async function triggerN8NEmailWorkflow(payload: N8NWebhookPayload): Promi
   try {
     console.log('Triggering N8N workflow with payload:', payload);
     
+    // Add a no_branding flag to request that n8n not append its automatic footer/signature.
+    // The n8n workflow must be updated to honor this flag (see instructions returned to the user).
+    const requestBody = {
+      no_branding: true,
+      timestamp: new Date().toISOString(),
+      source: 'poligap-frontend',
+      ...payload,
+    };
+
     const response = await fetch('/api/n8n-email-webhook', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        source: 'poligap-frontend',
-        ...payload,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     console.log('API Response status:', response.status);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}. Response: ${errorText}`);
+    // Try to parse the response body (JSON preferred)
+    let parsed: any = null;
+    const text = await response.text();
+    try {
+      parsed = JSON.parse(text || '{}');
+    } catch (e) {
+      parsed = { message: text };
     }
 
-    const result: N8NWebhookResponse = await response.json();
+    if (!response.ok) {
+      console.error('API Error response:', parsed);
+      // If server returned a structured error, pass it through
+      if (parsed && typeof parsed === 'object' && 'success' in parsed) {
+        return parsed as N8NWebhookResponse;
+      }
+
+      return {
+        success: false,
+        message: parsed?.message || `HTTP error: ${response.status}`,
+        error: parsed?.error || `HTTP ${response.status}`,
+        data: parsed?.data,
+      } as N8NWebhookResponse;
+    }
+
+    const result: N8NWebhookResponse = parsed as N8NWebhookResponse;
     console.log('API Success response:', result);
     return result;
   } catch (error) {

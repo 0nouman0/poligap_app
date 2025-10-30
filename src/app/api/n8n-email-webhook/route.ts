@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     console.log('Request body:', JSON.stringify(body, null, 2));
     
     // Prepare the payload for n8n webhook in the format expected by your workflow
-    const payload = {
+    const payload: any = {
       timestamp: new Date().toISOString(),
       source: 'poligap-email-notifier',
       query: {
@@ -25,6 +25,11 @@ export async function POST(request: NextRequest) {
       // Keep original data for reference
       originalData: body
     };
+
+    // If frontend asked to suppress branding, promote the flag to top-level so n8n can read $json.no_branding
+    if (body && typeof body.no_branding !== 'undefined') {
+      payload.no_branding = body.no_branding;
+    }
     
     console.log('Payload to send to N8N:', JSON.stringify(payload, null, 2));
     console.log('N8N Webhook URL:', N8N_WEBHOOK_URL);
@@ -38,7 +43,7 @@ export async function POST(request: NextRequest) {
       console.log('Attempting to call N8N webhook...');
       console.log('Using URL:', N8N_WEBHOOK_URL);
       console.log('Payload size:', JSON.stringify(payload).length, 'bytes');
-      
+
       response = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: {
@@ -51,7 +56,34 @@ export async function POST(request: NextRequest) {
       console.log('N8N Response status:', response.status);
       console.log('N8N Response headers:', Object.fromEntries(response.headers.entries()));
 
-      // If production URL fails with 404, try test URL as fallback
+      // If the configured URL returned 404 and looks like a "test" path, try the non-test (production) path
+      if (!response.ok && response.status === 404 && N8N_WEBHOOK_URL.includes('/webhook-test/')) {
+        const altUrl = N8N_WEBHOOK_URL.replace('/webhook-test/', '/webhook/');
+        try {
+          console.log(`Initial webhook returned 404; attempting alternate webhook path: ${altUrl}`);
+          const altResp = await fetch(altUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          console.log('Alternate webhook response status:', altResp.status);
+          // If alternate worked, use it
+          if (altResp.ok) {
+            response = altResp;
+          } else {
+            // capture alt error for diagnostics
+            try {
+              lastError = await altResp.text();
+            } catch (e) {
+              lastError = 'Could not read alt response';
+            }
+          }
+        } catch (e) {
+          console.log('Alternate webhook attempt failed:', e instanceof Error ? e.message : e);
+        }
+      }
+
+      // If production URL fails with 404, try test URL as fallback (existing behavior)
       if (!response.ok && response.status === 404 && N8N_WEBHOOK_URL === N8N_PRODUCTION_URL) {
         console.log('Production webhook failed, trying test webhook...');
         // Clone response to read error text without consuming the original
@@ -61,7 +93,7 @@ export async function POST(request: NextRequest) {
         } catch (e) {
           lastError = 'Could not read error response';
         }
-        
+
         console.log('Calling test webhook URL:', N8N_TEST_URL);
         response = await fetch(N8N_TEST_URL, {
           method: 'POST',
@@ -70,7 +102,7 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify(payload),
         });
-        
+
         console.log('Test webhook response status:', response.status);
       }
     } catch (fetchError) {
@@ -81,13 +113,32 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('N8N webhook error response:', errorText);
-      
-      // Check if it's a webhook registration error
+
+      // If the webhook is not registered/active, return a structured client-friendly response
       if (response.status === 404 && errorText.includes('not registered')) {
-        throw new Error(`N8N webhook not active. Please activate your workflow in N8N by clicking the "Execute workflow" button, then try again. Status: ${response.status}`);
+        const clientPayload = {
+          success: false,
+          message: 'N8N webhook is not active or not registered. Activate the workflow in n8n (click "Execute workflow" in the editor) or enable the webhook, then try again.',
+          details: {
+            status: response.status,
+            raw: errorText,
+          },
+        };
+
+        return NextResponse.json(clientPayload, { status: 422 });
       }
-      
-      throw new Error(`N8N webhook failed with status: ${response.status}. Response: ${errorText}`);
+
+      // For other non-OK responses return a 502-like structured response so the frontend can handle it gracefully
+      const clientPayload = {
+        success: false,
+        message: `N8N webhook failed with status: ${response.status}`,
+        details: {
+          status: response.status,
+          raw: errorText,
+        },
+      };
+
+      return NextResponse.json(clientPayload, { status: 502 });
     }
 
     let result;
