@@ -27,6 +27,7 @@ interface ActivityState {
   addActivity: (activity: Omit<ActivityItem, 'id' | 'timestamp'>) => void;
   getRecentActivities: (limit?: number) => ActivityItem[];
   clearActivities: () => void;
+  removeActivitiesByType: (types: ActivityItem['type'][]) => void;
   getActivitiesByType: (type: ActivityItem['type']) => ActivityItem[];
 }
 
@@ -55,17 +56,52 @@ export const useActivityStore = create<ActivityState>()(
         set({ activities: [] });
       },
 
+      removeActivitiesByType: (types: ActivityItem['type'][]) => {
+        set((state) => ({
+          activities: state.activities.filter(a => !types.includes(a.type))
+        }));
+      },
+
       getActivitiesByType: (type) => {
         return get().activities.filter(activity => activity.type === type);
       },
     }),
     {
       name: 'user-activity-store',
-      version: 1,
+      // bump version so we can run a one-time cleanup of noisy "Visited ..." entries
+      version: 2,
       migrate: (persistedState: any, version: number) => {
-        if (version === 0) {
+        // If migrating from version 0 or 1, filter out page-visit entries which were
+        // previously recorded as noisy "Visited ..." actions. We detect those by the
+        // action string starting with 'Visited ' or by presence of details.pageVisited.
+        if (version === 0 || version === 1) {
+          // persistedState can have different shapes depending on zustand/persist version:
+          // - { activities: [...] }
+          // - { state: { activities: [...] }, ... }
+          const rawActivities: any[] = persistedState?.state?.activities ?? persistedState?.activities ?? [];
+          const cleaned = rawActivities.filter((a) => {
+            if (!a) return false;
+            const action: string = a.action || '';
+            const hasPageVisited = !!(a.details && a.details.pageVisited);
+            // drop entries that look like page visits
+            if (action.startsWith('Visited ') || hasPageVisited) return false;
+            return true;
+          });
+
+          // Preserve original persisted shape when returning
+          if (persistedState?.state) {
+            return {
+              ...persistedState,
+              state: {
+                ...persistedState.state,
+                activities: cleaned,
+              },
+            };
+          }
+
           return {
-            activities: persistedState?.activities || [],
+            ...persistedState,
+            activities: cleaned,
           };
         }
         return persistedState;
@@ -132,24 +168,8 @@ export const ActivityHelpers = {
   },
 
   pageVisit: (pageName: string) => {
-    const pageNames: Record<string, string> = {
-      'dashboard': 'Dashboard',
-      'home': 'Home Page',
-      'compliance-check': 'Compliance Check',
-      'contract-review': 'Contract Review',
-      'policy-generator': 'Policy Generator',
-      'rulebase': 'Rules Management',
-      'rules': 'Rules Management',
-      'ai-agents': 'AI Agents',
-      'chat': 'Chat with AI',
-      'search': 'Search',
-      'knowledge': 'Knowledge Base',
-      'history': 'History & Audit Logs',
-      'profile': 'Profile Settings',
-      'users': 'User Management',
-      'upload-assets': 'Asset Upload',
-      'how-to-use': 'Help & Documentation',
-    };
-    return `Visited ${pageNames[pageName] || pageName}`;
+    // Removed page visit helper to prevent creation of noisy "Visited ..." activities.
+    // This function intentionally returns an empty string to avoid producing activity text.
+    return '';
   }
 };

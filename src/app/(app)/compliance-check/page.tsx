@@ -430,12 +430,9 @@ export default function ComplianceCheckPage() {
   // Use Zustand stores for caching
   const { logs: auditLogs, isLoading: isLoadingLogs, fetchLogs: fetchAuditLogsFromStore, addLog } = useAuditLogsStore();
   const { rules, fetchRules } = useRulebaseStore();
-  const { trackComplianceCheck, trackPageVisit } = useActivityTracker();
+  const { trackComplianceCheck } = useActivityTracker();
 
-  // Track page visit
-  useEffect(() => {
-    trackPageVisit('compliance-check');
-  }, [trackPageVisit]);
+  
   
   const [selectedStandards, setSelectedStandards] = useState<string[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -897,16 +894,19 @@ export default function ComplianceCheckPage() {
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
         console.error('Failed to create task', e);
+        try { toastError('Task creation failed', e?.error || 'Unable to create task'); } catch (err) { /* ignore */ }
       } else {
         if (key) {
           setAddedTaskKeys(prev => new Set(prev).add(key));
         }
         console.debug('Task created');
-        // Invalidate recent activity cache so new task shows up on home
+        // Invalidate recent activity and tasks cache so new task shows up on home and My Tasks
         const userId = getUserId();
         if (userId) {
           try { deleteCacheKey(CACHE_KEYS.RECENT_ACTIVITY(userId)); } catch(e) { /* ignore */ }
+          try { deleteCacheKey(CACHE_KEYS.TASKS(userId)); } catch(e) { /* ignore */ }
         }
+        try { toastSuccess('Task created', 'The task was added to your My Tasks list.'); } catch(e) { /* ignore */ }
       }
     } catch (err) {
       console.error('Error creating task', err);

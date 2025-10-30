@@ -144,12 +144,9 @@ export default function PolicyGeneratorPage() {
   
   // Get user data from store
   const { userData } = useUserStore();
-  const { trackPolicyGeneration, trackPageVisit } = useActivityTracker();
+  const { trackPolicyGeneration } = useActivityTracker();
 
-  // Track page visit
-  useEffect(() => {
-    trackPageVisit('policy-generator');
-  }, [trackPageVisit]);
+  
 
   // Helper to get userId with fallback
   const getUserId = (): string | null => {

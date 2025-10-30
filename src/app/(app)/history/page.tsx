@@ -84,12 +84,8 @@ export default function HistoryPage() {
     'all'
   );
   const [statusFilter, setStatusFilter] = useState<'all' | 'compliant' | 'partial' | 'non-compliant'>('all');
-  const { trackPageVisit, trackHistoryView } = useActivityTracker();
+  const { trackHistoryView } = useActivityTracker();
 
-  // Track page visit
-  useEffect(() => {
-    trackPageVisit('history');
-  }, [trackPageVisit]);
 
   // Helper to get userId with fallbacks
   const getUserId = (): string | null => {
