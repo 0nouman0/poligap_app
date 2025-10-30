@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InviteUserModal } from "@/components/modals/InviteUserModal";
+import type { UserRole } from "@/types/user-management";
 import { EditUserModal } from "@/components/modals/EditUserModal";
 
 // Separate component for action dots to ensure proper re-rendering
@@ -211,7 +212,7 @@ export default function Component() {
   // State for user management modals
   const [memberToDelete, setMemberToDelete] = useState<typeof teamMembers[0] | null>(null);
   const [memberToChangeRole, setMemberToChangeRole] = useState<typeof teamMembers[0] | null>(null);
-  const [newRole, setNewRole] = useState<string>("");
+  const [newRole, setNewRole] = useState<UserRole | "">("");
 
   // Ref for filter dropdown
   const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -311,7 +312,8 @@ export default function Component() {
   const removeMemberMutation = useRemoveMember();
   const updateRoleMutation = useUpdateMemberRole();
 
-  const teamMembers = membersResponse?.members || [];
+  // Tolerant access during build inference: some TS generics hide the response shape
+  const teamMembers = (membersResponse as any)?.members || [];
   
   // Get current user's email - use authUserEmail first (most reliable), then fallback to userData
   const currentUserEmailNormalized = authUserEmail || userData?.email?.toLowerCase()?.trim() || null;
@@ -381,7 +383,7 @@ export default function Component() {
   // Helper to get unique values for a given filter category
   function getUniqueFilterValues(category: string) {
     const values = new Set<string>();
-    teamMembers.forEach((member) => {
+    teamMembers.forEach((member: any) => {
       switch (category) {
         case "Status":
           if (member.status) values.add(member.status);
@@ -412,7 +414,7 @@ export default function Component() {
   // Filtered people based on search and filter dropdown
   const filteredPeople = useMemo(() => {
     if (!teamMembers || !Array.isArray(teamMembers)) return [];
-    return teamMembers.filter((member) => {
+    return teamMembers.filter((member: any) => {
       const matchesSearch = member.user?.name
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase()) ?? true;
@@ -448,7 +450,7 @@ export default function Component() {
 
   // Dynamic user counts
   const totalUsers = teamMembers.length;
-  const activeUsers = teamMembers.filter((m) => m.status === "active").length;
+  const activeUsers = teamMembers.filter((m: any) => m.status === "active").length;
 
   // Sorting logic
   const sortedPeople = useMemo(() => {
@@ -612,7 +614,7 @@ export default function Component() {
       {
         company_id: companyId,
         member_user_id: memberToChangeRole.user_id,
-        new_role: newRole,
+        new_role: newRole as UserRole,
       },
       {
         onSuccess: () => {
@@ -966,7 +968,7 @@ export default function Component() {
                       </TableCell>
                     </TableRow>
                   ))
-                : (sortedAndFilteredPeople || []).map((member) => (
+                : (sortedAndFilteredPeople || []).map((member: any) => (
                     <TableRow
                       key={member.user_id}
                       className="text-13 border-b border-gray-100 dark:border-gray-700 hover:bg-transparent"
@@ -1068,10 +1070,12 @@ export default function Component() {
                           // Check role - must be exactly "super_admin" or "company_admin" (case-insensitive)
                           const roleString = String(currentUserRole || "").toLowerCase().trim();
                           const isAdmin = (roleString === "super_admin") || (roleString === "company_admin");
-                          
+                          const isCompanyAdminViewingSuperAdmin = (roleString === "company_admin") && (String(member?.role || "").toLowerCase().trim() === "super_admin");
+
                           // Only show dots if: (current user is admin) OR (this is the current user)
                           // If BOTH are false, do NOT render component at all
-                          const shouldShowDots = isAdmin === true || isCurrentUser === true;
+                          // We still render for company_admin viewing super_admin so we can show a disabled button
+                          const shouldShowDots = (isAdmin === true || isCurrentUser === true) || isCompanyAdminViewingSuperAdmin;
                           
                           // STRICT CHECK: If we shouldn't show dots, return null immediately (no component render)
                           if (!shouldShowDots) {
@@ -1096,7 +1100,7 @@ export default function Component() {
                               }}
                               onChangeRole={() => {
                                 setMemberToChangeRole(member);
-                                setNewRole(member.role);
+                                setNewRole(member.role as UserRole);
                               }}
                               onDelete={() => setMemberToDelete(member)}
                             />
@@ -1182,7 +1186,7 @@ export default function Component() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <Select value={newRole} onValueChange={setNewRole}>
+            <Select value={newRole} onValueChange={(val) => setNewRole(val as UserRole)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>

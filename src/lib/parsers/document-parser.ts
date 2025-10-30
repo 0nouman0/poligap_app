@@ -272,58 +272,12 @@ export async function getDocumentMetadata(file: File): Promise<{
   };
 
   if (file.type === 'application/pdf') {
+    // Avoid bundling pdfjs-dist (which requires native canvas). Return basic metadata.
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      // Try to dynamically load pdfjs-dist for accurate metadata (page count, info)
-      try {
-        let pdfjsLib: any = null;
-        try {
-          // try legacy path first
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
-        } catch (e1) {
-          try {
-            // fallback path
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            pdfjsLib = require('pdfjs-dist/build/pdf.js');
-          } catch (e2) {
-            pdfjsLib = null;
-          }
-        }
-
-        if (pdfjsLib) {
-          const loadingTask = pdfjsLib.getDocument({ data: buffer });
-          // some pdfjs builds return a promise directly on getDocument
-          const doc = await (loadingTask.promise || loadingTask);
-          const pageCount = doc.numPages ?? doc.numpages ?? doc._pdfInfo?.numPages;
-          const info = doc._pdfInfo ?? doc.info ?? null;
-
-          return {
-            ...baseMetadata,
-            pageCount: typeof pageCount === 'number' ? pageCount : undefined,
-            info: info || undefined,
-          };
-        }
-
-        // If pdfjs-dist is not available, fall back to a simpler approach
-        // Use extractTextFromPdf to validate content and return base metadata
-        try {
-          // We call the extractor to ensure the file is a valid PDF and to trigger any errors
-          await extractTextFromPdf(file);
-        } catch (err) {
-          console.error(`Error extracting text fallback for PDF metadata: ${String(err)}`);
-        }
-
-        return baseMetadata;
-      } catch (error) {
-        console.error('Error loading pdfjs-dist for metadata:', String(error));
-        return baseMetadata;
-      }
-    } catch (error) {
-      console.error('Error getting PDF metadata:', error);
-      return baseMetadata;
-    }
+      // Optionally validate the PDF by attempting text extraction; ignore failures.
+      await extractTextFromPdf(file).catch(() => undefined);
+    } catch {}
+    return baseMetadata;
   }
 
   return baseMetadata;
