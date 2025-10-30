@@ -100,10 +100,9 @@ function ActionDotsCell({
     willShowDots: isAdmin || isCurrentUser
   };
   
-  // THE CRITICAL CHECK: Only show if user is admin OR if this is the current user
-  // If BOTH conditions are false, return null immediately
-  // Using explicit boolean checks to avoid any truthy/falsy issues
-  const shouldShowDots = Boolean(isAdmin) || Boolean(isCurrentUser);
+  // THE CRITICAL CHECK: Only show actions for admins (super_admin or company_admin)
+  // Regular users (member/viewer) should never see actions, even for themselves
+  const shouldShowDots = Boolean(isAdmin);
   
   if (!shouldShowDots) {
     // NOT admin AND NOT current user = absolutely NO action dots
@@ -327,7 +326,8 @@ export default function Component() {
     const memberEmail = m.user?.email?.toLowerCase()?.trim();
     return memberEmail === currentUserEmailNormalized && !!currentUserEmailNormalized;
   });
-  const currentUserRole = currentUserMember?.role || selectedCompany?.role || "viewer";
+  // Use role strictly from teamMembers; avoid optimistic selectedCompany role
+  const currentUserRole = currentUserMember?.role || "viewer";
 
   // Sync selectedCompany role with actual API role if it differs
   useEffect(() => {
@@ -929,9 +929,11 @@ export default function Component() {
                 <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7">
                   Joined On
                 </TableHead>
-                <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7 text-right">
-                  Actions
-                </TableHead>
+                { (String(currentUserRole || "").toLowerCase() === "super_admin" || String(currentUserRole || "").toLowerCase() === "company_admin") && (
+                  <TableHead className="font-medium py-0 text-gray-500 dark:text-gray-100 h-7 text-right">
+                    Actions
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1050,6 +1052,7 @@ export default function Component() {
                             : "-"}
                         </span>
                       </TableCell>
+                      {(String(currentUserRole || "").toLowerCase() === "super_admin" || String(currentUserRole || "").toLowerCase() === "company_admin") && (
                       <TableCell className="px-3 py-1 text-right">
                         {(() => {
                           // Only render ActionDotsCell if we have the current user's email
@@ -1074,10 +1077,9 @@ export default function Component() {
                           const isAdmin = (roleString === "super_admin") || (roleString === "company_admin");
                           const isCompanyAdminViewingSuperAdmin = (roleString === "company_admin") && (String(member?.role || "").toLowerCase().trim() === "super_admin");
 
-                          // Only show dots if: (current user is admin) OR (this is the current user)
-                          // If BOTH are false, do NOT render component at all
-                          // We still render for company_admin viewing super_admin so we can show a disabled button
-                          const shouldShowDots = (isAdmin === true || isCurrentUser === true) || isCompanyAdminViewingSuperAdmin;
+                          // Only show dots for admins; regular users should not see actions
+                          // Still render for company_admin viewing super_admin to show disabled button
+                          const shouldShowDots = (isAdmin === true) || isCompanyAdminViewingSuperAdmin;
                           
                           // STRICT CHECK: If we shouldn't show dots, return null immediately (no component render)
                           if (!shouldShowDots) {
@@ -1109,6 +1111,7 @@ export default function Component() {
                           );
                         })()}
                       </TableCell>
+                      )}
                     </TableRow>
                   ))}
             </TableBody>

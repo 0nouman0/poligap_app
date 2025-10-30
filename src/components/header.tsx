@@ -201,17 +201,26 @@ export const Header = memo(function Header() {
 
   // Get user data from user store
   const { userData } = useUserStore();
-  const profilePictureUrl = userData?.profileImage;
 
   useEffect(() => {
     // Access localStorage only on client side
     setStoredId(localStorage.getItem("user_id"));
   }, []);
 
-  const { data } = useUserProfileDetails(
-    storedId || "",
+  // Fallback to store userId if localStorage isn't ready
+  useEffect(() => {
+    if (!storedId && userData?.userId) {
+      setStoredId(userData.userId);
+    }
+  }, [storedId, userData?.userId]);
+
+  const effectiveUserId = storedId || userData?.userId || "";
+  const { data, isLoading: isProfileLoading } = useUserProfileDetails(
+    effectiveUserId,
     selectedCompany?.companyId || ""
   );
+  const profileFromQuery: any = data?.data;
+  const profilePictureUrl = userData?.profileImage || profileFromQuery?.profileImage || "";
 
   useEffect(() => {
     if (data?.data && storedId) {
@@ -264,8 +273,8 @@ export const Header = memo(function Header() {
   const searchEnabled = useMemo(() => false, []);
   
   const userInitials = useMemo(() => 
-    getInitials(userData?.name) || "",
-    [userData?.name]
+    getInitials(userData?.name || profileFromQuery?.name) || "",
+    [userData?.name, profileFromQuery?.name]
   );
 
   const handleLogoClick = useCallback(() => {
@@ -353,10 +362,10 @@ export const Header = memo(function Header() {
                   </Avatar>
                   <div>
                     <div className="font-semibold text-base">
-                      {userData?.name}
+                      {userData?.name || profileFromQuery?.name || ""}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {userData?.email}
+                      {userData?.email || profileFromQuery?.email || ""}
                     </div>
                   </div>
                 </div>
