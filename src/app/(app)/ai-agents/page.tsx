@@ -242,7 +242,7 @@ export default function AIAgentsPage() {
   const [emailsText, setEmailsText] = useState("");
   const [selectedAction, setSelectedAction] = useState<string>(emailActions[0].value);
   const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState<null | { sent: number; failed: number }>(null);
+  const [sendResult, setSendResult] = useState<null | { sent: number; failed: number; message?: string }>(null);
 
   const parseEmails = (text: string) => {
     return Array.from(
@@ -283,7 +283,7 @@ export default function AIAgentsPage() {
       if (result.success) {
         setSendResult({ sent: recipients.length, failed: 0 });
       } else {
-        setSendResult({ sent: 0, failed: recipients.length });
+        setSendResult({ sent: 0, failed: recipients.length, message: result.message || result.error || 'Failed to trigger email workflow' });
       }
     } catch (e) {
       setSendResult({ sent: 0, failed: parseEmails(emailsText).length });
@@ -544,16 +544,21 @@ export default function AIAgentsPage() {
                         {/* Send Button */}
                         <div className="flex justify-end items-center gap-[15px]">
                           {sendResult && (
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <span className="font-medium text-green-700">{sendResult.sent} sent</span>
-                              </div>
-                              {sendResult.failed > 0 && (
+                            <div className="flex flex-col gap-2 text-sm">
+                              <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1">
-                                  <XCircle className="h-4 w-4 text-red-600" />
-                                  <span className="font-medium text-red-700">{sendResult.failed} failed</span>
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                  <span className="font-medium text-green-700">{sendResult.sent} sent</span>
                                 </div>
+                                {sendResult.failed > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <XCircle className="h-4 w-4 text-red-600" />
+                                    <span className="font-medium text-red-700">{sendResult.failed} failed</span>
+                                  </div>
+                                )}
+                              </div>
+                              {sendResult.message && (
+                                <div className="text-xs text-red-600">{sendResult.message}</div>
                               )}
                             </div>
                           )}
