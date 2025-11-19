@@ -58,8 +58,8 @@ function getAnalysisTypeIcon(method?: string) {
   switch (method) {
     case 'contract-review':
       return <FileText className="h-4 w-4 text-blue-600" />;
-    case 'policy-generator':
-      return <Shield className="h-4 w-4 text-purple-600" />;
+    // case 'policy-generator':
+    //   return <Shield className="h-4 w-4 text-purple-600" />;
     default:
       return <Shield className="h-4 w-4 text-blue-600" />;
   }
@@ -69,8 +69,8 @@ function getAnalysisTypeName(method?: string) {
   switch (method) {
     case 'contract-review':
       return 'Contract Review';
-    case 'policy-generator':
-      return 'Policy Generator';
+    // case 'policy-generator':
+    //   return 'Policy Generator';
     default:
       return 'Compliance Check';
   }
@@ -80,7 +80,7 @@ export default function HistoryPage() {
   const { userData } = useUserStore();
   const { logs, isLoading: loading, fetchLogs } = useAuditLogsStore();
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  const [methodFilter, setMethodFilter] = useState<'all' | 'compliance-check' | 'policy-analysis' | 'contract-review' | 'policy-generator' | 'others'>(
+  const [methodFilter, setMethodFilter] = useState<'all' | 'compliance-check' | 'policy-analysis' | 'contract-review' | 'others'>(
     'all'
   );
   const [statusFilter, setStatusFilter] = useState<'all' | 'compliant' | 'partial' | 'non-compliant'>('all');
@@ -121,7 +121,7 @@ export default function HistoryPage() {
       if (methodFilter === 'others') {
         return (
           !!log.analysisMethod &&
-          !['contract-review', 'policy-generator', 'policy-analysis'].includes(log.analysisMethod)
+          !['contract-review', 'policy-analysis'].includes(log.analysisMethod)
         );
       }
       return log.analysisMethod === methodFilter;
@@ -136,8 +136,8 @@ export default function HistoryPage() {
         return 'Compliance Checks';
       case 'contract-review':
         return 'Contract Reviews';
-      case 'policy-generator':
-        return 'Policy Generations';
+      // case 'policy-generator':
+      //   return 'Policy Generations';
       case 'policy-analysis':
         return 'Compliance Checks';
       default:
@@ -188,7 +188,7 @@ export default function HistoryPage() {
                 <DropdownMenuItem onClick={() => setMethodFilter('all')}>All Methods</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setMethodFilter('compliance-check')}>Compliance Checks</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setMethodFilter('contract-review')}>Contract Reviews</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setMethodFilter('policy-generator')}>Policy Generations</DropdownMenuItem>
+                {/* <DropdownMenuItem onClick={() => setMethodFilter('policy-generator')}>Policy Generations</DropdownMenuItem> */}
                 <DropdownMenuItem onClick={() => setMethodFilter('others')}>Other Sources</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -368,15 +368,15 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Content based on analysis type */}
-                {selectedLog.analysisMethod === 'policy-generator' ? (
+                {/* {selectedLog.analysisMethod === 'policy-generator' ? (
                   <div className="prose max-w-none">
                     <h4 className="font-semibold mb-4">Generated Policy Content</h4>
                     <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap">
                       {selectedLog.snapshot?.content || 'No content available'}
                     </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                ) : ( */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Issues */}
                     <div>
                       <h4 className="font-semibold mb-4 flex items-center gap-2">
@@ -431,8 +431,7 @@ export default function HistoryPage() {
                         )}
                       </div>
                     </div>
-                  </div>
-                )}
+                </div>
               </div>
             )}
           </DialogContent>

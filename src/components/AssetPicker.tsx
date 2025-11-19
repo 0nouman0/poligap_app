@@ -13,7 +13,14 @@ import {
   X,
   Upload,
   Grid3X3,
-  List
+  List,
+  FileSpreadsheet,
+  Presentation,
+  FileImage,
+  FileAudio,
+  FileVideo,
+  FileCode,
+  Folder
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +51,7 @@ interface AssetPickerProps {
   onSelect: (assets: Asset[]) => void;
   multiple?: boolean;
   allowedTypes?: string[]; // e.g., ['image/*', 'application/pdf']
+  context?: 'compliance' | 'contract-review' | 'chat' | 'general'; // Context for filtering
   title?: string;
   description?: string;
 }
@@ -54,6 +62,7 @@ export function AssetPicker({
   onSelect,
   multiple = false,
   allowedTypes,
+  context = 'general',
   title = "Select Assets",
   description = "Choose from your uploaded assets"
 }: AssetPickerProps) {
@@ -64,6 +73,107 @@ export function AssetPicker({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
+  // Get context-specific allowed file types
+  const getContextAllowedTypes = (context: string): string[] => {
+    switch (context) {
+      case 'compliance':
+      case 'contract-review':
+        return [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'text/plain'
+        ];
+      case 'chat':
+        // Allow all file types for chat
+        return [];
+      default:
+        return allowedTypes || [];
+    }
+  };
+
+  // Enhanced file icon function with specific icons for different file types
+  const getFileIcon = (mimeType: string, fileName: string = '') => {
+    const extension = fileName.split('.').pop()?.toLowerCase() || '';
+    
+    let icon;
+    let bgColor = 'bg-muted';
+    let textColor = 'text-muted-foreground';
+
+    // Images
+    if (mimeType.startsWith('image/')) {
+      icon = <FileImage className="h-4 w-4" />;
+      bgColor = 'bg-green-50 dark:bg-green-900/30';
+      textColor = 'text-green-600 dark:text-green-400';
+    }
+    // PDFs
+    else if (mimeType === 'application/pdf') {
+      icon = <FileText className="h-4 w-4" />;
+      bgColor = 'bg-red-50 dark:bg-red-900/30';
+      textColor = 'text-red-600 dark:text-red-400';
+    }
+    // Word Documents
+    else if (mimeType === 'application/msword' || mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      icon = <FileText className="h-4 w-4" />;
+      bgColor = 'bg-blue-50 dark:bg-blue-900/30';
+      textColor = 'text-blue-600 dark:text-blue-400';
+    }
+    // PowerPoint
+    else if (mimeType === 'application/vnd.ms-powerpoint' || mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      icon = <Presentation className="h-4 w-4" />;
+      bgColor = 'bg-orange-50 dark:bg-orange-900/30';
+      textColor = 'text-orange-600 dark:text-orange-400';
+    }
+    // Excel/Spreadsheets
+    else if (mimeType === 'application/vnd.ms-excel' || mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      icon = <FileSpreadsheet className="h-4 w-4" />;
+      bgColor = 'bg-emerald-50 dark:bg-emerald-900/30';
+      textColor = 'text-emerald-600 dark:text-emerald-400';
+    }
+    // Text files
+    else if (mimeType === 'text/plain' || extension === 'txt') {
+      icon = <FileText className="h-4 w-4" />;
+      bgColor = 'bg-gray-50 dark:bg-gray-900/30';
+      textColor = 'text-gray-600 dark:text-gray-400';
+    }
+    // Videos
+    else if (mimeType.startsWith('video/')) {
+      icon = <FileVideo className="h-4 w-4" />;
+      bgColor = 'bg-purple-50 dark:bg-purple-900/30';
+      textColor = 'text-purple-600 dark:text-purple-400';
+    }
+    // Audio
+    else if (mimeType.startsWith('audio/')) {
+      icon = <FileAudio className="h-4 w-4" />;
+      bgColor = 'bg-pink-50 dark:bg-pink-900/30';
+      textColor = 'text-pink-600 dark:text-pink-400';
+    }
+    // Archives
+    else if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('tar')) {
+      icon = <Archive className="h-4 w-4" />;
+      bgColor = 'bg-yellow-50 dark:bg-yellow-900/30';
+      textColor = 'text-yellow-600 dark:text-yellow-400';
+    }
+    // Code files
+    else if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml', 'py', 'java', 'cpp', 'c'].includes(extension)) {
+      icon = <FileCode className="h-4 w-4" />;
+      bgColor = 'bg-indigo-50 dark:bg-indigo-900/30';
+      textColor = 'text-indigo-600 dark:text-indigo-400';
+    }
+    // Default
+    else {
+      icon = <File className="h-4 w-4" />;
+    }
+
+    return (
+      <div className={`h-7 w-7 rounded-md ${bgColor} ${textColor} flex items-center justify-center`}>
+        {icon}
+      </div>
+    );
+  };
+
   // Fetch assets when dialog opens and when filters change (server-side filtering)
   useEffect(() => {
     if (!isOpen) return;
@@ -72,12 +182,17 @@ export function AssetPicker({
     fetchAssets({ category, search }).catch(() => {});
   }, [isOpen, selectedCategory, searchTerm, fetchAssets]);
 
-  // Client-side filter by allowed MIME types only
+  // Client-side filter by context-aware allowed MIME types
   useEffect(() => {
     let filtered = assets;
-    if (allowedTypes && allowedTypes.length > 0) {
+    
+    // Get context-specific allowed types, fallback to provided allowedTypes
+    const contextTypes = getContextAllowedTypes(context);
+    const typesToFilter = contextTypes.length > 0 ? contextTypes : (allowedTypes || []);
+    
+    if (typesToFilter.length > 0) {
       filtered = filtered.filter(asset =>
-        allowedTypes.some(type => {
+        typesToFilter.some(type => {
           if (type.endsWith('/*')) {
             const baseType = type.replace('/*', '');
             return asset.mimetype.startsWith(baseType);
@@ -87,23 +202,7 @@ export function AssetPicker({
       );
     }
     setFilteredAssets(filtered);
-  }, [assets, allowedTypes]);
-
-  // Note: fetching handled by useAssets via useEffect above
-
-  const getFileIcon = (mimeType: string) => {
-    const icon = mimeType.startsWith('image/') ? <Image className="h-4 w-4" />
-      : mimeType.startsWith('video/') ? <Video className="h-4 w-4" />
-      : mimeType.startsWith('audio/') ? <Music className="h-4 w-4" />
-      : (mimeType.includes('pdf') || mimeType.includes('msword') || mimeType.includes('officedocument')) ? <FileText className="h-4 w-4" />
-      : (mimeType.includes('zip') || mimeType.includes('rar')) ? <Archive className="h-4 w-4" />
-      : <File className="h-4 w-4" />;
-    return (
-      <div className="h-7 w-7 rounded-md bg-muted text-muted-foreground flex items-center justify-center">
-        {icon}
-      </div>
-    );
-  };
+  }, [assets, allowedTypes, context]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -221,7 +320,7 @@ export function AssetPicker({
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            {getFileIcon(asset.mimetype)}
+                            {getFileIcon(asset.mimetype, asset.originalName)}
                               {multiple && (
                                 <Checkbox
                                   checked={!!isSelected}
@@ -281,7 +380,7 @@ export function AssetPicker({
                             onChange={() => {}} // Handled by card click
                           />
                         )}
-                        {getFileIcon(asset.mimetype)}
+                        {getFileIcon(asset.mimetype, asset.originalName)}
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium whitespace-normal break-words text-sm">{asset.originalName}</h4>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">

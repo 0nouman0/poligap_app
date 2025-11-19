@@ -69,14 +69,14 @@ export default function HomePage() {
       color: "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400",
       badge: "Smart Analysis"
     },
-    {
-      title: "Policy Generator",
-      description: "Generate comprehensive policies tailored to your organization's needs",
-      icon: BookOpen,
-      href: "/policy-generator",
-      color: "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
-      badge: "Auto-Generate"
-    },
+    // {
+    //   title: "Policy Generator",
+    //   description: "Generate comprehensive policies tailored to your organization's needs",
+    //   icon: BookOpen,
+    //   href: "/policy-generator",
+    //   color: "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
+    //   badge: "Auto-Generate"
+    // },
     {
       title: "AI Agents",
       description: "Deploy specialized AI agents for automated legal and compliance tasks",
@@ -104,14 +104,14 @@ export default function HomePage() {
       iconColor: "text-green-600 dark:text-green-400",
       description: "AI-powered document analysis with gap identification and improvement suggestions"
     },
-    { 
-      title: "Generate Policy", 
-      icon: BookOpen, 
-      href: "/policy-generator", 
-      iconBg: "bg-purple-100 dark:bg-purple-500/20",
-      iconColor: "text-purple-600 dark:text-purple-400",
-      description: "Create comprehensive policies tailored to your organization's specific needs and requirements"
-    },
+    // { 
+    //   title: "Generate Policy", 
+    //   icon: BookOpen, 
+    //   href: "/policy-generator", 
+    //   iconBg: "bg-purple-100 dark:bg-purple-500/20",
+    //   iconColor: "text-purple-600 dark:text-purple-400",
+    //   description: "Create comprehensive policies tailored to your organization's specific needs and requirements"
+    // },
     { 
       title: "Learn Modules", 
       icon: Users, 

@@ -1,4 +1,6 @@
-import { NextConfig } from "next";
+import type { NextConfig } from "next";
+
+// Force rebuild
 
 const nextConfig: NextConfig = {
   // Static caching headers for optimal browser caching
@@ -36,25 +38,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  
+
   compiler: {
     // Remove console logs in production and staging
     removeConsole: ["production", "staging"].includes(
       process.env.NODE_ENV || ""
     ),
   },
-  
+
   images: {
     // Enable modern image formats
     formats: ["image/webp", "image/avif"],
-    
+
     // Responsive image sizes
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    
+
     // Cache optimized images for 1 year
     minimumCacheTTL: 31536000,
-    
+
     // Remote image patterns
     remotePatterns: [
       {

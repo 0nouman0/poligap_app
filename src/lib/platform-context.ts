@@ -44,7 +44,7 @@ const PLATFORM_KEYWORDS = {
     'compliance analysis', 'compliance check', 'compliance score',
     'document extraction', 'extract document', 'upload document',
     'audit log', 'audit trail', 'rulebase', 'rule base',
-    'policy generator', 'copyright detector', 'idea analyzer',
+    'copyright detector', 'idea analyzer',
   ],
   
   // Standards
@@ -114,7 +114,7 @@ function extractRelevantSections(query: string, fullDocs: string): string {
     'AI Chat Assistant': ['chat', 'conversation', 'assistant', 'model', 'gpt', 'claude', 'llama', 'ask'],
     'Document Extraction': ['extract', 'upload', 'document', 'pdf', 'docx', 'file', 'format'],
     'Audit Logs': ['audit', 'log', 'history', 'track', 'activity'],
-    'Additional Features': ['policy generator', 'copyright', 'idea analyzer'],
+    'Additional Features': ['copyright', 'idea analyzer'],
     'Technical Stack': ['technical', 'architecture', 'technology', 'stack', 'backend', 'frontend'],
     'API Endpoints': ['api', 'endpoint', 'integration', 'route'],
     'File Size and Format Limits': ['file size', 'format', 'limit', 'maximum', 'supported format'],
@@ -227,7 +227,7 @@ Core capabilities:
 - AI Chat with multiple models (GPT-4o, Claude, Llama)
 - Document Extraction (PDF, DOCX, TXT - max 20MB)
 - Audit Logs and Activity Tracking
-- Policy Generator, Copyright Detection, Idea Analysis
+- Copyright Detection, Idea Analysis
 
 If users ask about these features, provide helpful information. For detailed platform questions, you have access to comprehensive documentation.`;
 }

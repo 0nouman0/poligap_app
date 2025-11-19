@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen, BarChart2, XOctagon, Coffee, Meh, Search } from "lucide-react";
+import { Shield, Upload, FileText, AlertTriangle, CheckCircle, Eye, Download, Heart, Globe, MapPin, TrendingUp, CreditCard, Lock, Award, Building, GraduationCap, Landmark, Users, Plane, Factory, Zap, Car, Pill, Database, Radio, Flag, Star, Crown, Network, Cpu, ChevronRight, ChevronLeft, FolderOpen, Filter, X, AlertCircle, Info, Minus, History, Calendar, TrendingDown, TrendingUp as TrendingUpIcon, Plus, Loader2, BookOpen, BarChart2, XOctagon, Coffee, Meh, Search, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AssetPicker } from "@/components/AssetPicker";
@@ -40,6 +40,8 @@ interface ComplianceGap {
   recommendation: string; // kept for history compatibility
   justification?: string; // evidence citation or excerpt from the document
   section?: string;
+  regulationReference?: string; // e.g., "GDPR Art. 30"
+  officialSource?: string; // official URL to the regulation source
 }
 
 interface ComplianceResult {
@@ -453,6 +455,135 @@ export default function ComplianceCheckPage() {
   const [addingTaskKeys, setAddingTaskKeys] = useState<Set<string>>(new Set());
   const [isLogsCollapsed, setIsLogsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isGDPRClauseDialogOpen, setIsGDPRClauseDialogOpen] = useState(false);
+  const [selectedGDPRClause, setSelectedGDPRClause] = useState<{
+    article: string;
+    title: string;
+    text: string;
+    url: string;
+  } | null>(null);
+
+  // GDPR Article texts for information display
+  const getGDPRClauseText = (regulationReference: string) => {
+    const gdprClauses = {
+      "GDPR Art. 6": {
+        title: "Lawfulness of processing",
+        text: "1. Processing shall be lawful only if and to the extent that at least one of the following applies:\n(a) the data subject has given consent to the processing of his or her personal data for one or more specific purposes;\n(b) processing is necessary for the performance of a contract to which the data subject is party or in order to take steps at the request of the data subject prior to entering into a contract;\n(c) processing is necessary for compliance with a legal obligation to which the controller is subject;\n(d) processing is necessary in order to protect the vital interests of the data subject or of another natural person;\n(e) processing is necessary for the performance of a task carried out in the public interest or in the exercise of official authority vested in the controller;\n(f) processing is necessary for the purposes of the legitimate interests pursued by the controller or by a third party, except where such interests are overridden by the interests or fundamental rights and freedoms of the data subject which require protection of personal data, in particular where the data subject is a child.",
+        url: "https://eur-lex.europa.eu/eli/reg/2016/679/art_6/oj"
+      },
+      "GDPR Art. 7": {
+        title: "Conditions for consent",
+        text: "1. Where processing is based on consent, the controller shall be able to demonstrate that the data subject has consented to processing of his or her personal data.\n2. If the data subject's consent is given in the context of a written declaration which also concerns other matters, the request for consent shall be presented in a manner which is clearly distinguishable from the other matters, in an intelligible and easily accessible form, using clear and plain language.\n3. The data subject shall have the right to withdraw his or her consent at any time. The withdrawal of consent shall not affect the lawfulness of processing based on consent before its withdrawal.\n4. When assessing whether consent is freely given, utmost account shall be taken of whether, inter alia, the performance of a contract, including the provision of a service, is conditional on consent to the processing of personal data that is not necessary for the performance of that contract.",
+        url: "https://eur-lex.europa.eu/eli/reg/2016/679/art_7/oj"
+      },
+      "GDPR Art. 30": {
+        title: "Records of processing activities",
+        text: "1. Each controller and, where applicable, the controller's representative, shall maintain a record of processing activities under its responsibility. That record shall contain all of the following information:\n(a) the name and contact details of the controller and, where applicable, the joint controller, the controller's representative and the data protection officer;\n(b) the purposes of the processing;\n(c) a description of the categories of data subjects and of the categories of personal data;\n(d) the categories of recipients to whom the personal data have been or will be disclosed including recipients in third countries or international organisations;\n(e) where applicable, transfers of personal data to a third country or an international organisation, including the identification of that third country or international organisation and, in the case of transfers referred to in the second subparagraph of Article 49(1), the documentation of suitable safeguards;\n(f) where possible, the envisaged time limits for erasure of the different categories of data;\n(g) where possible, a general description of the technical and organisational security measures referred to in Article 32(1).",
+        url: "https://eur-lex.europa.eu/eli/reg/2016/679/art_30/oj"
+      },
+      "GDPR Art. 33": {
+        title: "Notification of a personal data breach to the supervisory authority",
+        text: "1. In the case of a personal data breach, the controller shall without undue delay and, where feasible, not later than 72 hours after having become aware of it, notify the personal data breach to the supervisory authority competent in accordance with Article 55, unless the personal data breach is unlikely to result in a risk to the rights and freedoms of natural persons.\n2. Where the notification to the supervisory authority is not made within 72 hours, it shall be accompanied by reasons for the delay.\n3. The processor shall notify the controller without undue delay after becoming aware of a personal data breach.",
+        url: "https://eur-lex.europa.eu/eli/reg/2016/679/art_33/oj"
+      },
+      "GDPR Art. 35": {
+        title: "Data protection impact assessment",
+        text: "1. Where a type of processing in particular using new technologies, and taking into account the nature, scope, context and purposes of the processing, is likely to result in a high risk to the rights and freedoms of natural persons, the controller shall, prior to the processing, carry out an assessment of the impact of the envisaged processing operations on the protection of personal data. A single assessment may address a set of similar processing operations that present similar high risks.\n2. A data protection impact assessment referred to in paragraph 1 shall in particular be required in the case of:\n(a) a systematic and extensive evaluation of personal aspects relating to natural persons which is based on automated processing, including profiling, and on which decisions are taken that produce legal effects concerning the natural person or similarly significantly affect the natural person;\n(b) processing on a large scale of special categories of data referred to in Article 9(1), or of personal data relating to criminal convictions and offences referred to in Article 10;\n(c) a systematic monitoring of a publicly accessible area on a large scale.",
+        url: "https://eur-lex.europa.eu/eli/reg/2016/679/art_35/oj"
+      },
+      "GDPR Art. 37": {
+        title: "Designation of the data protection officer",
+        text: "1. The controller and the processor shall designate a data protection officer in any case where:\n(a) the processing is carried out by a public authority or body, except for courts acting in their judicial capacity;\n(b) the core activities of the controller or the processor consist of processing operations which, by virtue of their nature, their scope and/or their purposes, require regular and systematic monitoring of data subjects on a large scale; or\n(c) the core activities of the controller or the processor consist of processing on a large scale of special categories of data pursuant to Article 9 and personal data relating to criminal convictions and offences referred to in Article 10.",
+        url: "https://eur-lex.europa.eu/eli/reg/2016/679/art_37/oj"
+      }
+    };
+
+    // Extract article number from regulation reference
+    const match = regulationReference.match(/GDPR\s+Art\.?\s*(\d+)/i);
+    if (match) {
+      const articleKey = `GDPR Art. ${match[1]}`;
+      return gdprClauses[articleKey as keyof typeof gdprClauses] || null;
+    }
+    return null;
+  };
+
+  const showGDPRClause = (regulationReference: string) => {
+    const clauseData = getGDPRClauseText(regulationReference);
+    if (clauseData) {
+      setSelectedGDPRClause({
+        article: regulationReference,
+        title: clauseData.title,
+        text: clauseData.text,
+        url: clauseData.url
+      });
+      setIsGDPRClauseDialogOpen(true);
+    }
+  };
+
+  // GDPR Citation Component
+  interface GDPRCitationProps {
+    regulationReference: string;
+    officialSource?: string;
+    className?: string;
+  }
+
+  const GDPRCitation: React.FC<GDPRCitationProps> = ({ 
+    regulationReference, 
+    officialSource, 
+    className = '' 
+  }) => {
+    // Extract article number from regulation reference
+    const getArticleInfo = (reference: string) => {
+      const gdprMatch = reference.match(/GDPR\s+Art\.?\s*(\d+)(?:-(\d+))?/i);
+      if (gdprMatch) {
+        const startArticle = gdprMatch[1];
+        const endArticle = gdprMatch[2];
+        return {
+          isGDPR: true,
+          article: startArticle,
+          articleRange: endArticle ? `${startArticle}-${endArticle}` : startArticle,
+          displayText: endArticle ? `Articles ${startArticle}-${endArticle}` : `Article ${startArticle}`
+        };
+      }
+      return { isGDPR: false, article: null, articleRange: null, displayText: reference };
+    };
+
+    const articleInfo = getArticleInfo(regulationReference);
+    
+    // Generate EUR-Lex URL if not provided
+    const getEURLexURL = (article: string) => {
+      return `https://eur-lex.europa.eu/eli/reg/2016/679/art_${article}/oj`;
+    };
+
+    const finalURL = officialSource || (articleInfo.article ? getEURLexURL(articleInfo.article) : null);
+
+    if (!articleInfo.isGDPR || !finalURL) {
+      // For non-GDPR regulations, just show the reference
+      return (
+        <Badge variant="outline" className={`font-body-12 ${className}`}>
+          {regulationReference}
+        </Badge>
+      );
+    }
+
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Badge variant="outline" className="font-body-12 bg-green-50 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
+          GDPR {articleInfo.displayText}
+        </Badge>
+        <a
+          href={finalURL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-body-12 hover:underline transition-colors"
+          title={`View official GDPR ${articleInfo.displayText} on EUR-Lex`}
+        >
+          <ExternalLink className="h-3 w-3" />
+          <span>Official Source</span>
+        </a>
+      </div>
+    );
+  };
 
   // Filter standards based on search query
   const filteredStandards = useMemo(() => {
@@ -1305,8 +1436,24 @@ export default function ComplianceCheckPage() {
                   {results.map((result) => (
                     <div key={result.id} className="space-y-[30px]">
                       {/* Document Header Card */}
-                      <div className="bg-card dark:bg-card border border-border dark:border-border rounded-[5px] py-[15px] px-5">
-                        <div className="flex items-start gap-[15px]">
+                      <div className="bg-card dark:bg-card border border-border dark:border-border rounded-[5px] py-[15px] px-5 relative">
+                        {/* Official GDPR Link Icon - Top Right */}
+                        {result.standard.toLowerCase().includes('gdpr') && (
+                          <div className="absolute top-4 right-4">
+                            <a
+                              href="https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors shadow-sm hover:shadow-md"
+                              title="View Official GDPR Regulation on EUR-Lex"
+                              aria-label="Open official GDPR regulation"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-start gap-[15px] pr-12">
                           <FileText className="w-6 h-6 flex-shrink-0" strokeWidth={2} />
                           <div className="flex-1 space-y-[7px]">
                             <h3 className="text-[16px] font-semibold leading-[19.36px] text-foreground dark:text-foreground">
@@ -1625,6 +1772,27 @@ export default function ComplianceCheckPage() {
                                               <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1">
                                                   <p className="text-sm leading-relaxed text-foreground dark:text-foreground">{gap.description}</p>
+                                                  
+                                                  {/* GDPR Citation Component */}
+                                                  {gap.regulationReference && (
+                                                    <div className="mt-2 flex items-center gap-2">
+                                                      <GDPRCitation 
+                                                        regulationReference={gap.regulationReference}
+                                                        officialSource={gap.officialSource}
+                                                      />
+                                                      {/* Information Icon for GDPR Clause Details */}
+                                                      {gap.regulationReference && gap.regulationReference.toLowerCase().includes('gdpr') && (
+                                                        <button
+                                                          onClick={() => showGDPRClause(gap.regulationReference!)}
+                                                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                                          title="View GDPR clause details"
+                                                          aria-label="Show GDPR clause information"
+                                                        >
+                                                          <Info className="h-3 w-3" />
+                                                        </button>
+                                                      )}
+                                                    </div>
+                                                  )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                   <Badge variant="outline" className="text-xs whitespace-nowrap">
@@ -1996,9 +2164,9 @@ export default function ComplianceCheckPage() {
         isOpen={isAssetPickerOpen}
         onClose={() => setIsAssetPickerOpen(false)}
         onSelect={handleAssetSelect}
-        allowedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']}
+        context="compliance"
         title="Select Document"
-        description="Choose a document from your assets for compliance analysis"
+        description="Choose a document from your assets for compliance analysis (PDF, DOCX, PPT, TXT)"
       />
 
       {/* Audit Log Details Dialog */}
@@ -2098,6 +2266,60 @@ export default function ComplianceCheckPage() {
           )}
 
           {/* Footer intentionally removed per UI request (dialog closes via outside click or ESC). */}
+        </DialogContent>
+      </Dialog>
+
+      {/* GDPR Clause Details Dialog */}
+      <Dialog open={isGDPRClauseDialogOpen} onOpenChange={setIsGDPRClauseDialogOpen}>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-green-600" />
+              GDPR Article Details
+            </DialogTitle>
+            <DialogDescription>
+              Official clause text from the General Data Protection Regulation
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedGDPRClause && (
+            <div className="space-y-4">
+              {/* Article Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="font-semibold text-lg text-green-700 dark:text-green-400">
+                    {selectedGDPRClause.article}
+                  </div>
+                  <div className="text-base font-medium text-foreground mt-1">
+                    {selectedGDPRClause.title}
+                  </div>
+                </div>
+                <a
+                  href={selectedGDPRClause.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 rounded-lg transition-colors text-sm font-medium"
+                  title="View on EUR-Lex"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View Official Source
+                </a>
+              </div>
+
+              {/* Article Text */}
+              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border-l-4 border-green-500">
+                <div className="text-sm leading-relaxed text-foreground dark:text-foreground whitespace-pre-line">
+                  {selectedGDPRClause.text}
+                </div>
+              </div>
+
+              {/* Footer Note */}
+              <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                <strong>Note:</strong> This is the official text from the EU General Data Protection Regulation (GDPR). 
+                The complete regulation and additional context can be found on the official EUR-Lex website.
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

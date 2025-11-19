@@ -26,7 +26,7 @@ export default function VerifyEmailPage() {
 
   const handleResendEmail = async () => {
     if (!email) return;
-    
+
     setResendLoading(true);
     setResendError(null);
     setResendSuccess(false);
@@ -54,19 +54,19 @@ export default function VerifyEmailPage() {
     }
   };
 
-  const logoSrc = "/assets/Poligap_wide_erased.png";
+  const logoSrc = "/assets/new-logo.png";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <Image 
-              src={logoSrc} 
-              alt="Logo" 
-              width={320} 
-              height={120} 
-              className="object-contain" 
+            <Image
+              src={logoSrc}
+              alt="Logo"
+              width={200}
+              height={75}
+              className="object-contain"
             />
           </div>
           <div className="flex justify-center">
@@ -82,7 +82,7 @@ export default function VerifyEmailPage() {
             </div>
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
             <h3 className="font-semibold text-sm text-blue-900">Next Steps:</h3>
@@ -142,8 +142,8 @@ export default function VerifyEmailPage() {
             </Button>
 
             <Link href="/auth/signin" className="block">
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 className="w-full bg-purple-600 hover:bg-purple-700"
               >
                 Already Verified? Sign In

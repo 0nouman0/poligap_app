@@ -813,6 +813,14 @@ export default function ContractReviewPage() {
   const customTemplateInputRef = useRef<HTMLInputElement | null>(null);
   const [customTemplateInputKey, setCustomTemplateInputKey] = useState(0);
   const [customTemplateFile, setCustomTemplateFile] = useState<File | null>(null);
+  const [customTemplatePreview, setCustomTemplatePreview] = useState<{
+    content: string;
+    sections: string[];
+    format: string;
+    wordCount: number;
+  } | null>(null);
+  const [isParsingTemplate, setIsParsingTemplate] = useState(false);
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
 
   // Get audit logs from store
   const { logs: allAuditLogs, isLoading: logsLoading, fetchLogs } = useAuditLogsStore();
@@ -887,11 +895,52 @@ export default function ContractReviewPage() {
     }
   };
 
-  const handleCustomTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setCustomTemplateFile(file);
-      toastSuccess('Template Uploaded', `Custom template "${file.name}" has been uploaded successfully.`);
+      setIsParsingTemplate(true);
+      
+      try {
+        // Extract text from the template file
+        const extractedText = await extractFileText(file);
+        
+        // Parse the template to extract sections and format
+        const sections = extractedText.split(/\n\s*\n/).filter(section => section.trim().length > 50);
+        const wordCount = extractedText.split(/\s+/).length;
+        
+        // Detect common section headers
+        const detectedSections = sections
+          .map(section => {
+            const firstLine = section.split('\n')[0].trim();
+            if (firstLine.length < 100 && (
+              firstLine.match(/^\d+\./) || 
+              firstLine.match(/^[A-Z\s]{3,}$/) ||
+              firstLine.toLowerCase().includes('section') ||
+              firstLine.toLowerCase().includes('article')
+            )) {
+              return firstLine;
+            }
+            return null;
+          })
+          .filter(Boolean) as string[];
+
+        setCustomTemplatePreview({
+          content: extractedText.substring(0, 2000) + (extractedText.length > 2000 ? '...' : ''),
+          sections: detectedSections.slice(0, 10), // Show first 10 sections
+          format: file.type.includes('pdf') ? 'PDF' : 'DOCX',
+          wordCount
+        });
+        
+        setShowTemplatePreview(true);
+        toastSuccess('Template Parsed', `Template "${file.name}" has been parsed successfully. ${detectedSections.length} sections detected.`);
+      } catch (error) {
+        console.error('Template parsing error:', error);
+        toastError('Template Parse Failed', 'Could not parse the template file. Please try a different file.');
+        setCustomTemplateFile(null);
+      } finally {
+        setIsParsingTemplate(false);
+      }
     }
   };
 
@@ -1927,48 +1976,25 @@ export default function ContractReviewPage() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-xs text-[#6A707C] dark:text-gray-400">No references available for this template type.</p>
+                    <p className="text-xs text-[#6A707C] dark:text-gray-400">
+                      No references available for this template type.
+                    </p>
                   )}
                 </div>
-              </div>
-
-              {/* Right Column - Sources (240px) */}
-              <div className="w-[240px] flex-shrink-0 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-4 overflow-y-auto scrollbar-thin">
-                <h3 className="text-base font-semibold text-[#2D2F34] dark:text-gray-100 mb-3 leading-tight">Sources</h3>
-                {selectedTypeSources.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedTypeSources.map((s, i) => (
-                      <li key={i} className="text-xs">
-                        <a href={s.url} target="_blank" rel="noreferrer" className="text-[#3B43D6] hover:underline">{s.name}</a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-10">
-                    <svg width="140" height="64" viewBox="0 0 168 77" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M83.9999 76.5C130.392 76.5 167.5 59.5538 167.5 38.5C167.5 17.4462 130.392 0.5 83.9999 0.5C37.6078 0.5 0.5 17.4462 0.5 38.5C0.5 59.5538 37.6078 76.5 83.9999 76.5Z" fill="#F5F5F5" stroke="#E0E0E0"/>
-                      <rect x="34" y="20" width="100" height="37" rx="4" fill="white" stroke="#E0E0E0"/>
-                      <circle cx="84" cy="38.5" r="8" fill="#F0F0F0"/>
-                      <line x1="60" y1="32" x2="75" y2="32" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                      <line x1="60" y1="38" x2="70" y2="38" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                      <line x1="93" y1="32" x2="108" y2="32" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                      <line x1="93" y1="38" x2="103" y2="38" stroke="#E0E0E0" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <p className="text-xs text-[#6A707C] dark:text-gray-400 mt-5 text-center">No sources available</p>
-                  </div>
-                )}
               </div>
             </div>
             ) : (
               /* Custom Template Upload */
-              <div className="flex-1 flex flex-col overflow-hidden items-center pt-8">
-                <div className="bg-white dark:bg-gray-800 rounded-[10px] border border-[#DEE3ED] dark:border-gray-600 border-dashed p-5 flex flex-col gap-4 w-full max-w-3xl">
-                  <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
-                    Provide a custom template
-                  </h3>
-                  
-                  {/* Upload Area */}
-                  <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 p-8">
+              <div className="flex-1 flex flex-col overflow-hidden pt-4">
+                <div className="flex gap-5 h-full">
+                  {/* Upload Section */}
+                  <div className="w-96 bg-white dark:bg-gray-800 rounded-[10px] border border-[#DEE3ED] dark:border-gray-600 border-dashed p-5 flex flex-col gap-4">
+                    <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
+                      Upload Custom Template
+                    </h3>
+                    
+                    {/* Upload Area */}
+                    <div className="border border-[#DEE3ED] dark:border-gray-700 rounded-[5px] bg-[#FAFAFA] dark:bg-gray-800 p-8">
                     <div className="flex flex-col items-center justify-center gap-2.5">
                       <svg className="w-16 h-16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm4.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" className="text-gray-400 dark:text-gray-500"/>
@@ -2011,8 +2037,74 @@ export default function ContractReviewPage() {
                           </button>
                         </div>
                       )}
+
+                      {isParsingTemplate && (
+                        <div className="mt-4 flex items-center gap-2 text-xs">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#3B43D6]"></div>
+                          <span className="text-[#6A707C] dark:text-gray-400">Parsing template...</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+                  </div>
+
+                  {/* Preview Section */}
+                  {showTemplatePreview && customTemplatePreview && (
+                    <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
+                          Template Preview
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {customTemplatePreview.format}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {customTemplatePreview.wordCount} words
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Detected Sections */}
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-[#202020] dark:text-gray-100 mb-2">
+                          Detected Sections ({customTemplatePreview.sections.length})
+                        </h4>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {customTemplatePreview.sections.map((section, index) => (
+                            <div key={index} className="flex items-center gap-2 text-xs">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              <span className="text-[#6A707C] dark:text-gray-400">{section}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Content Preview */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-[#202020] dark:text-gray-100 mb-2">
+                          Content Preview
+                        </h4>
+                        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 text-xs text-[#6A707C] dark:text-gray-400 leading-relaxed max-h-64 overflow-y-auto">
+                          {customTemplatePreview.content}
+                        </div>
+                      </div>
+
+                      {/* Apply Template Button */}
+                      <div className="mt-4 pt-4 border-t border-[#DEE3ED] dark:border-gray-700">
+                        <Button
+                          onClick={() => {
+                            // Apply the custom template
+                            setShowTemplatePreview(false);
+                            toastSuccess('Template Applied', 'Custom template has been applied successfully.');
+                          }}
+                          className="w-full bg-[#3B43D6] text-white hover:bg-[#2F36B0] text-sm font-semibold"
+                        >
+                          Apply This Template
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2043,11 +2135,45 @@ export default function ContractReviewPage() {
           </div>
         )}
 
-        {/* Step 3: Upload Contract */}
+        {/* Step 3: Upload Contract & Configure Analysis */}
         {currentStep === 3 && (
-          <div className="flex-1 flex flex-col gap-[30px] overflow-y-auto scrollbar-thin items-end pr-4">
+          <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-thin pr-4">
+            {/* Instructions Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5">
+              <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100 mb-3">
+                Analysis Instructions
+              </h3>
+              <p className="text-xs text-[#595959] dark:text-gray-400 mb-4">
+                Provide specific instructions for the contract analysis (optional)
+              </p>
+              <Textarea
+                value={finalInstructions}
+                onChange={(e) => setFinalInstructions(e.target.value)}
+                placeholder="E.g., 'Focus on liability clauses and payment terms', 'Check for GDPR compliance', etc."
+                className="min-h-[80px] text-sm"
+              />
+            </div>
+
+            {/* Rulebase Selection */}
+            <div className="bg-white dark:bg-gray-800 rounded-[10px] shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
+                    Apply Custom Rules
+                  </h3>
+                  <p className="text-xs text-[#595959] dark:text-gray-400 mt-1">
+                    Use your custom rulebase for enhanced analysis
+                  </p>
+                </div>
+                <Switch
+                  checked={applyRules}
+                  onCheckedChange={setApplyRules}
+                />
+              </div>
+            </div>
+
             {/* Upload Options */}
-            <div className="flex gap-[25px] w-full max-w-[1648px]">
+            <div className="flex gap-6 w-full">
               {/* Upload from Device */}
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-[10px] border border-[#DEE3ED] dark:border-gray-600 border-dashed p-5 flex flex-col gap-[15px]">
                 <h3 className="text-base font-semibold text-[#202020] dark:text-gray-100">
@@ -2485,8 +2611,9 @@ export default function ContractReviewPage() {
         isOpen={isAssetPickerOpen}
         onClose={() => setIsAssetPickerOpen(false)}
         onSelect={handleAssetSelect}
+        context="contract-review"
         title="Select Contract Document"
-        description="Choose a document from your assets to review"
+        description="Choose a document from your assets to review (PDF, DOCX, PPT, TXT)"
       />
     </div>
   );

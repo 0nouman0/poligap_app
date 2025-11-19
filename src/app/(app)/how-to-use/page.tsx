@@ -13,7 +13,7 @@ export default function HowToUsePage() {
     { id: "chat", title: "Chat (Poligap AI)" },
     { id: "compliance-check", title: "Compliance Check" },
     { id: "contract-review", title: "Contract Review" },
-    { id: "policy-generator", title: "Policy Generator" },
+    // { id: "policy-generator", title: "Policy Generator" },
     { id: "idea-analyzer", title: "Idea Analyzer (Beta)" },
     { id: "ai-agents", title: "AI Agents" },
     { id: "rulebase", title: "Rules" },
@@ -206,8 +206,8 @@ export default function HowToUsePage() {
         </CardContent>
       </Card>
 
-      {/* Policy Generator */}
-      <Card id="policy-generator">
+      {/* Policy Generator - Hidden */}
+      {/* <Card id="policy-generator">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5"/> Policy Generator</CardTitle>
         </CardHeader>
@@ -245,7 +245,7 @@ export default function HowToUsePage() {
           </div>
           <Link href="/policy-generator"><Button variant="outline" className="mt-2 cursor-pointer">Open Policy Generator</Button></Link>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Idea Analyzer */}
       <Card id="idea-analyzer">

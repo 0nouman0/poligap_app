@@ -42,7 +42,7 @@ const CompanyDropdown = memo(() => {
       try {
         const { createClient } = await import('@/lib/supabase/client');
         const { createGraphQLClient, queries } = await import('@/lib/supabase/graphql');
-        
+
         const supabase = createClient();
         const { data: sessionData } = await supabase.auth.getSession();
         const { data: { user } } = await supabase.auth.getUser();
@@ -53,7 +53,7 @@ const CompanyDropdown = memo(() => {
         const gql = createGraphQLClient(sessionData.session?.access_token);
         const res: any = await gql.request(queries.getUserCompanies, { userId });
         const edges = res?.user_companiesCollection?.edges || [];
-        
+
         // If user has no company memberships, try to auto-fix via API
         if (edges.length === 0) {
           console.log('No company memberships found, attempting auto-fix...');
@@ -66,12 +66,12 @@ const CompanyDropdown = memo(() => {
             });
             const fixData = await fixResponse.json();
             console.log('Auto-fix result:', fixData);
-            
+
             // Retry fetching companies after a short delay
             await new Promise(resolve => setTimeout(resolve, 2000));
             const retryRes: any = await gql.request(queries.getUserCompanies, { userId });
             const retryEdges = retryRes?.user_companiesCollection?.edges || [];
-            
+
             if (retryEdges.length > 0) {
               edges.push(...retryEdges);
             }
@@ -79,7 +79,7 @@ const CompanyDropdown = memo(() => {
             console.error('Auto-fix failed:', fixError);
           }
         }
-        
+
         const COLORS = ["#7164FF", "#FFD600", "#FF4A4A", "#34A853"];
         const mapped = edges.map((e: any) => ({
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
@@ -150,12 +150,11 @@ const CompanyDropdown = memo(() => {
             >
               <div className="w-full flex items-center justify-between gap-2">
                 <span
-                  className={`text-gray-900 dark:text-gray-100 truncate ${
-                    selectedCompany &&
+                  className={`text-gray-900 dark:text-gray-100 truncate ${selectedCompany &&
                     selectedCompany.companyId === company.companyId
-                      ? "font-semibold"
-                      : "font-normal"
-                  }`}
+                    ? "font-semibold"
+                    : "font-normal"
+                    }`}
                 >
                   {company.name}
                 </span>
@@ -256,14 +255,14 @@ export const Header = memo(function Header() {
   }, [router]);
 
   // Memoized values for performance
-  const headerImageSrc = useMemo(() => 
-    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/Poligap_wide_erased.png",
+  const headerImageSrc = useMemo(() =>
+    process.env.NEXT_PUBLIC_LOGO_URL || "/assets/new-logo.png",
     []
   );
-  
+
   const searchEnabled = useMemo(() => false, []);
-  
-  const userInitials = useMemo(() => 
+
+  const userInitials = useMemo(() =>
     getInitials(userData?.name) || "",
     [userData?.name]
   );
@@ -282,8 +281,8 @@ export const Header = memo(function Header() {
 
   return (
     <header className="bg-[#FAFAFB] dark:bg-background shadow-[0px_0px_15px_0px_rgba(19,43,76,0.1)] sticky top-0 z-50 mx-[17px] mt-[15px] rounded-[10px]">
-  {/* Make header visually thinner while keeping the logo large — allow logo to overlap via negative margin */}
-  <div className="w-full flex items-center justify-between h-14 sm:h-14 md:h-16 px-3 sm:px-4 md:px-6 lg:px-8 overflow-visible">
+      {/* Make header visually thinner while keeping the logo large — allow logo to overlap via negative margin */}
+      <div className="w-full flex items-center justify-between h-14 sm:h-14 md:h-16 px-3 sm:px-4 md:px-6 lg:px-8 overflow-visible">
         <ConfirmDialog
           open={confirmSignOutOpen}
           title="Sign out?"
@@ -299,7 +298,7 @@ export const Header = memo(function Header() {
             src={headerImageSrc}
             alt="Poligap"
             // keep logo large but nudge it slightly so header can be thinner; use relative top for finer control
-            className="h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto relative -top-1 sm:-top-1 md:-top-1 lg:-top-1"
+            className="h-10 sm:h-12 md:h-14 lg:h-10 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity select-none pointer-events-auto relative -top-1"
             onClick={handleLogoClick}
             draggable={false}
             onDragStart={(e) => e.preventDefault()}

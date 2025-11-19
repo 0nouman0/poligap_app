@@ -60,7 +60,7 @@ export default function ConfirmEmailPage() {
         // If this is an invitation (type=invite or has company metadata)
         if (type === 'invite' || metadata.company_id) {
           console.log('🔄 Invitation flow detected')
-          
+
           // Create or update profile
           const { error: profileError, data: profileData } = await supabase
             .from('profiles')
@@ -121,7 +121,7 @@ export default function ConfirmEmailPage() {
 
           setStatus('success');
           setMessage(`Welcome to the team, ${user.email}!`);
-          
+
           // Redirect to set password page for invited users
           setTimeout(() => {
             router.push('/auth/set-password');
@@ -133,10 +133,10 @@ export default function ConfirmEmailPage() {
         if (type === 'signup' && user.email_confirmed_at) {
           setStatus('success');
           setMessage('Email verified successfully! Redirecting to login...');
-          
+
           // Sign out the user so they can log in properly
           await supabase.auth.signOut();
-          
+
           // Redirect to login after 3 seconds
           setTimeout(() => {
             router.push('/auth/signin?verified=true');
@@ -155,27 +155,26 @@ export default function ConfirmEmailPage() {
     handleAuth();
   }, [router, supabase]);
 
-  const logoSrc = "/assets/poligap-logo.png";
+  const logoSrc = "/assets/new-logo.png";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <Image 
-              src={logoSrc} 
-              alt="Poligap AI" 
-              width={180} 
-              height={180} 
-              className="object-contain" 
+            <Image
+              src={logoSrc}
+              alt="Poligap AI"
+              width={120}
+              height={120}
+              className="object-contain"
             />
           </div>
           <div className="flex justify-center">
-            <div className={`rounded-full p-3 ${
-              status === 'loading' ? 'bg-blue-100' : 
-              status === 'success' ? 'bg-green-100' : 
-              'bg-red-100'
-            }`}>
+            <div className={`rounded-full p-3 ${status === 'loading' ? 'bg-blue-100' :
+                status === 'success' ? 'bg-green-100' :
+                  'bg-red-100'
+              }`}>
               {status === 'loading' && <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />}
               {status === 'success' && <CheckCircle className="h-12 w-12 text-green-600" />}
               {status === 'error' && <XCircle className="h-12 w-12 text-red-600" />}
@@ -190,7 +189,7 @@ export default function ConfirmEmailPage() {
             {message}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           {status === 'success' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center space-y-2">

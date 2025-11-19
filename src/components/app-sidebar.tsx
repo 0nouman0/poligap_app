@@ -82,11 +82,11 @@ const navigationItems = [
     icon: FileText,
     page: "/contract-review" as PageType,
   },
-  {
-    title: "Policy Generator",
-    icon: BookOpen,
-    page: "/policy-generator" as PageType,
-  },
+  // {
+  //   title: "Policy Generator",
+  //   icon: BookOpen,
+  //   page: "/policy-generator" as PageType,
+  // },
   // {
   //   title: "Idea Analyzer",
   //   icon: Lightbulb,

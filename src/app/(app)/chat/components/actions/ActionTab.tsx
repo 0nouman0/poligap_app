@@ -54,8 +54,7 @@ export const ActionTab = ({
       toastSuccess("Exported as PDF");
     } catch (error) {
       toastError(
-        `Failed to export as PDF  ${
-          error instanceof Error ? error.message : String(error)
+        `Failed to export as PDF  ${error instanceof Error ? error.message : String(error)
         }`
       );
     } finally {
@@ -84,8 +83,7 @@ export const ActionTab = ({
       toastSuccess("Exported as Markdown");
     } catch (error) {
       toastError(
-        `Failed to export as Markdown  ${
-          error instanceof Error ? error.message : String(error)
+        `Failed to export as Markdown  ${error instanceof Error ? error.message : String(error)
         }`
       );
     } finally {
@@ -110,8 +108,7 @@ export const ActionTab = ({
       }
     } catch (error) {
       toastError(
-        `Chat Creation Failed: ${
-          error instanceof Error ? error.message : String(error)
+        `Chat Creation Failed: ${error instanceof Error ? error.message : String(error)
         }`
       );
     } finally {
@@ -125,8 +122,7 @@ export const ActionTab = ({
       }
     } catch (error) {
       toastError(
-        `Chat Creation Failed: ${
-          error instanceof Error ? error.message : String(error)
+        `Chat Creation Failed: ${error instanceof Error ? error.message : String(error)
         }`
       );
     }
